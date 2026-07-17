@@ -1,36 +1,14 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-
-const block = v.object({
-  id: v.string(),
-  type: v.union(
-    v.literal("paragraph"),
-    v.literal("heading1"),
-    v.literal("heading2"),
-    v.literal("heading3"),
-    v.literal("bullet"),
-    v.literal("todo"),
-    v.literal("quote"),
-    v.literal("code"),
-    v.literal("divider"),
-    v.literal("callout"),
-    v.literal("pagelink"),
-  ),
-  text: v.string(),
-  checked: v.optional(v.boolean()),
-  calloutVariant: v.optional(
-    v.union(v.literal("info"), v.literal("tip"), v.literal("warning")),
-  ),
-  pageId: v.optional(v.string()),
-});
+import { blockValidator } from "./block";
 
 export default defineSchema({
   notes: defineTable({
     ownerId: v.string(),
     title: v.string(),
     content: v.string(),
-    blocks: v.optional(v.array(block)),
-    folderBlocks: v.optional(v.array(block)),
+    blocks: v.optional(v.array(blockValidator)),
+    folderBlocks: v.optional(v.array(blockValidator)),
     icon: v.string(),
     coverColor: v.optional(v.string()),
     parentId: v.optional(v.id("notes")),

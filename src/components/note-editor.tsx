@@ -23,13 +23,14 @@ import {
 import { LABEL_COLORS } from "@/lib/colors";
 import { isFolder } from "@/lib/item-kinds";
 import { useVaultAccess } from "@/context/vault-access";
-import { BlockEditor } from "./block-editor";
+import { VaultEditor } from "@/editor";
 import { CollectionDetail } from "./collection-detail";
 import { IconPicker } from "./icon-picker";
 import { PageBreadcrumbs } from "./page-breadcrumbs";
 import { PageHeaderActions } from "./page-header-actions";
 import { PageProperties } from "./page-properties";
 import { SharePanel } from "./share-panel";
+import { useToast } from "./toast";
 
 type Props = {
   noteId: Id<"notes">;
@@ -50,6 +51,7 @@ export function NoteEditor({
   onCreateEntry,
   onCreateCollection,
 }: Props) {
+  const toast = useToast();
   const { readOnly: globalReadOnly } = useVaultAccess();
   const note = useQuery(api.notes.get, { id: noteId });
   const children = useQuery(api.notes.listChildren, { parentId: noteId });
@@ -100,14 +102,34 @@ export function NoteEditor({
 
   async function handleTrash() {
     if (readOnly) return;
-    await trashNote({ id: noteId });
-    onNavigate(null);
+    try {
+      await trashNote({ id: noteId });
+      toast.success("Moved to bin");
+      onNavigate(null);
+    } catch {
+      toast.error("Couldn’t move to bin");
+    }
   }
 
   async function handleDuplicate() {
     if (readOnly) return;
-    const id = await duplicateNote({ id: noteId });
-    onNavigate(id);
+    try {
+      const id = await duplicateNote({ id: noteId });
+      toast.success("Duplicated");
+      onNavigate(id);
+    } catch {
+      toast.error("Couldn’t duplicate");
+    }
+  }
+
+  async function handleTogglePin() {
+    if (!note || readOnly) return;
+    try {
+      await updateNote({ id: note._id, pinned: !note.pinned });
+      toast.success(note.pinned ? "Removed from favorites" : "Added to favorites");
+    } catch {
+      toast.error("Couldn’t update favorite");
+    }
   }
 
   if (note === undefined) {
@@ -158,7 +180,7 @@ export function NoteEditor({
               type="button"
               className={`topbar-btn ${note.pinned ? "text-accent" : ""}`}
               aria-label="Favorite"
-              onClick={() => updateNote({ id: note._id, pinned: !note.pinned })}
+              onClick={handleTogglePin}
             >
               <Pin className={`size-4 ${note.pinned ? "fill-current" : ""}`} />
             </button>
@@ -251,7 +273,7 @@ export function NoteEditor({
             />
 
             <div className="page-body">
-              <BlockEditor
+              <VaultEditor
                 blocks={blocks}
                 readOnly={readOnly}
                 linkablePages={linkablePages}

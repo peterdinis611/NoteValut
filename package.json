@@ -12,6 +12,7 @@
   "dependencies": {
     "@fluentui/react-components": "^9.74.3",
     "convex": "^1.42.1",
+    "highlight.js": "^11.11.1",
     "lucide-react": "^1.24.0",
     "motion": "^12.42.2",
     "next": "16.2.10",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/highlight.js": "^9.12.4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

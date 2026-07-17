@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery } from "convex/react";
 import {
-  Archive,
   ChevronDown,
   ChevronRight,
   FolderOpen,
@@ -21,6 +20,7 @@ import { getLabelColor } from "@/lib/colors";
 import { isFolder } from "@/lib/item-kinds";
 import { easeOutSoft, sidebarVariants } from "@/lib/motion";
 import { CreateMenu } from "./create-menu";
+import { useToast } from "./toast";
 
 type Props = {
   ownerId: string;
@@ -41,6 +41,7 @@ export function Sidebar({
   onCreateEntry,
   onCreateCollection,
 }: Props) {
+  const toast = useToast();
   const [search, setSearch] = useState("");
   const [showBin, setShowBin] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -53,6 +54,43 @@ export function Sidebar({
   const trashNote = useMutation(api.notes.trash);
   const restoreNote = useMutation(api.notes.restoreFromTrash);
   const emptyTrash = useMutation(api.notes.emptyTrash);
+
+  async function handleTrash(id: Id<"notes">) {
+    try {
+      await trashNote({ id });
+      toast.success("Moved to bin");
+    } catch {
+      toast.error("Couldn’t move to bin");
+    }
+  }
+
+  async function handleRestore(id: Id<"notes">) {
+    try {
+      await restoreNote({ id });
+      toast.success("Restored from bin");
+    } catch {
+      toast.error("Couldn’t restore item");
+    }
+  }
+
+  async function handleEmptyTrash() {
+    try {
+      await emptyTrash({ ownerId });
+      toast.success("Bin emptied");
+      setShowBin(false);
+    } catch {
+      toast.error("Couldn’t empty bin");
+    }
+  }
+
+  async function handleTogglePin(id: Id<"notes">, pinned: boolean) {
+    try {
+      await updateNote({ id, pinned: !pinned });
+      toast.success(pinned ? "Removed from favorites" : "Added to favorites");
+    } catch {
+      toast.error("Couldn’t update favorite");
+    }
+  }
 
   const isSearching = !!search.trim();
   const activeItems = useMemo(() => notes ?? [], [notes]);
@@ -75,6 +113,7 @@ export function Sidebar({
   }, [activeItems]);
 
   const rootItems = childrenByParent.get("root") ?? [];
+  const trashCount = trashed?.length ?? 0;
 
   return (
     <motion.aside
@@ -87,10 +126,17 @@ export function Sidebar({
     >
       <div className="sidebar-header">
         <button type="button" className="sidebar-workspace" onClick={onGoHome}>
-          <span className="sidebar-workspace-icon">📓</span>
-          <span className="min-w-0 flex-1 truncate text-left text-sm font-medium">NoteVault</span>
+          <span className="sidebar-mark" aria-hidden>
+            N
+          </span>
+          <span className="sidebar-brand">NoteVault</span>
         </button>
-        <button type="button" className="sidebar-icon-btn" onClick={onCollapse} aria-label="Collapse sidebar">
+        <button
+          type="button"
+          className="sidebar-icon-btn"
+          onClick={onCollapse}
+          aria-label="Collapse sidebar"
+        >
           <PanelLeftClose className="size-4" />
         </button>
       </div>
@@ -99,26 +145,29 @@ export function Sidebar({
         <Search className="sidebar-search-icon" />
         <input
           className="sidebar-search"
-          placeholder="Search vault…"
+          placeholder="Search…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
-      <nav className="sidebar-nav note-scroll">
+      <div className="sidebar-quick">
         <button
           type="button"
-          className={`sidebar-home ${activeId === null ? "sidebar-home-active" : ""}`}
+          className={`sidebar-nav-btn ${activeId === null && !isSearching ? "sidebar-nav-btn-active" : ""}`}
           onClick={onGoHome}
         >
-          <Home className="size-4" />
-          Vault home
+          <Home className="size-3.5" />
+          Home
         </button>
-
-        <div className="relative">
-          <button type="button" className="sidebar-new-page" onClick={() => setShowCreate((v) => !v)}>
-            <Plus className="size-4" />
-            Create new
+        <div className="relative flex-1">
+          <button
+            type="button"
+            className="sidebar-nav-btn sidebar-nav-btn-accent"
+            onClick={() => setShowCreate((v) => !v)}
+          >
+            <Plus className="size-3.5" />
+            New
           </button>
           <CreateMenu
             open={showCreate}
@@ -127,13 +176,15 @@ export function Sidebar({
             onCreateCollection={() => onCreateCollection()}
           />
         </div>
+      </div>
 
+      <nav className="sidebar-nav note-scroll">
         {notes === undefined ? (
           <p className="sidebar-empty">Loading…</p>
         ) : isSearching ? (
           <SidebarSection title="Results">
             {notes.length === 0 ? (
-              <p className="sidebar-empty">No results</p>
+              <p className="sidebar-empty">No matches</p>
             ) : (
               notes.map((item) => (
                 <SidebarItem
@@ -141,8 +192,8 @@ export function Sidebar({
                   item={item}
                   active={item._id === activeId}
                   onSelect={() => onSelect(item._id)}
-                  onTogglePin={() => updateNote({ id: item._id, pinned: !item.pinned })}
-                  onTrash={() => trashNote({ id: item._id })}
+                  onTogglePin={() => handleTogglePin(item._id, item.pinned)}
+                  onTrash={() => handleTrash(item._id)}
                 />
               ))
             )}
@@ -157,16 +208,51 @@ export function Sidebar({
                     item={item}
                     active={item._id === activeId}
                     onSelect={() => onSelect(item._id)}
-                    onTogglePin={() => updateNote({ id: item._id, pinned: !item.pinned })}
-                    onTrash={() => trashNote({ id: item._id })}
+                    onTogglePin={() => handleTogglePin(item._id, item.pinned)}
+                    onTrash={() => handleTrash(item._id)}
                   />
                 ))}
               </SidebarSection>
             )}
 
-            <SidebarSection title="Your vault">
+            <SidebarSection title="Vault">
               {rootItems.length === 0 ? (
-                <p className="sidebar-empty">Empty vault — create something!</p>
+                <div className="sidebar-empty-state">
+                  <p className="sidebar-empty-title">Nothing here yet</p>
+                  <p className="sidebar-empty-copy">
+                    {trashCount > 0
+                      ? `${trashCount} item${trashCount === 1 ? "" : "s"} in the bin — restore or create new.`
+                      : "Create an entry or collection to get started."}
+                  </p>
+                  <div className="sidebar-empty-actions">
+                    <button
+                      type="button"
+                      className="sidebar-empty-cta"
+                      onClick={() => onCreateEntry()}
+                    >
+                      <Plus className="size-3.5" />
+                      Entry
+                    </button>
+                    <button
+                      type="button"
+                      className="sidebar-empty-cta"
+                      onClick={() => onCreateCollection()}
+                    >
+                      <FolderOpen className="size-3.5" />
+                      Collection
+                    </button>
+                    {trashCount > 0 && (
+                      <button
+                        type="button"
+                        className="sidebar-empty-cta"
+                        onClick={() => setShowBin(true)}
+                      >
+                        <Trash2 className="size-3.5" />
+                        Open bin
+                      </button>
+                    )}
+                  </div>
+                </div>
               ) : (
                 <ul className="sidebar-tree">
                   {rootItems.map((item) => (
@@ -177,12 +263,12 @@ export function Sidebar({
                       activeId={activeId}
                       childrenByParent={childrenByParent}
                       expanded={expanded}
-                      onToggleExpanded={(id) => setExpanded((e) => ({ ...e, [id]: !e[id] }))}
+                      onToggleExpanded={(id, next) => setExpanded((e) => ({ ...e, [id]: next }))}
                       onSelect={onSelect}
                       onCreateEntry={onCreateEntry}
                       onCreateCollection={onCreateCollection}
-                      onTogglePin={(id, pinned) => updateNote({ id, pinned: !pinned })}
-                      onTrash={(id) => trashNote({ id })}
+                      onTogglePin={handleTogglePin}
+                      onTrash={handleTrash}
                     />
                   ))}
                 </ul>
@@ -193,26 +279,31 @@ export function Sidebar({
       </nav>
 
       <div className="sidebar-footer">
-        <button type="button" className="sidebar-footer-btn" onClick={() => setShowBin((v) => !v)}>
-          <Trash2 className="size-4" />
+        <button
+          type="button"
+          className={`sidebar-footer-btn ${showBin ? "sidebar-footer-btn-open" : ""}`}
+          onClick={() => setShowBin((v) => !v)}
+        >
+          <Trash2 className="size-3.5" />
           <span className="flex-1 text-left">Bin</span>
-          <span className="text-xs text-muted">{trashed?.length ?? 0}</span>
+          {trashCount > 0 && <span className="sidebar-count">{trashCount}</span>}
         </button>
         {showBin && (
           <div className="sidebar-bin">
-            {trashed?.length === 0 ? (
+            {trashCount === 0 ? (
               <p className="sidebar-empty">Bin is empty</p>
             ) : (
               <>
                 {trashed?.map((item) => (
-                  <div key={item._id} className="sidebar-bin-item group">
-                    <span className="truncate text-sm">
-                      {item.icon} {item.title || "Untitled"}
+                  <div key={item._id} className="sidebar-bin-item">
+                    <span className="sidebar-bin-label">
+                      <span>{item.icon}</span>
+                      <span className="truncate">{item.title || "Untitled"}</span>
                     </span>
                     <button
                       type="button"
-                      className="text-[10px] text-muted opacity-0 group-hover:opacity-100"
-                      onClick={() => restoreNote({ id: item._id })}
+                      className="sidebar-bin-restore"
+                      onClick={() => handleRestore(item._id)}
                     >
                       Restore
                     </button>
@@ -221,7 +312,7 @@ export function Sidebar({
                 <button
                   type="button"
                   className="sidebar-empty-bin"
-                  onClick={() => emptyTrash({ ownerId })}
+                  onClick={handleEmptyTrash}
                 >
                   Empty bin
                 </button>
@@ -229,10 +320,6 @@ export function Sidebar({
             )}
           </div>
         )}
-        <button type="button" className="sidebar-footer-btn">
-          <Archive className="size-4" />
-          <span>Archive</span>
-        </button>
       </div>
     </motion.aside>
   );
@@ -268,7 +355,7 @@ function SidebarItem({
       <button type="button" className="sidebar-item-btn" onClick={onSelect}>
         <span className="sidebar-item-stripe" style={{ background: label.hex }} />
         {folder ? (
-          <FolderOpen className="size-4 shrink-0 text-muted" />
+          <FolderOpen className="size-3.5 shrink-0 text-muted" />
         ) : (
           <span className="sidebar-item-emoji">{item.icon}</span>
         )}
@@ -304,7 +391,7 @@ function TreeNode({
   activeId: Id<"notes"> | null;
   childrenByParent: Map<string, Doc<"notes">[]>;
   expanded: Record<string, boolean>;
-  onToggleExpanded: (id: Id<"notes">) => void;
+  onToggleExpanded: (id: Id<"notes">, next: boolean) => void;
   onSelect: (id: Id<"notes">) => void;
   onCreateEntry: (parentId?: Id<"notes">, templateId?: string) => void;
   onCreateCollection: (parentId?: Id<"notes">) => void;
@@ -313,16 +400,17 @@ function TreeNode({
 }) {
   const children = childrenByParent.get(item._id) ?? [];
   const hasChildren = children.length > 0;
-  const isExpanded = expanded[item._id] ?? false;
   const folder = isFolder(item);
+  const isExpanded = expanded[item._id] ?? (folder && hasChildren);
 
   return (
     <li>
-      <div className="group flex items-center" style={{ paddingLeft: depth * 10 }}>
+      <div className="sidebar-tree-row group" style={{ paddingLeft: depth * 12 }}>
         <button
           type="button"
           className={`sidebar-tree-toggle ${hasChildren || folder ? "" : "invisible"}`}
-          onClick={() => onToggleExpanded(item._id)}
+          onClick={() => onToggleExpanded(item._id, !isExpanded)}
+          aria-label={isExpanded ? "Collapse" : "Expand"}
         >
           {isExpanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
         </button>
@@ -338,7 +426,7 @@ function TreeNode({
         {folder && (
           <button
             type="button"
-            className="sidebar-tree-add opacity-0 group-hover:opacity-100"
+            className="sidebar-tree-add"
             onClick={() => onCreateEntry(item._id)}
             aria-label="Add entry"
           >

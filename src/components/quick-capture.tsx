@@ -8,6 +8,7 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { createBlock } from "@/lib/blocks";
 import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
+import { useToast } from "./toast";
 
 type Props = {
   ownerId: string;
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export function QuickCapture({ ownerId, open, onClose, onCreated }: Props) {
+  const toast = useToast();
   const notes = useQuery(api.notes.list, { ownerId });
   const createNote = useMutation(api.notes.create);
   const [title, setTitle] = useState("");
@@ -28,25 +30,31 @@ export function QuickCapture({ ownerId, open, onClose, onCreated }: Props) {
   async function handleSave() {
     if (!title.trim() && !body.trim()) return;
     setSaving(true);
-    const blocks = body.trim()
-      ? [createBlock("paragraph", body.trim())]
-      : [createBlock("paragraph", "")];
+    try {
+      const blocks = body.trim()
+        ? [createBlock("paragraph", body.trim())]
+        : [createBlock("paragraph", "")];
 
-    const id = await createNote({
-      ownerId,
-      title: title.trim() || "Quick capture",
-      parentId: inbox?._id,
-      kind: "page",
-      icon: "⚡",
-      tags: ["capture"],
-      blocks,
-    });
+      const id = await createNote({
+        ownerId,
+        title: title.trim() || "Quick capture",
+        parentId: inbox?._id,
+        kind: "page",
+        icon: "⚡",
+        tags: ["capture"],
+        blocks,
+      });
 
-    setTitle("");
-    setBody("");
-    setSaving(false);
-    onCreated(id);
-    onClose();
+      setTitle("");
+      setBody("");
+      toast.success("Captured");
+      onCreated(id);
+      onClose();
+    } catch {
+      toast.error("Couldn’t save capture");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (

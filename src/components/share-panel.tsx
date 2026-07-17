@@ -8,6 +8,7 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
 import { permissionLabel, shareUrl, type ShareScope } from "@/lib/share";
+import { useToast } from "./toast";
 
 type Props = {
   ownerId: string;
@@ -19,6 +20,7 @@ type Props = {
 };
 
 export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Props) {
+  const toast = useToast();
   const shares = useQuery(api.shares.list, open ? { ownerId } : "skip");
   const settings = useQuery(api.vaultSettings.get, open ? { ownerId } : "skip");
   const createShare = useMutation(api.shares.create);
@@ -36,19 +38,50 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
     }) ?? [];
 
   async function handleCreate() {
-    await createShare({
-      ownerId,
-      scope,
-      noteId,
-      permission,
-      label: title ? `Share: ${title}` : undefined,
-    });
+    try {
+      await createShare({
+        ownerId,
+        scope,
+        noteId,
+        permission,
+        label: title ? `Share: ${title}` : undefined,
+      });
+      toast.success(
+        permission === "read" ? "Read-only link created" : "Editable link created",
+      );
+    } catch {
+      toast.error("Couldn’t create share link");
+    }
   }
 
-  function copyLink(token: string) {
-    navigator.clipboard.writeText(shareUrl(token));
-    setCopied(token);
-    setTimeout(() => setCopied(null), 2000);
+  async function copyLink(token: string) {
+    try {
+      await navigator.clipboard.writeText(shareUrl(token));
+      setCopied(token);
+      toast.success("Link copied");
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      toast.error("Couldn’t copy link");
+    }
+  }
+
+  async function handleTogglePermission(share: { _id: Id<"shares">; permission: "read" | "write" }) {
+    try {
+      const next = share.permission === "read" ? "write" : "read";
+      await updateShare({ id: share._id, ownerId, permission: next });
+      toast.success(next === "read" ? "Set to read-only" : "Set to can edit");
+    } catch {
+      toast.error("Couldn’t update permission");
+    }
+  }
+
+  async function handleRemove(id: Id<"shares">) {
+    try {
+      await removeShare({ id, ownerId });
+      toast.success("Share link removed");
+    } catch {
+      toast.error("Couldn’t remove link");
+    }
   }
 
   return (
@@ -88,9 +121,16 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                   <input
                     type="checkbox"
                     checked={settings.sharingEnabled}
-                    onChange={(e) =>
-                      updateSettings({ ownerId, sharingEnabled: e.target.checked })
-                    }
+                    onChange={async (e) => {
+                      try {
+                        await updateSettings({ ownerId, sharingEnabled: e.target.checked });
+                        toast.success(
+                          e.target.checked ? "Sharing enabled" : "Sharing disabled",
+                        );
+                      } catch {
+                        toast.error("Couldn’t update sharing settings");
+                      }
+                    }}
                   />
                   <span>Enable vault sharing</span>
                 </label>
@@ -98,9 +138,18 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                   <input
                     type="checkbox"
                     checked={settings.publicReadonly}
-                    onChange={(e) =>
-                      updateSettings({ ownerId, publicReadonly: e.target.checked })
-                    }
+                    onChange={async (e) => {
+                      try {
+                        await updateSettings({ ownerId, publicReadonly: e.target.checked });
+                        toast.info(
+                          e.target.checked
+                            ? "New links default to read-only"
+                            : "New links can be editable",
+                        );
+                      } catch {
+                        toast.error("Couldn’t update sharing settings");
+                      }
+                    }}
                   />
                   <span>Default new links to read-only</span>
                 </label>
@@ -155,13 +204,7 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                       type="button"
                       className="topbar-btn"
                       title="Toggle permission"
-                      onClick={() =>
-                        updateShare({
-                          id: share._id,
-                          ownerId,
-                          permission: share.permission === "read" ? "write" : "read",
-                        })
-                      }
+                      onClick={() => handleTogglePermission(share)}
                     >
                       {share.permission === "read" ? (
                         <Lock className="size-4" />
@@ -172,7 +215,7 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                     <button
                       type="button"
                       className="topbar-btn text-red-400"
-                      onClick={() => removeShare({ id: share._id, ownerId })}
+                      onClick={() => handleRemove(share._id)}
                     >
                       <Trash2 className="size-4" />
                     </button>

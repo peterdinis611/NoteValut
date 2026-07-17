@@ -2,29 +2,9 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
+import { blockValidator } from "./block";
 
-const block = v.object({
-  id: v.string(),
-  type: v.union(
-    v.literal("paragraph"),
-    v.literal("heading1"),
-    v.literal("heading2"),
-    v.literal("heading3"),
-    v.literal("bullet"),
-    v.literal("todo"),
-    v.literal("quote"),
-    v.literal("code"),
-    v.literal("divider"),
-    v.literal("callout"),
-    v.literal("pagelink"),
-  ),
-  text: v.string(),
-  checked: v.optional(v.boolean()),
-  calloutVariant: v.optional(
-    v.union(v.literal("info"), v.literal("tip"), v.literal("warning")),
-  ),
-  pageId: v.optional(v.string()),
-});
+const block = blockValidator;
 
 function isActive(item: { archived: boolean; trashed?: boolean }) {
   return !item.archived && !item.trashed;

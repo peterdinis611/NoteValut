@@ -1,0 +1,39 @@
+import { v } from "convex/values";
+
+/** Shared Convex validator for editor blocks — keep schema + mutations in sync. */
+export const blockValidator = v.object({
+  id: v.string(),
+  type: v.union(
+    v.literal("paragraph"),
+    v.literal("heading1"),
+    v.literal("heading2"),
+    v.literal("heading3"),
+    v.literal("heading4"),
+    v.literal("heading5"),
+    v.literal("heading6"),
+    v.literal("bullet"),
+    v.literal("numbered"),
+    v.literal("todo"),
+    v.literal("quote"),
+    v.literal("code"),
+    v.literal("divider"),
+    v.literal("callout"),
+    v.literal("pagelink"),
+    v.literal("toggle"),
+    v.literal("image"),
+    v.literal("custom"),
+    v.literal("table"),
+    v.literal("video"),
+    v.literal("link"),
+  ),
+  text: v.string(),
+  checked: v.optional(v.boolean()),
+  calloutVariant: v.optional(
+    v.union(v.literal("info"), v.literal("tip"), v.literal("warning")),
+  ),
+  pageId: v.optional(v.string()),
+  language: v.optional(v.string()),
+  url: v.optional(v.string()),
+  label: v.optional(v.string()),
+  rows: v.optional(v.array(v.array(v.string()))),
+});

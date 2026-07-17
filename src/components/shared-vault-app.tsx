@@ -103,10 +103,10 @@ export function SharedVaultApp({ token }: Props) {
           ) : (
             <div className="vault-home note-scroll">
               <div className="vault-home-hero">
-                <div className="vault-home-badge">
-                  <Eye className="size-4" />
+                <p className="vault-home-kicker">
+                  <Eye className="mr-1 inline size-3.5" />
                   Shared vault
-                </div>
+                </p>
                 <h1 className="vault-home-title">{bundle.share.label}</h1>
                 <p className="vault-home-subtitle">
                   {readOnly
@@ -125,7 +125,7 @@ export function SharedVaultApp({ token }: Props) {
                       className="vault-recent-card"
                       onClick={() => setActiveId(entry._id)}
                     >
-                      <span className="text-2xl">{entry.icon}</span>
+                      <span className="vault-row-icon">{entry.icon}</span>
                       <span className="truncate font-medium">{entry.title || "Untitled"}</span>
                     </button>
                   ))}

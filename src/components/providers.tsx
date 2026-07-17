@@ -7,6 +7,7 @@ import {
   type BrandVariants,
 } from "@fluentui/react-components";
 import { ReactNode, useMemo } from "react";
+import { ToastProvider } from "./toast";
 
 const brand: BrandVariants = {
   10: "#1a1529",
@@ -61,7 +62,9 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
 
   return (
     <FluentProvider theme={theme}>
-      <ConvexProvider client={client}>{children}</ConvexProvider>
+      <ConvexProvider client={client}>
+        <ToastProvider>{children}</ToastProvider>
+      </ConvexProvider>
     </FluentProvider>
   );
 }

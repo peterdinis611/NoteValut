@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as block from "../block.js";
 import type * as notes from "../notes.js";
 import type * as shares from "../shares.js";
 import type * as vaultSettings from "../vaultSettings.js";
@@ -19,6 +20,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  block: typeof block;
   notes: typeof notes;
   shares: typeof shares;
   vaultSettings: typeof vaultSettings;

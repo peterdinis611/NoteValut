@@ -1,7 +1,7 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
-import { ArrowRight, CheckSquare, FileText, FolderOpen, Plus, Share2, Sparkles, Zap } from "lucide-react";
+import { useQuery } from "convex/react";
+import { ArrowRight, FolderOpen, Plus, Share2, Zap } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { api } from "../../convex/_generated/api";
@@ -26,6 +26,10 @@ type Props = {
   onQuickCapture: () => void;
 };
 
+function plural(n: number, one: string, many: string) {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
 export function VaultHome({
   ownerId,
   onNavigate,
@@ -41,12 +45,14 @@ export function VaultHome({
     notes
       ?.filter((n) => !isFolder(n))
       .sort((a, b) => b.updatedAt - a.updatedAt)
-      .slice(0, 6) ?? [];
+      .slice(0, 8) ?? [];
 
   const openTaskEntries =
     notes
       ?.filter((n) => !isFolder(n) && countOpenTasks(n.blocks) > 0)
       .slice(0, 5) ?? [];
+
+  const templates = PAGE_TEMPLATES.filter((t) => t.id !== "blank");
 
   return (
     <motion.div
@@ -55,15 +61,13 @@ export function VaultHome({
       animate="visible"
       variants={staggerContainer}
     >
-      <motion.div className="vault-home-hero" variants={fadeUpVariants} transition={easeOutSoft}>
-        <div className="vault-home-badge">
-          <Sparkles className="size-4" />
-          Your knowledge vault
-        </div>
+      <div className="vault-home-glow" aria-hidden />
+
+      <motion.header className="vault-home-hero" variants={fadeUpVariants} transition={easeOutSoft}>
+        <p className="vault-home-kicker">Your knowledge vault</p>
         <h1 className="vault-home-title">NoteVault</h1>
         <p className="vault-home-subtitle">
-          Capture ideas, organize collections, and build your personal workspace — designed for you,
-          not copied from anywhere else.
+          Capture ideas and organize them into collections — your workspace, your structure.
         </p>
 
         <div className="vault-home-actions">
@@ -77,115 +81,115 @@ export function VaultHome({
             <Plus className="size-4" />
             New entry
           </motion.button>
-          <motion.button
-            type="button"
-            className="vault-btn-secondary"
-            onClick={onCreateCollection}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <FolderOpen className="size-4" />
-            New collection
-          </motion.button>
-          <motion.button
-            type="button"
-            className="vault-btn-secondary"
-            onClick={() => setShareOpen(true)}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Share2 className="size-4" />
-            Share vault
-          </motion.button>
-          <motion.button
-            type="button"
-            className="vault-btn-secondary"
-            onClick={onQuickCapture}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Zap className="size-4" />
-            Quick capture
-          </motion.button>
+          <button type="button" className="vault-link-btn" onClick={onCreateCollection}>
+            <FolderOpen className="size-3.5" />
+            Collection
+          </button>
+          <button type="button" className="vault-link-btn" onClick={onQuickCapture}>
+            <Zap className="size-3.5" />
+            Capture
+          </button>
+          <button type="button" className="vault-link-btn" onClick={() => setShareOpen(true)}>
+            <Share2 className="size-3.5" />
+            Share
+          </button>
         </div>
-      </motion.div>
 
-      {stats && (
-        <motion.div className="vault-stats" variants={staggerContainer}>
-          <StatCard label="Entries" value={stats.entries} icon={<FileText className="size-4" />} />
-          <StatCard label="Collections" value={stats.collections} icon={<FolderOpen className="size-4" />} />
-          <StatCard label="Open tasks" value={stats.openTasks} icon={<CheckSquare className="size-4" />} />
-          <StatCard label="Favorites" value={stats.favorites} icon={<Sparkles className="size-4" />} />
-        </motion.div>
-      )}
+        {stats && (
+          <p className="vault-home-meta">
+            {plural(stats.entries, "entry", "entries")}
+            <span className="vault-meta-dot" />
+            {plural(stats.collections, "collection", "collections")}
+            <span className="vault-meta-dot" />
+            {plural(stats.openTasks, "open task", "open tasks")}
+          </p>
+        )}
+      </motion.header>
 
-      <motion.section className="vault-section" variants={fadeUpVariants} transition={easeOutSoft}>
-        <h2 className="vault-section-title">Start from a template</h2>
-        <motion.div className="template-grid" variants={staggerContainer}>
-          {PAGE_TEMPLATES.filter((t) => t.id !== "blank").map((template) => (
-            <motion.button
-              key={template.id}
-              type="button"
-              className="template-card"
-              onClick={() => onCreateEntry(template.id)}
-              variants={staggerItem}
-              whileHover={{ y: -2, borderColor: "var(--accent)" }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <span className="text-2xl">{template.icon}</span>
-              <span className="font-medium">{template.name}</span>
-              <span className="text-xs text-muted">{template.description}</span>
-            </motion.button>
-          ))}
-        </motion.div>
-      </motion.section>
-
-      {openTaskEntries.length > 0 && (
+      <div className="vault-home-body">
         <motion.section className="vault-section" variants={fadeUpVariants} transition={easeOutSoft}>
-          <h2 className="vault-section-title">Open tasks</h2>
-          <div className="vault-task-list">
-            {openTaskEntries.map((entry) => (
-              <motion.button
-                key={entry._id}
+          <div className="vault-section-head">
+            <h2 className="vault-section-title">Continue</h2>
+          </div>
+          {recent.length === 0 ? (
+            <p className="vault-empty">No entries yet — start with a blank page or a template.</p>
+          ) : (
+            <motion.ul className="vault-row-list" variants={staggerContainer}>
+              {recent.map((entry) => {
+                const tasks = countOpenTasks(entry.blocks);
+                return (
+                  <motion.li key={entry._id} variants={staggerItem}>
+                    <button
+                      type="button"
+                      className="vault-row"
+                      onClick={() => onNavigate(entry._id)}
+                    >
+                      <span className="vault-row-icon">{entry.icon}</span>
+                      <span className="vault-row-main">
+                        <span className="vault-row-title">{entry.title || "Untitled"}</span>
+                        {tasks > 0 && (
+                          <span className="vault-row-hint">
+                            {plural(tasks, "open task", "open tasks")}
+                          </span>
+                        )}
+                      </span>
+                      <span className="vault-row-meta">{formatRelativeTime(entry.updatedAt)}</span>
+                      <ArrowRight className="vault-row-arrow size-3.5" />
+                    </button>
+                  </motion.li>
+                );
+              })}
+            </motion.ul>
+          )}
+        </motion.section>
+
+        {openTaskEntries.length > 0 && (
+          <motion.section className="vault-section" variants={fadeUpVariants} transition={easeOutSoft}>
+            <div className="vault-section-head">
+              <h2 className="vault-section-title">Needs attention</h2>
+            </div>
+            <ul className="vault-row-list">
+              {openTaskEntries.map((entry) => {
+                const n = countOpenTasks(entry.blocks);
+                return (
+                  <li key={entry._id}>
+                    <button
+                      type="button"
+                      className="vault-row"
+                      onClick={() => onNavigate(entry._id)}
+                    >
+                      <span className="vault-row-icon">{entry.icon}</span>
+                      <span className="vault-row-main">
+                        <span className="vault-row-title">{entry.title || "Untitled"}</span>
+                      </span>
+                      <span className="vault-row-badge">{plural(n, "task", "tasks")}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </motion.section>
+        )}
+
+        <motion.section className="vault-section" variants={fadeUpVariants} transition={easeOutSoft}>
+          <div className="vault-section-head">
+            <h2 className="vault-section-title">Start from</h2>
+          </div>
+          <div className="vault-template-row">
+            {templates.map((template) => (
+              <button
+                key={template.id}
                 type="button"
-                className="vault-task-item"
-                onClick={() => onNavigate(entry._id)}
-                whileHover={{ x: 2 }}
+                className="vault-template-chip"
+                onClick={() => onCreateEntry(template.id)}
               >
-                <span>{entry.icon}</span>
-                <span className="flex-1 truncate text-left">{entry.title || "Untitled"}</span>
-                <span className="text-xs text-accent">{countOpenTasks(entry.blocks)} tasks</span>
-                <ArrowRight className="size-4 text-muted" />
-              </motion.button>
+                <span>{template.icon}</span>
+                <span>{template.name}</span>
+              </button>
             ))}
           </div>
         </motion.section>
-      )}
-
-      <motion.section className="vault-section" variants={fadeUpVariants} transition={easeOutSoft}>
-        <h2 className="vault-section-title">Recently edited</h2>
-        {recent.length === 0 ? (
-          <p className="text-sm text-muted">No entries yet — create your first one above.</p>
-        ) : (
-          <motion.div className="vault-recent-grid" variants={staggerContainer}>
-            {recent.map((entry) => (
-              <motion.button
-                key={entry._id}
-                type="button"
-                className="vault-recent-card"
-                onClick={() => onNavigate(entry._id)}
-                variants={staggerItem}
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <span className="text-2xl">{entry.icon}</span>
-                <span className="truncate font-medium">{entry.title || "Untitled"}</span>
-                <span className="text-xs text-muted">{formatRelativeTime(entry.updatedAt)}</span>
-              </motion.button>
-            ))}
-          </motion.div>
-        )}
-      </motion.section>
+      </div>
 
       <SharePanel
         ownerId={ownerId}
@@ -194,24 +198,6 @@ export function VaultHome({
         scope="vault"
         title="NoteVault"
       />
-    </motion.div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-}) {
-  return (
-    <motion.div className="vault-stat-card" variants={staggerItem} whileHover={{ y: -2 }}>
-      <div className="text-muted">{icon}</div>
-      <div className="text-2xl font-semibold">{value}</div>
-      <div className="text-xs text-muted">{label}</div>
     </motion.div>
   );
 }

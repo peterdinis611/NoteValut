@@ -13,10 +13,12 @@ import { useOwnerId } from "@/hooks/use-owner-id";
 import { NoteEditor } from "./note-editor";
 import { QuickCapture, QuickCaptureFab } from "./quick-capture";
 import { Sidebar } from "./sidebar";
+import { useToast } from "./toast";
 import { VaultHome } from "./vault-home";
 
 export function NoteVaultApp() {
   const ownerId = useOwnerId();
+  const toast = useToast();
   const seedDemo = useMutation(api.notes.seedDemo);
   const createNote = useMutation(api.notes.create);
   const notes = useQuery(api.notes.list, ownerId ? { ownerId } : "skip");
@@ -40,35 +42,47 @@ export function NoteVaultApp() {
   const handleCreateEntry = useCallback(
     async (parentId?: Id<"notes">, templateId = "blank") => {
       if (!ownerId) return;
-      const template = getTemplate(templateId);
-      const id = await createNote({
-        ownerId,
-        parentId,
-        kind: "page",
-        title: template.id === "blank" ? "Untitled" : template.name,
-        icon: template.icon,
-        tags: template.tags,
-        blocks: template.blocks.map((b) => ({ ...b, id: crypto.randomUUID() })),
-      });
-      setActiveId(id);
+      try {
+        const template = getTemplate(templateId);
+        const id = await createNote({
+          ownerId,
+          parentId,
+          kind: "page",
+          title: template.id === "blank" ? "Untitled" : template.name,
+          icon: template.icon,
+          tags: template.tags,
+          blocks: template.blocks.map((b) => ({ ...b, id: crypto.randomUUID() })),
+        });
+        setActiveId(id);
+        toast.success(
+          template.id === "blank" ? "Entry created" : `Created from ${template.name}`,
+        );
+      } catch {
+        toast.error("Couldn’t create entry");
+      }
     },
-    [ownerId, createNote],
+    [ownerId, createNote, toast],
   );
 
   const handleCreateCollection = useCallback(
     async (parentId?: Id<"notes">) => {
       if (!ownerId) return;
-      const id = await createNote({
-        ownerId,
-        parentId,
-        kind: "folder",
-        title: "New collection",
-        icon: "🗂️",
-        color: "teal",
-      });
-      setActiveId(id);
+      try {
+        const id = await createNote({
+          ownerId,
+          parentId,
+          kind: "folder",
+          title: "New collection",
+          icon: "🗂️",
+          color: "teal",
+        });
+        setActiveId(id);
+        toast.success("Collection created");
+      } catch {
+        toast.error("Couldn’t create collection");
+      }
     },
-    [ownerId, createNote],
+    [ownerId, createNote, toast],
   );
 
   if (!ownerId) {
