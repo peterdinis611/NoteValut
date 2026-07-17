@@ -1,6 +1,7 @@
 "use client";
 
 import type { Block } from "@/lib/blocks";
+import { blockToneStyle } from "@/lib/colors";
 import { Extension } from "../create-extension";
 import type { BlockRenderProps } from "../types";
 import { BlockTextInput } from "../components/block-text-input";
@@ -19,7 +20,10 @@ function TextBlock({
 }) {
   const { block, readOnly, onTextChange, onKeyDown, onPaste, onFocus } = props;
   return (
-    <div className={`nv-block-inner ${className}`}>
+    <div
+      className={`nv-block-inner ${className}`}
+      style={blockToneStyle(block.color, block.bgColor)}
+    >
       <BlockTextInput
         block={block}
         readOnly={readOnly}
@@ -233,7 +237,10 @@ export const BulletList = Extension({
   ],
   placeholder: () => "List item",
   render: (props) => (
-    <div className="nv-block-inner nv-bullet-row">
+    <div
+      className="nv-block-inner nv-bullet-row"
+      style={blockToneStyle(props.block.color, props.block.bgColor)}
+    >
       <span className="nv-bullet-mark" aria-hidden>
         •
       </span>
@@ -269,6 +276,7 @@ export const Todo = Extension({
   render: (props) => (
     <div
       className={`nv-block-inner nv-todo-row ${props.block.checked ? "nv-todo-done" : ""}`}
+      style={blockToneStyle(props.block.color, props.block.bgColor)}
     >
       <input
         type="checkbox"

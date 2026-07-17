@@ -2,13 +2,18 @@
 
 import {
   AlertTriangle,
+  Bookmark,
   Boxes,
   CheckSquare,
   ChevronsUpDown,
   Code2,
+  Film,
   Heading1,
   Heading2,
   Heading3,
+  Heading4,
+  Heading5,
+  Heading6,
   ImageIcon,
   Info,
   Lightbulb,
@@ -19,6 +24,7 @@ import {
   Pilcrow,
   Quote,
   Sparkles,
+  Table2,
   type LucideIcon,
 } from "lucide-react";
 import { motion } from "motion/react";
@@ -31,6 +37,9 @@ const ICONS: Record<string, LucideIcon> = {
   heading1: Heading1,
   heading2: Heading2,
   heading3: Heading3,
+  heading4: Heading4,
+  heading5: Heading5,
+  heading6: Heading6,
   bullet: List,
   numbered: ListOrdered,
   todo: CheckSquare,
@@ -42,6 +51,9 @@ const ICONS: Record<string, LucideIcon> = {
   pagelink: Link2,
   toggle: ChevronsUpDown,
   image: ImageIcon,
+  table: Table2,
+  video: Film,
+  link: Bookmark,
   divider: Minus,
   custom: Boxes,
 };
@@ -149,6 +161,8 @@ export function EditorSlashMenu({
 
 function toneFor(group?: string) {
   switch (group) {
+    case "Headings":
+      return "headings";
     case "Lists":
       return "lists";
     case "Callouts":
@@ -163,7 +177,7 @@ function toneFor(group?: string) {
 }
 
 function groupCommands(commands: SlashCommandDef[]) {
-  const order = ["Yours", "Basic", "Lists", "Callouts", "Media"];
+  const order = ["Yours", "Basic", "Headings", "Lists", "Callouts", "Media"];
   const map = new Map<string, SlashCommandDef[]>();
   for (const cmd of commands) {
     const group = cmd.group ?? "Basic";

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronRight, ImageIcon } from "lucide-react";
+import { blockToneStyle } from "@/lib/colors";
 import { Extension } from "../create-extension";
 import { BlockTextInput } from "../components/block-text-input";
 
@@ -22,7 +23,10 @@ export const NumberedList = Extension({
   render: (props) => {
     const number = numberedIndex(props);
     return (
-      <div className="nv-block-inner nv-bullet-row">
+      <div
+        className="nv-block-inner nv-bullet-row"
+        style={blockToneStyle(props.block.color, props.block.bgColor)}
+      >
         <span className="nv-number-mark" aria-hidden>
           {number}.
         </span>
@@ -74,7 +78,7 @@ export const Toggle = Extension({
     const body = rest.join("\n");
 
     return (
-      <div className="nv-toggle">
+      <div className="nv-toggle" style={blockToneStyle(props.block.color, props.block.bgColor)}>
         <button
           type="button"
           className="nv-toggle-head"

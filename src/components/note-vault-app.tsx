@@ -104,6 +104,7 @@ export function NoteVaultApp() {
               onCollapse={() => setSidebarOpen(false)}
               onCreateEntry={handleCreateEntry}
               onCreateCollection={handleCreateCollection}
+              onQuickCapture={() => setQuickCaptureOpen(true)}
             />
           )}
         </AnimatePresence>

@@ -10,6 +10,7 @@ import {
   Plus,
   Settings2,
   Share2,
+  Trash2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
@@ -53,6 +54,7 @@ export function CollectionDetail({
   const { readOnly: globalReadOnly } = useVaultAccess();
   const children = useQuery(api.notes.listChildren, { parentId: folder._id });
   const updateNote = useMutation(api.notes.update);
+  const trashNote = useMutation(api.notes.trash);
 
   const [tab, setTab] = useState<Tab>("overview");
   const [folderBlocks, setFolderBlocks] = useState<Block[]>(defaultBlocks());
@@ -73,6 +75,16 @@ export function CollectionDetail({
           : defaultBlocks(),
     );
   }, [folder._id, folder.folderBlocks, folder.description]);
+
+  async function handleTrashChild(id: Id<"notes">) {
+    if (readOnly) return;
+    try {
+      await trashNote({ id });
+      toast.success("Moved to bin");
+    } catch {
+      toast.error("Couldn’t move to bin");
+    }
+  }
 
   function scheduleFolderSave(blocks: Block[]) {
     if (readOnly) return;
@@ -243,30 +255,48 @@ export function CollectionDetail({
             ) : viewMode === "grid" ? (
               <div className="folder-grid">
                 {children.map((child) => (
-                  <ChildCard key={child._id} child={child} onNavigate={onNavigate} />
+                  <ChildCard
+                    key={child._id}
+                    child={child}
+                    readOnly={readOnly}
+                    onNavigate={onNavigate}
+                    onTrash={() => handleTrashChild(child._id)}
+                  />
                 ))}
               </div>
             ) : (
               <div className="collection-list">
                 {children.map((child) => (
-                  <button
-                    key={child._id}
-                    type="button"
-                    className="collection-list-row"
-                    onClick={() => onNavigate(child._id)}
-                  >
-                    <span
-                      className="collection-list-stripe"
-                      style={{ background: getLabelColor(child.color).hex }}
-                    />
-                    <span className="text-lg">{isFolder(child) ? "🗂️" : child.icon}</span>
-                    <span className="min-w-0 flex-1 truncate font-medium">
-                      {child.title || "Untitled"}
-                    </span>
-                    <span className="text-xs text-muted">
-                      {isFolder(child) ? "Collection" : "Entry"} · {formatRelativeTime(child.updatedAt)}
-                    </span>
-                  </button>
+                  <div key={child._id} className="collection-list-row-wrap">
+                    <button
+                      type="button"
+                      className="collection-list-row"
+                      onClick={() => onNavigate(child._id)}
+                    >
+                      <span
+                        className="collection-list-stripe"
+                        style={{ background: getLabelColor(child.color).hex }}
+                      />
+                      <span className="text-lg">{isFolder(child) ? "🗂️" : child.icon}</span>
+                      <span className="min-w-0 flex-1 truncate font-medium">
+                        {child.title || "Untitled"}
+                      </span>
+                      <span className="text-xs text-muted">
+                        {isFolder(child) ? "Collection" : "Entry"} ·{" "}
+                        {formatRelativeTime(child.updatedAt)}
+                      </span>
+                    </button>
+                    {!readOnly && (
+                      <button
+                        type="button"
+                        className="collection-list-trash"
+                        aria-label="Move to bin"
+                        onClick={() => handleTrashChild(child._id)}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
@@ -392,31 +422,47 @@ function SettingRow({ label, children }: { label: string; children: React.ReactN
 
 function ChildCard({
   child,
+  readOnly,
   onNavigate,
+  onTrash,
 }: {
   child: Doc<"notes">;
+  readOnly?: boolean;
   onNavigate: (id: Id<"notes">) => void;
+  onTrash: () => void;
 }) {
   return (
-    <button type="button" className="folder-card" onClick={() => onNavigate(child._id)}>
-      <div
-        className="folder-card-stripe"
-        style={{ background: getLabelColor(child.color).hex }}
-      />
-      <span className="text-2xl">{child.icon}</span>
-      <span className="truncate font-medium">{child.title || "Untitled"}</span>
-      <span className="flex items-center gap-1 text-xs text-muted">
-        {isFolder(child) ? (
-          <>
-            <FolderOpen className="size-3" /> Collection
-          </>
-        ) : (
-          <>
-            <FileText className="size-3" /> Entry
-          </>
-        )}
-        · {formatRelativeTime(child.updatedAt)}
-      </span>
-    </button>
+    <div className="folder-card-wrap">
+      <button type="button" className="folder-card" onClick={() => onNavigate(child._id)}>
+        <div
+          className="folder-card-stripe"
+          style={{ background: getLabelColor(child.color).hex }}
+        />
+        <span className="text-2xl">{child.icon}</span>
+        <span className="truncate font-medium">{child.title || "Untitled"}</span>
+        <span className="flex items-center gap-1 text-xs text-muted">
+          {isFolder(child) ? (
+            <>
+              <FolderOpen className="size-3" /> Collection
+            </>
+          ) : (
+            <>
+              <FileText className="size-3" /> Entry
+            </>
+          )}
+          · {formatRelativeTime(child.updatedAt)}
+        </span>
+      </button>
+      {!readOnly && (
+        <button
+          type="button"
+          className="folder-card-trash"
+          aria-label="Move to bin"
+          onClick={onTrash}
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+      )}
+    </div>
   );
 }

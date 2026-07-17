@@ -11,6 +11,7 @@ export default defineSchema({
     folderBlocks: v.optional(v.array(blockValidator)),
     icon: v.string(),
     coverColor: v.optional(v.string()),
+    coverImage: v.optional(v.string()),
     parentId: v.optional(v.id("notes")),
     kind: v.optional(v.union(v.literal("page"), v.literal("folder"))),
     color: v.optional(v.string()),

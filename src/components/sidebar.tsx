@@ -4,13 +4,18 @@ import { useMutation, useQuery } from "convex/react";
 import {
   ChevronDown,
   ChevronRight,
+  Clock3,
   FolderOpen,
   Home,
   PanelLeftClose,
   Pin,
   Plus,
   Search,
+  Share2,
+  Sparkles,
+  StickyNote,
   Trash2,
+  Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
@@ -19,8 +24,12 @@ import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { getLabelColor } from "@/lib/colors";
 import { isFolder } from "@/lib/item-kinds";
 import { easeOutSoft, sidebarVariants } from "@/lib/motion";
+import { PAGE_TEMPLATES } from "@/lib/templates";
 import { CreateMenu } from "./create-menu";
+import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
+
+type BrowseMode = "vault" | "favorites" | "recent" | "collections" | "pages";
 
 type Props = {
   ownerId: string;
@@ -30,6 +39,7 @@ type Props = {
   onCollapse: () => void;
   onCreateEntry: (parentId?: Id<"notes">, templateId?: string) => void;
   onCreateCollection: (parentId?: Id<"notes">) => void;
+  onQuickCapture: () => void;
 };
 
 export function Sidebar({
@@ -40,11 +50,14 @@ export function Sidebar({
   onCollapse,
   onCreateEntry,
   onCreateCollection,
+  onQuickCapture,
 }: Props) {
   const toast = useToast();
   const [search, setSearch] = useState("");
   const [showBin, setShowBin] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [browse, setBrowse] = useState<BrowseMode>("vault");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const notes = useQuery(api.notes.list, { ownerId, search: search || undefined });
@@ -95,6 +108,22 @@ export function Sidebar({
   const isSearching = !!search.trim();
   const activeItems = useMemo(() => notes ?? [], [notes]);
   const pinned = useMemo(() => activeItems.filter((n) => n.pinned), [activeItems]);
+  const collections = useMemo(
+    () => activeItems.filter((n) => isFolder(n) && !n.parentId),
+    [activeItems],
+  );
+  const pages = useMemo(
+    () => activeItems.filter((n) => !isFolder(n) && !n.parentId),
+    [activeItems],
+  );
+  const recent = useMemo(
+    () =>
+      [...activeItems]
+        .filter((n) => !isFolder(n))
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .slice(0, 12),
+    [activeItems],
+  );
 
   const childrenByParent = useMemo(() => {
     const map = new Map<string, Doc<"notes">[]>();
@@ -114,6 +143,13 @@ export function Sidebar({
 
   const rootItems = childrenByParent.get("root") ?? [];
   const trashCount = trashed?.length ?? 0;
+  const homeActive = activeId === null && !isSearching && browse === "vault" && !showBin;
+
+  function setBrowseMode(mode: BrowseMode) {
+    setShowBin(false);
+    setBrowse(mode);
+    if (mode === "vault") onGoHome();
+  }
 
   return (
     <motion.aside
@@ -145,7 +181,7 @@ export function Sidebar({
         <Search className="sidebar-search-icon" />
         <input
           className="sidebar-search"
-          placeholder="Search…"
+          placeholder="Search vault…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -154,27 +190,78 @@ export function Sidebar({
       <div className="sidebar-quick">
         <button
           type="button"
-          className={`sidebar-nav-btn ${activeId === null && !isSearching ? "sidebar-nav-btn-active" : ""}`}
-          onClick={onGoHome}
+          className={`sidebar-nav-btn ${homeActive ? "sidebar-nav-btn-active" : ""}`}
+          onClick={() => {
+            setBrowse("vault");
+            setShowBin(false);
+            onGoHome();
+          }}
         >
           <Home className="size-3.5" />
           Home
         </button>
-        <div className="relative flex-1">
-          <button
-            type="button"
-            className="sidebar-nav-btn sidebar-nav-btn-accent"
-            onClick={() => setShowCreate((v) => !v)}
-          >
-            <Plus className="size-3.5" />
-            New
-          </button>
-          <CreateMenu
-            open={showCreate}
-            onClose={() => setShowCreate(false)}
-            onCreateEntry={(templateId) => onCreateEntry(undefined, templateId)}
-            onCreateCollection={() => onCreateCollection()}
-          />
+        <button
+          type="button"
+          data-create-trigger
+          className="sidebar-nav-btn sidebar-nav-btn-accent"
+          onClick={() => setShowCreate((v) => !v)}
+        >
+          <Plus className="size-3.5" />
+          New
+        </button>
+        <CreateMenu
+          open={showCreate}
+          onClose={() => setShowCreate(false)}
+          onCreateEntry={(templateId) => onCreateEntry(undefined, templateId)}
+          onCreateCollection={() => onCreateCollection()}
+        />
+      </div>
+
+      <div className="sidebar-shortcuts">
+        {(
+          [
+            { id: "vault", label: "Vault", icon: StickyNote, count: rootItems.length },
+            { id: "favorites", label: "Favorites", icon: Pin, count: pinned.length },
+            { id: "recent", label: "Recent", icon: Clock3, count: recent.length },
+            { id: "collections", label: "Collections", icon: FolderOpen, count: collections.length },
+            { id: "pages", label: "Pages", icon: StickyNote, count: pages.length },
+          ] as const
+        ).map((item) => {
+          const Icon = item.icon;
+          const active = !isSearching && !showBin && browse === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={`sidebar-shortcut ${active ? "sidebar-shortcut-active" : ""}`}
+              onClick={() => setBrowseMode(item.id)}
+            >
+              <Icon className="size-3.5" />
+              <span className="sidebar-shortcut-label">{item.label}</span>
+              <span className="sidebar-shortcut-count">{item.count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="sidebar-templates">
+        <p className="sidebar-templates-label">
+          <Sparkles className="size-3" />
+          Quick start
+        </p>
+        <div className="sidebar-templates-row">
+          {PAGE_TEMPLATES.filter((t) => t.id !== "blank").slice(0, 4).map((template) => (
+            <button
+              key={template.id}
+              type="button"
+              className="sidebar-template-chip"
+              title={template.description}
+              onClick={() => onCreateEntry(undefined, template.id)}
+            >
+              <span>{template.icon}</span>
+              <span className="truncate">{template.name}</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -198,87 +285,170 @@ export function Sidebar({
               ))
             )}
           </SidebarSection>
+        ) : browse === "favorites" ? (
+          <SidebarSection title="Favorites">
+            {pinned.length === 0 ? (
+              <EmptyHint text="Pin entries to keep them here." />
+            ) : (
+              pinned.map((item) => (
+                <SidebarItem
+                  key={item._id}
+                  item={item}
+                  active={item._id === activeId}
+                  onSelect={() => onSelect(item._id)}
+                  onTogglePin={() => handleTogglePin(item._id, item.pinned)}
+                  onTrash={() => handleTrash(item._id)}
+                />
+              ))
+            )}
+          </SidebarSection>
+        ) : browse === "recent" ? (
+          <SidebarSection title="Recently edited">
+            {recent.length === 0 ? (
+              <EmptyHint text="Edited pages show up here." />
+            ) : (
+              recent.map((item) => (
+                <SidebarItem
+                  key={item._id}
+                  item={item}
+                  active={item._id === activeId}
+                  onSelect={() => onSelect(item._id)}
+                  onTogglePin={() => handleTogglePin(item._id, item.pinned)}
+                  onTrash={() => handleTrash(item._id)}
+                />
+              ))
+            )}
+          </SidebarSection>
+        ) : browse === "collections" ? (
+          <SidebarSection title="Collections">
+            <button
+              type="button"
+              className="sidebar-inline-cta"
+              onClick={() => onCreateCollection()}
+            >
+              <Plus className="size-3.5" />
+              New collection
+            </button>
+            {collections.length === 0 ? (
+              <EmptyHint text="Group related pages into collections." />
+            ) : (
+              collections.map((item) => (
+                <SidebarItem
+                  key={item._id}
+                  item={item}
+                  active={item._id === activeId}
+                  onSelect={() => onSelect(item._id)}
+                  onTogglePin={() => handleTogglePin(item._id, item.pinned)}
+                  onTrash={() => handleTrash(item._id)}
+                />
+              ))
+            )}
+          </SidebarSection>
+        ) : browse === "pages" ? (
+          <SidebarSection title="Pages">
+            <button
+              type="button"
+              className="sidebar-inline-cta"
+              onClick={() => onCreateEntry()}
+            >
+              <Plus className="size-3.5" />
+              New page
+            </button>
+            {pages.length === 0 ? (
+              <EmptyHint text="Top-level pages live here." />
+            ) : (
+              pages.map((item) => (
+                <SidebarItem
+                  key={item._id}
+                  item={item}
+                  active={item._id === activeId}
+                  onSelect={() => onSelect(item._id)}
+                  onTogglePin={() => handleTogglePin(item._id, item.pinned)}
+                  onTrash={() => handleTrash(item._id)}
+                />
+              ))
+            )}
+          </SidebarSection>
         ) : (
-          <>
-            {pinned.length > 0 && (
-              <SidebarSection title="Favorites">
-                {pinned.map((item) => (
-                  <SidebarItem
+          <SidebarSection
+            title="Vault"
+            action={
+              <button
+                type="button"
+                className="sidebar-section-action"
+                onClick={() => onCreateEntry()}
+                aria-label="New entry"
+              >
+                <Plus className="size-3.5" />
+              </button>
+            }
+          >
+            {rootItems.length === 0 ? (
+              <div className="sidebar-empty-state">
+                <p className="sidebar-empty-title">Nothing here yet</p>
+                <p className="sidebar-empty-copy">
+                  {trashCount > 0
+                    ? `${trashCount} item${trashCount === 1 ? "" : "s"} in the bin — restore or create new.`
+                    : "Create an entry or collection to get started."}
+                </p>
+                <div className="sidebar-empty-actions">
+                  <button
+                    type="button"
+                    className="sidebar-empty-cta"
+                    onClick={() => onCreateEntry()}
+                  >
+                    <Plus className="size-3.5" />
+                    Entry
+                  </button>
+                  <button
+                    type="button"
+                    className="sidebar-empty-cta"
+                    onClick={() => onCreateCollection()}
+                  >
+                    <FolderOpen className="size-3.5" />
+                    Collection
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <ul className="sidebar-tree">
+                {rootItems.map((item) => (
+                  <TreeNode
                     key={item._id}
                     item={item}
-                    active={item._id === activeId}
-                    onSelect={() => onSelect(item._id)}
-                    onTogglePin={() => handleTogglePin(item._id, item.pinned)}
-                    onTrash={() => handleTrash(item._id)}
+                    depth={0}
+                    activeId={activeId}
+                    childrenByParent={childrenByParent}
+                    expanded={expanded}
+                    onToggleExpanded={(id, next) =>
+                      setExpanded((e) => ({ ...e, [id]: next }))
+                    }
+                    onSelect={onSelect}
+                    onCreateEntry={onCreateEntry}
+                    onCreateCollection={onCreateCollection}
+                    onTogglePin={handleTogglePin}
+                    onTrash={handleTrash}
                   />
                 ))}
-              </SidebarSection>
+              </ul>
             )}
-
-            <SidebarSection title="Vault">
-              {rootItems.length === 0 ? (
-                <div className="sidebar-empty-state">
-                  <p className="sidebar-empty-title">Nothing here yet</p>
-                  <p className="sidebar-empty-copy">
-                    {trashCount > 0
-                      ? `${trashCount} item${trashCount === 1 ? "" : "s"} in the bin — restore or create new.`
-                      : "Create an entry or collection to get started."}
-                  </p>
-                  <div className="sidebar-empty-actions">
-                    <button
-                      type="button"
-                      className="sidebar-empty-cta"
-                      onClick={() => onCreateEntry()}
-                    >
-                      <Plus className="size-3.5" />
-                      Entry
-                    </button>
-                    <button
-                      type="button"
-                      className="sidebar-empty-cta"
-                      onClick={() => onCreateCollection()}
-                    >
-                      <FolderOpen className="size-3.5" />
-                      Collection
-                    </button>
-                    {trashCount > 0 && (
-                      <button
-                        type="button"
-                        className="sidebar-empty-cta"
-                        onClick={() => setShowBin(true)}
-                      >
-                        <Trash2 className="size-3.5" />
-                        Open bin
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <ul className="sidebar-tree">
-                  {rootItems.map((item) => (
-                    <TreeNode
-                      key={item._id}
-                      item={item}
-                      depth={0}
-                      activeId={activeId}
-                      childrenByParent={childrenByParent}
-                      expanded={expanded}
-                      onToggleExpanded={(id, next) => setExpanded((e) => ({ ...e, [id]: next }))}
-                      onSelect={onSelect}
-                      onCreateEntry={onCreateEntry}
-                      onCreateCollection={onCreateCollection}
-                      onTogglePin={handleTogglePin}
-                      onTrash={handleTrash}
-                    />
-                  ))}
-                </ul>
-              )}
-            </SidebarSection>
-          </>
+          </SidebarSection>
         )}
       </nav>
 
       <div className="sidebar-footer">
+        <button type="button" className="sidebar-footer-btn" onClick={onQuickCapture}>
+          <Zap className="size-3.5" />
+          <span className="flex-1 text-left">Quick capture</span>
+        </button>
+        <button
+          type="button"
+          className="sidebar-footer-btn"
+          onClick={() => setShowShare(true)}
+        >
+          <Share2 className="size-3.5" />
+          <span className="flex-1 text-left">Share vault</span>
+        </button>
         <button
           type="button"
           className={`sidebar-footer-btn ${showBin ? "sidebar-footer-btn-open" : ""}`}
@@ -321,14 +491,37 @@ export function Sidebar({
           </div>
         )}
       </div>
+
+      <SharePanel
+        ownerId={ownerId}
+        open={showShare}
+        onClose={() => setShowShare(false)}
+        scope="vault"
+        title="NoteVault"
+      />
     </motion.aside>
   );
 }
 
-function SidebarSection({ title, children }: { title: string; children: React.ReactNode }) {
+function EmptyHint({ text }: { text: string }) {
+  return <p className="sidebar-empty-hint">{text}</p>;
+}
+
+function SidebarSection({
+  title,
+  children,
+  action,
+}: {
+  title: string;
+  children: React.ReactNode;
+  action?: React.ReactNode;
+}) {
   return (
     <div className="sidebar-section">
-      <p className="sidebar-section-title">{title}</p>
+      <div className="sidebar-section-head">
+        <p className="sidebar-section-title">{title}</p>
+        {action}
+      </div>
       <div className="sidebar-section-items">{children}</div>
     </div>
   );

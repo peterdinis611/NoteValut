@@ -20,8 +20,8 @@ import {
   defaultBlocks,
   migrateContentToBlocks,
 } from "@/lib/blocks";
-import { LABEL_COLORS } from "@/lib/colors";
 import { isFolder } from "@/lib/item-kinds";
+import { firstIssue, parseBlocks, parseTags } from "@/lib/validation";
 import { useVaultAccess } from "@/context/vault-access";
 import { VaultEditor } from "@/editor";
 import { CollectionDetail } from "./collection-detail";
@@ -31,6 +31,7 @@ import { PageHeaderActions } from "./page-header-actions";
 import { PageProperties } from "./page-properties";
 import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
+import { UiTooltip } from "./ui-tooltip";
 
 type Props = {
   noteId: Id<"notes">;
@@ -83,9 +84,25 @@ export function NoteEditor({
     blocks?: Block[];
     tags?: string[];
     coverColor?: string | null;
-    color?: string | null;
+    coverImage?: string | null;
   }) {
     if (!note || isFolder(note) || readOnly) return;
+
+    if (patch.blocks) {
+      const parsed = parseBlocks(patch.blocks);
+      if (!parsed.success) {
+        toast.error(firstIssue(parsed));
+        return;
+      }
+    }
+    if (patch.tags) {
+      const parsed = parseTags(patch.tags);
+      if (!parsed.success) {
+        toast.error(firstIssue(parsed));
+        return;
+      }
+    }
+
     setSaveState("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
@@ -155,9 +172,11 @@ export function NoteEditor({
       <header className="page-topbar">
         <div className="flex min-w-0 items-center gap-2">
           {sidebarCollapsed && (
-            <button type="button" className="topbar-btn" onClick={onToggleSidebar} aria-label="Open sidebar">
-              <PanelLeft className="size-4" />
-            </button>
+            <UiTooltip label="Open sidebar">
+              <button type="button" className="topbar-btn" onClick={onToggleSidebar} aria-label="Open sidebar">
+                <PanelLeft className="size-4" />
+              </button>
+            </UiTooltip>
           )}
           <PageBreadcrumbs noteId={noteId} onNavigate={onNavigate} compact />
         </div>
@@ -166,33 +185,43 @@ export function NoteEditor({
             <span className="topbar-status">{saveState === "saving" ? "Saving…" : "Saved"}</span>
           )}
           {!readOnly && (
-            <button type="button" className="topbar-btn" aria-label="Share" onClick={() => setShareOpen(true)}>
-              <Share2 className="size-4" />
-            </button>
+            <UiTooltip label="Share">
+              <button type="button" className="topbar-btn" aria-label="Share" onClick={() => setShareOpen(true)}>
+                <Share2 className="size-4" />
+              </button>
+            </UiTooltip>
           )}
           {!isFolder(note) && !readOnly && (
-            <button type="button" className="topbar-btn" aria-label="Duplicate" onClick={handleDuplicate}>
-              <Copy className="size-4" />
-            </button>
+            <UiTooltip label="Duplicate">
+              <button type="button" className="topbar-btn" aria-label="Duplicate" onClick={handleDuplicate}>
+                <Copy className="size-4" />
+              </button>
+            </UiTooltip>
           )}
           {!readOnly && (
-            <button
-              type="button"
-              className={`topbar-btn ${note.pinned ? "text-accent" : ""}`}
-              aria-label="Favorite"
-              onClick={handleTogglePin}
-            >
-              <Pin className={`size-4 ${note.pinned ? "fill-current" : ""}`} />
-            </button>
+            <UiTooltip label={note.pinned ? "Remove from favorites" : "Add to favorites"}>
+              <button
+                type="button"
+                className={`topbar-btn ${note.pinned ? "text-accent" : ""}`}
+                aria-label={note.pinned ? "Remove from favorites" : "Add to favorites"}
+                onClick={handleTogglePin}
+              >
+                <Pin className={`size-4 ${note.pinned ? "fill-current" : ""}`} />
+              </button>
+            </UiTooltip>
           )}
           {!readOnly && (
-            <button type="button" className="topbar-btn text-red-400" aria-label="Move to bin" onClick={handleTrash}>
-              <Trash2 className="size-4" />
-            </button>
+            <UiTooltip label="Move to bin">
+              <button type="button" className="topbar-btn text-red-400" aria-label="Move to bin" onClick={handleTrash}>
+                <Trash2 className="size-4" />
+              </button>
+            </UiTooltip>
           )}
-          <button type="button" className="topbar-btn" aria-label="More">
-            <MoreHorizontal className="size-4" />
-          </button>
+          <UiTooltip label="More actions">
+            <button type="button" className="topbar-btn" aria-label="More actions">
+              <MoreHorizontal className="size-4" />
+            </button>
+          </UiTooltip>
         </div>
       </header>
 
@@ -207,26 +236,42 @@ export function NoteEditor({
       ) : (
         <div className="page-scroll note-scroll">
           <div className="group/page relative">
-            {note.coverColor ? (
+            {note.coverImage ? (
+              <div
+                className="page-cover page-cover-image"
+                style={{ backgroundImage: `url(${note.coverImage})` }}
+              />
+            ) : note.coverColor ? (
               <div className={`page-cover bg-gradient-to-r ${note.coverColor}`} />
             ) : (
               <div className="page-cover-placeholder" />
             )}
             {!readOnly && (
               <PageHeaderActions
-                hasCover={!!note.coverColor}
+                hasCover={!!(note.coverColor || note.coverImage)}
                 hasIcon={showIcon}
                 coverValue={note.coverColor}
+                coverImage={note.coverImage}
                 onAddIcon={() => setShowIcon(true)}
-                onAddCover={(cover) => scheduleSave({ coverColor: cover })}
-                onRemoveCover={() => scheduleSave({ coverColor: null })}
+                onAddCover={(cover) => scheduleSave({ coverColor: cover, coverImage: null })}
+                onSetCoverImage={(url) =>
+                  scheduleSave({
+                    coverImage: url,
+                    coverColor: url ? null : note.coverColor ?? null,
+                  })
+                }
+                onRemoveCover={() => scheduleSave({ coverColor: null, coverImage: null })}
               />
             )}
           </div>
 
           <article className="page-content">
             {showIcon && (
-              <div className={`page-icon-wrap ${note.coverColor ? "page-icon-over-cover" : ""}`}>
+              <div
+                className={`page-icon-wrap ${
+                  note.coverColor || note.coverImage ? "page-icon-over-cover" : ""
+                }`}
+              >
                 <IconPicker
                   value={note.icon}
                   onChange={(icon) => !readOnly && updateNote({ id: note._id, icon })}
@@ -246,21 +291,6 @@ export function NoteEditor({
                 scheduleSave({ title: e.target.value });
               }}
             />
-
-            {!readOnly && (
-              <div className="entry-label-colors">
-                {LABEL_COLORS.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    aria-label={c.id}
-                    className={`color-dot ${note.color === c.id ? "color-dot-active" : ""}`}
-                    style={{ background: c.hex }}
-                    onClick={() => updateNote({ id: note._id, color: c.id })}
-                  />
-                ))}
-              </div>
-            )}
 
             <PageProperties
               tags={tags}
@@ -290,7 +320,20 @@ export function NoteEditor({
                 <p className="page-children-label">Nested items</p>
                 <div className="page-children-list">
                   {children.map((child) => (
-                    <ChildCard key={child._id} child={child} onNavigate={onNavigate} />
+                    <ChildCard
+                      key={child._id}
+                      child={child}
+                      readOnly={readOnly}
+                      onNavigate={onNavigate}
+                      onTrash={async () => {
+                        try {
+                          await trashNote({ id: child._id });
+                          toast.success("Moved to bin");
+                        } catch {
+                          toast.error("Couldn’t move to bin");
+                        }
+                      }}
+                    />
                   ))}
                 </div>
               </section>
@@ -313,16 +356,42 @@ export function NoteEditor({
 
 function ChildCard({
   child,
+  readOnly,
   onNavigate,
+  onTrash,
 }: {
   child: Doc<"notes">;
+  readOnly?: boolean;
   onNavigate: (id: Id<"notes">) => void;
+  onTrash: () => void;
 }) {
   return (
-    <button type="button" className="page-child-card" onClick={() => onNavigate(child._id)}>
-      <span className="text-xl">{child.icon}</span>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">{child.title || "Untitled"}</span>
-      <ChevronRight className="size-4 shrink-0 text-muted" />
-    </button>
+    <div className="page-child-card">
+      <button
+        type="button"
+        className="page-child-main"
+        onClick={() => onNavigate(child._id)}
+      >
+        <span className="text-xl">{child.icon}</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">
+          {child.title || "Untitled"}
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-muted" />
+      </button>
+      {!readOnly && (
+        <button
+          type="button"
+          className="page-child-trash"
+          aria-label="Move to bin"
+          title="Move to bin"
+          onClick={(e) => {
+            e.stopPropagation();
+            onTrash();
+          }}
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+      )}
+    </div>
   );
 }

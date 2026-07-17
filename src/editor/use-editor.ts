@@ -381,7 +381,11 @@ export function useEditor(options: EditorOptions) {
       e.key === "Backspace" &&
       !block.text &&
       block.type !== "divider" &&
-      block.type !== "pagelink"
+      block.type !== "pagelink" &&
+      block.type !== "table" &&
+      block.type !== "video" &&
+      block.type !== "link" &&
+      block.type !== "image"
     ) {
       e.preventDefault();
       setSlashBlockId(null);

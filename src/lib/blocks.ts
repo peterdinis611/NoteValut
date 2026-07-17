@@ -35,6 +35,10 @@ export type Block = {
   label?: string;
   /** Table cells: rows × columns */
   rows?: string[][];
+  /** Text accent color id from TEXT_COLORS */
+  color?: string;
+  /** Highlight background id from HIGHLIGHT_COLORS */
+  bgColor?: string;
 };
 
 export type SlashCommand = {
@@ -64,7 +68,7 @@ export function createBlock(
   type: BlockType,
   text = "",
   extras?: Partial<
-    Pick<Block, "checked" | "calloutVariant" | "pageId" | "language" | "url" | "label" | "rows">
+    Pick<Block, "checked" | "calloutVariant" | "pageId" | "language" | "url" | "label" | "rows" | "color" | "bgColor">
   >,
 ): Block {
   return {

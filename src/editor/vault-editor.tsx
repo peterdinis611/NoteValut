@@ -1,11 +1,12 @@
 "use client";
 
-import { GripVertical, Plus } from "lucide-react";
+import { GripVertical, Plus, Trash2 } from "lucide-react";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import type { Block } from "@/lib/blocks";
 import { StarterKit } from "./extensions";
 import type { Extension } from "./types";
 import { useEditor } from "./use-editor";
+import { BlockToolbar, canColorBlock } from "./components/block-toolbar";
 import { EditorSlashMenu } from "./components/editor-slash-menu";
 
 type Props = {
@@ -47,6 +48,10 @@ export function VaultEditor({
         const slashOpen = editor.slashBlockId === block.id && isSlash;
         const slashCmds = slashOpen ? editor.filterSlash(query) : [];
         const isHovered = editor.hoveredId === block.id;
+        const isFocused = editor.focusedId === block.id;
+        const showChrome = isHovered || isFocused;
+        const showToolbar =
+          !readOnly && isFocused && !slashOpen && canColorBlock(block.type);
         const isEmptyHint =
           !readOnly &&
           !block.text &&
@@ -57,12 +62,12 @@ export function VaultEditor({
         return (
           <div
             key={block.id}
-            className="nv-row"
+            className={`nv-row ${isFocused ? "nv-row-focused" : ""}`}
             onMouseEnter={() => editor.setHoveredId(block.id)}
             onMouseLeave={() => editor.setHoveredId(null)}
           >
             {!readOnly && (
-              <div className={`nv-gutter ${isHovered ? "nv-gutter-visible" : ""}`}>
+              <div className={`nv-gutter ${showChrome ? "nv-gutter-visible" : ""}`}>
                 <button
                   type="button"
                   className="nv-gutter-btn"
@@ -80,17 +85,39 @@ export function VaultEditor({
                 >
                   <GripVertical className="size-3.5" />
                 </button>
+                <button
+                  type="button"
+                  className="nv-gutter-btn nv-gutter-danger"
+                  aria-label="Delete block"
+                  title="Delete block"
+                  onClick={() => editor.commands.deleteBlock(block.id)}
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
               </div>
             )}
 
             <div className="nv-content">
+              {showToolbar && (
+                <BlockToolbar
+                  color={block.color}
+                  bgColor={block.bgColor}
+                  onColor={(color) =>
+                    editor.commands.updateBlock(block.id, { color })
+                  }
+                  onBgColor={(bgColor) =>
+                    editor.commands.updateBlock(block.id, { bgColor })
+                  }
+                />
+              )}
+
               {ext ? (
                 ext.render({
                   block,
                   index,
                   readOnly,
                   isHovered,
-                  isFocused: editor.focusedId === block.id,
+                  isFocused,
                   commands: editor.commands,
                   linkablePages,
                   onNavigate,
@@ -110,7 +137,7 @@ export function VaultEditor({
 
               {isEmptyHint && (
                 <p className="nv-hint">
-                  / commands · markdown shortcuts (# ## -) · paste markdown
+                  / commands · hover to delete · paste markdown
                 </p>
               )}
 
@@ -121,7 +148,9 @@ export function VaultEditor({
                     selectedIndex={editor.slashIndex}
                     query={query}
                     onHoverIndex={editor.setSlashIndex}
-                    onSelect={(cmd) => editor.commands.applySlashCommand(block.id, cmd)}
+                    onSelect={(cmd) =>
+                      editor.commands.applySlashCommand(block.id, cmd)
+                    }
                   />
                 </div>
               )}

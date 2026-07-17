@@ -2,6 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import { CALLOUT_STYLES } from "@/lib/blocks";
+import { blockToneStyle } from "@/lib/colors";
 import { Extension } from "../create-extension";
 import { BlockTextInput } from "../components/block-text-input";
 
@@ -44,8 +45,13 @@ export const Callout = Extension({
     const variant = props.block.calloutVariant ?? "info";
     const style = CALLOUT_STYLES[variant];
     return (
-      <div className={`nv-callout ${style.class}`}>
-        <span className="nv-callout-icon">{style.icon}</span>
+      <div
+        className={`nv-callout ${style.class}`}
+        style={blockToneStyle(props.block.color, props.block.bgColor)}
+      >
+        <span className="nv-callout-icon" aria-hidden>
+          {style.icon}
+        </span>
         <BlockTextInput
           block={props.block}
           readOnly={props.readOnly}

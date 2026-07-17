@@ -210,6 +210,7 @@ export const update = mutation({
     folderBlocks: v.optional(v.array(block)),
     icon: v.optional(v.string()),
     coverColor: v.optional(v.union(v.string(), v.null())),
+    coverImage: v.optional(v.union(v.string(), v.null())),
     color: v.optional(v.union(v.string(), v.null())),
     description: v.optional(v.union(v.string(), v.null())),
     viewMode: v.optional(v.union(v.literal("grid"), v.literal("list"))),
@@ -242,6 +243,7 @@ export const update = mutation({
     if (patch.folderBlocks !== undefined) updates.folderBlocks = patch.folderBlocks;
     if (patch.icon !== undefined) updates.icon = patch.icon;
     if (patch.coverColor !== undefined) updates.coverColor = patch.coverColor ?? undefined;
+    if (patch.coverImage !== undefined) updates.coverImage = patch.coverImage ?? undefined;
     if (patch.color !== undefined) updates.color = patch.color ?? undefined;
     if (patch.description !== undefined) updates.description = patch.description ?? undefined;
     if (patch.viewMode !== undefined) updates.viewMode = patch.viewMode;

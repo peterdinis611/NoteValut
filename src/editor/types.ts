@@ -21,7 +21,7 @@ export type EditorCommands = {
     id: string,
     type: BlockType,
     extras?: Partial<
-      Pick<Block, "checked" | "calloutVariant" | "pageId" | "language" | "url" | "label" | "rows">
+      Pick<Block, "checked" | "calloutVariant" | "pageId" | "language" | "url" | "label" | "rows" | "color" | "bgColor">
     >,
   ) => void;
   insertBlockAfter: (id: string, type?: BlockType, text?: string) => string;

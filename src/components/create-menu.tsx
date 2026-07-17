@@ -19,7 +19,11 @@ export function CreateMenu({ open, onClose, onCreateEntry, onCreateCollection }:
   useEffect(() => {
     if (!open) return;
     function onClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (ref.current?.contains(target)) return;
+      if ((target as Element).closest?.("[data-create-trigger]")) return;
+      onClose();
     }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);

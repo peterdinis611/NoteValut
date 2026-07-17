@@ -2,6 +2,8 @@
 
 import { Tag, X } from "lucide-react";
 import { KeyboardEvent, useState } from "react";
+import { firstIssue, parseTags } from "@/lib/validation";
+import { useToast } from "./toast";
 
 type Props = {
   tags: string[];
@@ -11,13 +13,27 @@ type Props = {
 };
 
 export function PageProperties({ tags, updatedAt, readOnly, onChange }: Props) {
+  const toast = useToast();
   const [draft, setDraft] = useState("");
   const [editingTags, setEditingTags] = useState(false);
 
   function addTag(raw: string) {
-    const tag = raw.trim().toLowerCase().replace(/^#/, "");
-    if (!tag || tags.includes(tag)) return;
-    onChange([...tags, tag]);
+    const tag = raw.trim().replace(/^#/, "");
+    if (!tag) {
+      setDraft("");
+      return;
+    }
+    if (tags.some((t) => t.toLowerCase() === tag.toLowerCase())) {
+      setDraft("");
+      return;
+    }
+    const next = [...tags, tag];
+    const parsed = parseTags(next);
+    if (!parsed.success) {
+      toast.error(firstIssue(parsed));
+      return;
+    }
+    onChange(parsed.output);
     setDraft("");
   }
 

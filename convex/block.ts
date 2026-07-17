@@ -36,4 +36,6 @@ export const blockValidator = v.object({
   url: v.optional(v.string()),
   label: v.optional(v.string()),
   rows: v.optional(v.array(v.array(v.string()))),
+  color: v.optional(v.string()),
+  bgColor: v.optional(v.string()),
 });
