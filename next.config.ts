@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  transpilePackages: ["@fluentui/react-components", "motion"],
+  experimental: {
+    optimizePackageImports: ["lucide-react", "motion"],
+  },
 };
 
 export default nextConfig;
