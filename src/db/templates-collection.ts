@@ -15,8 +15,6 @@ export const CustomTemplateSchema = v.object({
 
 export type CustomPageTemplate = v.InferOutput<typeof CustomTemplateSchema>;
 
-const LEGACY_KEY = "notevault.custom-templates";
-
 export const templatesCollection = createCollection(
   localStorageCollectionOptions({
     id: "nv-custom-templates",
@@ -26,51 +24,29 @@ export const templatesCollection = createCollection(
   }),
 );
 
-let migrated = false;
-
-/** One-time migrate from the old raw localStorage array. */
-export function migrateLegacyTemplates() {
-  if (migrated || typeof window === "undefined") return;
-  migrated = true;
+function ensureSynced() {
+  if (typeof window === "undefined") return;
   try {
-    const raw = window.localStorage.getItem(LEGACY_KEY);
-    if (!raw) return;
-    const parsed = JSON.parse(raw) as CustomPageTemplate[];
-    if (!Array.isArray(parsed)) return;
-    for (const item of parsed) {
-      if (!item?.id || templatesCollection.has(item.id)) continue;
-      const result = v.safeParse(CustomTemplateSchema, {
-        ...item,
-        custom: true as const,
-        createdAt: item.createdAt ?? Date.now(),
-        tags: item.tags ?? [],
-        description: item.description ?? "Saved from your vault",
-        blocks: item.blocks ?? [],
-      });
-      if (result.success) {
-        templatesCollection.insert(result.output);
-      }
-    }
-    window.localStorage.removeItem(LEGACY_KEY);
+    templatesCollection.startSyncImmediate();
   } catch {
-    // ignore corrupt legacy data
+    /* already syncing */
   }
 }
 
 export function loadCustomTemplates(): CustomPageTemplate[] {
-  migrateLegacyTemplates();
+  ensureSynced();
   return [...templatesCollection.values()].sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function getCustomTemplate(id: string) {
-  migrateLegacyTemplates();
+  ensureSynced();
   return templatesCollection.get(id);
 }
 
 export function saveCustomTemplate(
   template: Omit<CustomPageTemplate, "custom" | "createdAt"> & { createdAt?: number },
 ) {
-  migrateLegacyTemplates();
+  ensureSynced();
   const next: CustomPageTemplate = {
     ...template,
     custom: true,
@@ -109,7 +85,7 @@ export function saveCustomTemplate(
 }
 
 export function removeCustomTemplate(id: string) {
-  migrateLegacyTemplates();
+  ensureSynced();
   if (templatesCollection.has(id)) {
     templatesCollection.delete(id);
   }

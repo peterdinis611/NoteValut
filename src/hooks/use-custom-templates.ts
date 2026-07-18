@@ -1,26 +1,55 @@
 "use client";
 
-import { useLiveQuery } from "@tanstack/react-db";
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
   loadCustomTemplates,
-  migrateLegacyTemplates,
   templatesCollection,
   type CustomPageTemplate,
 } from "@/db/templates-collection";
+import { migrateLegacyLocalStorageOnce } from "@/db/migrate-legacy";
+
+const SERVER_TEMPLATES: CustomPageTemplate[] = [];
+
+function subscribeTemplates(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => {};
+  migrateLegacyLocalStorageOnce();
+  try {
+    templatesCollection.startSyncImmediate();
+  } catch {
+    /* already syncing */
+  }
+  const subscription = templatesCollection.subscribeChanges(() => {
+    clientCache = null;
+    onStoreChange();
+  });
+  return () => subscription.unsubscribe();
+}
+
+let clientCache: CustomPageTemplate[] | null = null;
+let clientCacheKey = "";
+
+function getClientSnapshot(): CustomPageTemplate[] {
+  const rows = loadCustomTemplates();
+  const key = JSON.stringify(rows.map((r) => [r.id, r.createdAt, r.name]));
+  if (clientCache && clientCacheKey === key) return clientCache;
+  clientCacheKey = key;
+  clientCache = [...rows].sort((a, b) => b.createdAt - a.createdAt);
+  return clientCache;
+}
+
+function getServerSnapshot(): CustomPageTemplate[] {
+  return SERVER_TEMPLATES;
+}
 
 /** Reactive list of user templates from TanStack DB. */
 export function useCustomTemplates(): CustomPageTemplate[] {
   useEffect(() => {
-    migrateLegacyTemplates();
+    migrateLegacyLocalStorageOnce();
   }, []);
 
-  const { data } = useLiveQuery((q) => q.from({ t: templatesCollection }));
-
-  if (!data?.length) {
-    // Fallback while collection boots / SSR
-    return typeof window === "undefined" ? [] : loadCustomTemplates();
-  }
-
-  return [...data].sort((a, b) => b.createdAt - a.createdAt);
+  return useSyncExternalStore(
+    subscribeTemplates,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
 }

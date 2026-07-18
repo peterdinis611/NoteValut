@@ -48,6 +48,12 @@ function blockToHtml(block: Block): string {
       return block.url
         ? `<figure><img src="${escapeHtml(block.url)}" alt="${escapeHtml(block.text || "")}"/><figcaption>${t}</figcaption></figure>`
         : "";
+    case "file":
+    case "pdf":
+    case "link":
+      return block.url
+        ? `<p><a href="${escapeHtml(block.url)}">${escapeHtml(block.text || block.label || block.url)}</a></p>`
+        : "";
     case "table":
       if (!block.rows?.length) return "";
       return `<table>${block.rows

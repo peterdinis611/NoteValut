@@ -94,7 +94,9 @@ export function VaultEditor({
       }
       try {
         const uploaded = await uploadFile(file);
-        const id = editor.commands.insertBlockAfter(afterId, kind, file.name.replace(/\.[^.]+$/, ""));
+        const title =
+          kind === "file" ? file.name : file.name.replace(/\.[^.]+$/, "");
+        const id = editor.commands.insertBlockAfter(afterId, kind, title);
         editor.commands.updateBlock(id, { url: uploaded.url });
         afterId = id;
         toast.success(`Uploaded ${file.name}`);

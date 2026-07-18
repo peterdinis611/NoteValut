@@ -183,6 +183,12 @@ const DEFAULT_SETTINGS: SettingsRecord = {
   updatedAt: Date.now(),
 };
 
+/** Stable snapshot for SSR (`useSyncExternalStore` getServerSnapshot). */
+export const SERVER_SETTINGS_SNAPSHOT: SettingsRecord = Object.freeze({
+  ...DEFAULT_SETTINGS,
+  updatedAt: 0,
+});
+
 function normalizeSettings(raw: SettingsRecord): SettingsRecord {
   return {
     ...DEFAULT_SETTINGS,

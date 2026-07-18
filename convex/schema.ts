@@ -56,6 +56,8 @@ export default defineSchema({
     ownerId: v.string(),
     sharingEnabled: v.boolean(),
     publicReadonly: v.boolean(),
+    /** Optional full-bleed background on vault home */
+    backgroundImage: v.optional(v.string()),
     updatedAt: v.number(),
   }).index("by_owner", ["ownerId"]),
 

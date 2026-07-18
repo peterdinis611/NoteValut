@@ -5,6 +5,7 @@ import { emptyTable } from "@/lib/blocks";
 import { Extension } from "../create-extension";
 import type { BlockRenderProps } from "../types";
 import { PdfBlockView } from "../components/pdf-block-view";
+import { FileBlockView } from "../components/file-block-view";
 import { VideoBlockView } from "../components/video-block-view";
 
 export const TableBlock = Extension({
@@ -145,11 +146,43 @@ export const PdfBlock = Extension({
       label: "PDF",
       description: "Embed a PDF with NoteVault viewer",
       icon: "📄",
-      keywords: ["pdf", "document", "embed", "file", "reader"],
+      keywords: ["pdf", "document", "embed", "reader"],
       group: "Media",
     },
   ],
   render: (props) => <PdfBlockView {...props} />,
+});
+
+export const FileBlock = Extension({
+  name: "file",
+  types: ["file"],
+  atom: true,
+  slashCommands: [
+    {
+      id: "file",
+      type: "file",
+      label: "Office file",
+      description: "Word, Excel, or PowerPoint attachment",
+      icon: "📎",
+      keywords: [
+        "file",
+        "office",
+        "word",
+        "excel",
+        "powerpoint",
+        "docx",
+        "xlsx",
+        "pptx",
+        "doc",
+        "xls",
+        "ppt",
+        "attachment",
+        "document",
+      ],
+      group: "Media",
+    },
+  ],
+  render: (props) => <FileBlockView {...props} />,
 });
 
 export const WebLink = Extension({

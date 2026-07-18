@@ -1,9 +1,8 @@
-/** Re-export TanStack DB template helpers (no raw localStorage API). */
+/** Re-export TanStack DB template helpers. */
 export {
   type CustomPageTemplate,
   getCustomTemplate,
   loadCustomTemplates,
-  migrateLegacyTemplates,
   removeCustomTemplate,
   saveCustomTemplate,
   templatesCollection,

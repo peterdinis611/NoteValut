@@ -34,7 +34,7 @@ import { IconPicker } from "./icon-picker";
 import { MoreActionIcons, MoreActionsMenu, type MoreActionItem } from "./more-actions-menu";
 import { MoveDialog } from "./move-dialog";
 import { PageBreadcrumbs } from "./page-breadcrumbs";
-import { PageHeaderActions } from "./page-header-actions";
+import { CoverBanner } from "./cover-banner";
 import { PageProperties } from "./page-properties";
 import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
@@ -426,34 +426,22 @@ export function NoteEditor({
       ) : (
         <div className="page-scroll note-scroll">
           <div className="group/page relative">
-            {note.coverImage ? (
-              <div
-                className="page-cover page-cover-image"
-                style={{ backgroundImage: `url(${note.coverImage})` }}
-              />
-            ) : note.coverColor ? (
-              <div className={`page-cover bg-gradient-to-r ${note.coverColor}`} />
-            ) : (
-              <div className="page-cover-placeholder" />
-            )}
-            {!readOnly && (
-              <PageHeaderActions
-                hasCover={!!(note.coverColor || note.coverImage)}
-                hasIcon={showIcon}
-                coverValue={note.coverColor}
-                coverImage={note.coverImage}
-                onAddIcon={() => setShowIcon(true)}
-                onAddCover={(cover) => scheduleSave({ coverColor: cover, coverImage: null })}
-                onSetCoverImage={(url) =>
-                  scheduleSave({
-                    coverImage: url,
-                    coverColor: url ? null : note.coverColor ?? null,
-                  })
-                }
-                onRemoveCover={() => scheduleSave({ coverColor: null, coverImage: null })}
-                onUploadError={(msg) => toast.error(msg)}
-              />
-            )}
+            <CoverBanner
+              coverColor={note.coverColor}
+              coverImage={note.coverImage}
+              readOnly={readOnly}
+              onSetCoverColor={(cover) =>
+                scheduleSave({ coverColor: cover, coverImage: cover ? null : note.coverImage ?? null })
+              }
+              onSetCoverImage={(url) =>
+                scheduleSave({
+                  coverImage: url,
+                  coverColor: url ? null : note.coverColor ?? null,
+                })
+              }
+              onError={(msg) => toast.error(msg)}
+              onSuccess={(msg) => toast.success(msg)}
+            />
           </div>
 
           <article className="page-content">

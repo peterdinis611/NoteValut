@@ -26,6 +26,7 @@ export const blockValidator = v.object({
     v.literal("video"),
     v.literal("link"),
     v.literal("pdf"),
+    v.literal("file"),
   ),
   text: v.string(),
   checked: v.optional(v.boolean()),

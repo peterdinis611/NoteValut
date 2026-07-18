@@ -1,25 +1,60 @@
 "use client";
 
-import { useLiveQuery } from "@tanstack/react-db";
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
   applyTheme,
   getSettings,
   settingsCollection,
+  SERVER_SETTINGS_SNAPSHOT,
   type SettingsRecord,
 } from "@/db/settings-collection";
+import { migrateLegacyLocalStorageOnce } from "@/db/migrate-legacy";
+
+/**
+ * Subscribe to the TanStack DB settings collection (SSR-safe snapshot).
+ */
+function subscribeSettings(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => {};
+  migrateLegacyLocalStorageOnce();
+  try {
+    settingsCollection.startSyncImmediate();
+  } catch {
+    /* collection may already be syncing */
+  }
+  const subscription = settingsCollection.subscribeChanges(() => {
+    clientCache = null;
+    onStoreChange();
+  });
+  return () => subscription.unsubscribe();
+}
+
+let clientCache: SettingsRecord | null = null;
+let clientCacheKey = "";
+
+function getClientSnapshot(): SettingsRecord {
+  const row = settingsCollection.get("vault");
+  const key = row ? JSON.stringify(row) : "__default__";
+  if (clientCache && clientCacheKey === key) return clientCache;
+  clientCacheKey = key;
+  clientCache = getSettings();
+  return clientCache;
+}
+
+function getServerSnapshot(): SettingsRecord {
+  return SERVER_SETTINGS_SNAPSHOT;
+}
 
 export function useVaultSettings(): SettingsRecord {
-  useEffect(() => {
-    applyTheme(getSettings());
-  }, []);
+  const record = useSyncExternalStore(
+    subscribeSettings,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
 
-  const { data } = useLiveQuery((q) => q.from({ s: settingsCollection }));
-
-  const record = data?.find((row) => row.id === "vault") ?? data?.[0];
   useEffect(() => {
-    if (record) applyTheme(record);
+    migrateLegacyLocalStorageOnce();
+    applyTheme(record);
   }, [record]);
 
-  return record ?? getSettings();
+  return record;
 }

@@ -137,7 +137,6 @@ function CustomBlockView(props: BlockRenderProps) {
                   body: parsed.output.body,
                 };
                 saveCustomBlockTemplate(template);
-                window.dispatchEvent(new Event("nv-custom-blocks-changed"));
                 toast.success(`Saved “${template.label}” to slash menu`);
               }}
             >

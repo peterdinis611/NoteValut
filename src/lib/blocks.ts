@@ -20,7 +20,8 @@ export type BlockType =
   | "table"
   | "video"
   | "link"
-  | "pdf";
+  | "pdf"
+  | "file";
 
 export type CalloutVariant = "info" | "tip" | "warning";
 
@@ -304,6 +305,9 @@ export function markdownToBlocks(md: string): Block[] {
     } else if (/^\[pdf(?::([^\]]*))?\]\(([^)]+)\)$/i.test(line.trim())) {
       const m = line.trim().match(/^\[pdf(?::([^\]]*))?\]\(([^)]+)\)$/i);
       if (m) blocks.push(createBlock("pdf", m[1] || "", { url: m[2] }));
+    } else if (/^\[file(?::([^\]]*))?\]\(([^)]+)\)$/i.test(line.trim())) {
+      const m = line.trim().match(/^\[file(?::([^\]]*))?\]\(([^)]+)\)$/i);
+      if (m) blocks.push(createBlock("file", m[1] || "File", { url: m[2] }));
     } else if (/^\[([^\]]+)\]\(([^)]+)\)$/.test(line.trim())) {
       const m = line.trim().match(/^\[([^\]]+)\]\(([^)]+)\)$/);
       if (m) blocks.push(createBlock("link", m[1], { url: m[2], label: m[1] }));
@@ -358,6 +362,10 @@ export function blocksToMarkdown(blocks: Block[]): string {
           return block.text.trim()
             ? `[pdf:${block.text}](${block.url ?? ""})`
             : `[pdf](${block.url ?? ""})`;
+        case "file":
+          return block.text.trim()
+            ? `[file:${block.text}](${block.url ?? ""})`
+            : `[file](${block.url ?? ""})`;
         case "link":
           return `[${block.label || block.text || "link"}](${block.url ?? ""})`;
         case "table": {

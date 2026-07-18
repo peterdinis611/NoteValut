@@ -1,13 +1,26 @@
 "use client";
 
-import { useQuery } from "convex/react";
-import { ArrowRight, CalendarClock, FolderOpen, Network, Plus, Share2, Zap } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
+import {
+  ArrowRight,
+  CalendarClock,
+  FolderOpen,
+  ImageIcon,
+  Loader2,
+  Network,
+  Plus,
+  Share2,
+  Upload,
+  X,
+  Zap,
+} from "lucide-react";
 import { motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { countOpenTasks, countOverdueTasks } from "@/lib/blocks";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
+import { useVaultUpload } from "@/hooks/use-vault-upload";
 import { formatRelativeTime } from "@/lib/format";
 import { isFolder } from "@/lib/item-kinds";
 import {
@@ -19,6 +32,7 @@ import {
 import { PAGE_TEMPLATES } from "@/lib/templates";
 import { DailyCalendar } from "./daily-calendar";
 import { SharePanel } from "./share-panel";
+import { useToast } from "./toast";
 
 type Props = {
   ownerId: string;
@@ -75,7 +89,12 @@ export function VaultHome({
   onQuickCapture,
   onOpenGraph,
 }: Props) {
+  const toast = useToast();
   const [shareOpen, setShareOpen] = useState(false);
+  const [bgUploading, setBgUploading] = useState(false);
+  const bgFileRef = useRef<HTMLInputElement>(null);
+  const { uploadFile } = useVaultUpload();
+  const updateSettings = useMutation(api.vaultSettings.update);
   const customTemplates = useCustomTemplates();
   const templates = useMemo(
     () => [...customTemplates, ...PAGE_TEMPLATES.filter((t) => t.id !== "blank")],
@@ -83,6 +102,36 @@ export function VaultHome({
   );
   const stats = useQuery(api.notes.getVaultStats, { ownerId });
   const notes = useQuery(api.notes.list, { ownerId });
+  const vaultSettings = useQuery(api.vaultSettings.get, { ownerId });
+  const backgroundImage = vaultSettings?.backgroundImage;
+
+  async function uploadBackground(file: File | null) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Choose an image file");
+      return;
+    }
+    setBgUploading(true);
+    try {
+      const uploaded = await uploadFile(file);
+      await updateSettings({ ownerId, backgroundImage: uploaded.url });
+      toast.success("Vault background saved");
+    } catch {
+      toast.error("Couldn’t upload background");
+    } finally {
+      setBgUploading(false);
+      if (bgFileRef.current) bgFileRef.current.value = "";
+    }
+  }
+
+  async function clearBackground() {
+    try {
+      await updateSettings({ ownerId, backgroundImage: null });
+      toast.success("Background removed");
+    } catch {
+      toast.error("Couldn’t remove background");
+    }
+  }
 
   const recent =
     notes
@@ -104,14 +153,56 @@ export function VaultHome({
 
   return (
     <motion.div
-      className="vault-home note-scroll"
+      className={`vault-home note-scroll ${backgroundImage ? "vault-home-has-bg" : ""}`}
       initial="hidden"
       animate="visible"
       variants={staggerContainer}
+      style={
+        backgroundImage
+          ? ({ "--vault-bg-image": `url(${backgroundImage})` } as React.CSSProperties)
+          : undefined
+      }
     >
       <div className="vault-home-glow" aria-hidden />
+      {backgroundImage && <div className="vault-home-bg" aria-hidden />}
 
       <motion.header className="vault-home-hero" variants={fadeUpVariants} transition={easeOutSoft}>
+        <div className="vault-home-bg-actions">
+          <input
+            ref={bgFileRef}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(e) => void uploadBackground(e.target.files?.[0] ?? null)}
+          />
+          <button
+            type="button"
+            className="vault-bg-btn"
+            disabled={bgUploading}
+            onClick={() => bgFileRef.current?.click()}
+            title="Upload vault background"
+          >
+            {bgUploading ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : backgroundImage ? (
+              <ImageIcon className="size-3.5" />
+            ) : (
+              <Upload className="size-3.5" />
+            )}
+            {bgUploading ? "Uploading…" : backgroundImage ? "Change background" : "Vault background"}
+          </button>
+          {backgroundImage && (
+            <button
+              type="button"
+              className="vault-bg-btn"
+              onClick={() => void clearBackground()}
+              title="Remove background"
+            >
+              <X className="size-3.5" />
+              Remove
+            </button>
+          )}
+        </div>
         <p className="vault-home-kicker">Your knowledge vault</p>
         <h1 className="vault-home-title">NoteVault</h1>
         <p className="vault-home-subtitle">

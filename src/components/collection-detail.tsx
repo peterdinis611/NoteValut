@@ -32,6 +32,7 @@ import { PAGE_TEMPLATES } from "@/lib/templates";
 import { useVaultAccess } from "@/context/vault-access";
 import { VaultEditor } from "@/editor";
 import { IconPicker } from "./icon-picker";
+import { CoverBanner } from "./cover-banner";
 import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
 
@@ -122,6 +123,31 @@ export function CollectionDetail({
             : "Read-only view — you can browse but not make changes."}
         </div>
       )}
+
+      <div className="collection-cover-wrap group/page relative">
+        <CoverBanner
+          coverColor={folder.coverColor}
+          coverImage={folder.coverImage}
+          readOnly={readOnly}
+          compactEmpty={false}
+          onSetCoverColor={(cover) =>
+            void updateNote({
+              id: folder._id,
+              coverColor: cover,
+              coverImage: cover ? null : folder.coverImage ?? null,
+            })
+          }
+          onSetCoverImage={(url) =>
+            void updateNote({
+              id: folder._id,
+              coverImage: url,
+              coverColor: url ? null : folder.coverColor ?? null,
+            })
+          }
+          onError={(msg) => toast.error(msg)}
+          onSuccess={(msg) => toast.success(msg)}
+        />
+      </div>
 
       <div className="collection-hero" style={{ borderColor: label.hex }}>
         <div className="collection-hero-top">

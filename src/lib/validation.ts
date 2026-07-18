@@ -23,6 +23,7 @@ export const BlockTypeSchema = v.picklist([
   "video",
   "link",
   "pdf",
+  "file",
 ]);
 
 export const CalloutVariantSchema = v.picklist(["info", "tip", "warning"]);
@@ -71,7 +72,7 @@ export const CoverImageSchema = v.pipe(
   v.string(),
   v.trim(),
   v.url("Enter a valid image URL"),
-  v.maxLength(2000),
+  v.maxLength(4000),
 );
 
 export const CustomBlockNameSchema = v.pipe(

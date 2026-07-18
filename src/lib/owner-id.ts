@@ -1,11 +1,3 @@
-const OWNER_KEY = "notevault-owner-id";
+import { getOwnerId, readOwnerRecord, ownerCollection } from "@/db/owner-collection";
 
-export function getOwnerId(): string {
-  if (typeof window === "undefined") return "server";
-  let id = localStorage.getItem(OWNER_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(OWNER_KEY, id);
-  }
-  return id;
-}
+export { getOwnerId, readOwnerRecord, ownerCollection };

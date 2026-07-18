@@ -14,7 +14,7 @@ import {
 import { Callout, Divider, PageLink } from "./advanced";
 import { ImageBlock, NumberedList, Toggle } from "./extra";
 import { CustomBlock } from "./custom";
-import { TableBlock, VideoBlock, WebLink, PdfBlock } from "./rich";
+import { TableBlock, VideoBlock, WebLink, PdfBlock, FileBlock } from "./rich";
 import type { Extension } from "../types";
 
 /** Default NoteVault starter kit — TipTap-style bundle of block extensions. */
@@ -37,6 +37,7 @@ export const StarterKit: Extension[] = [
   WebLink,
   VideoBlock,
   PdfBlock,
+  FileBlock,
   ImageBlock,
   Toggle,
   CustomBlock,
@@ -62,6 +63,7 @@ export {
   WebLink,
   VideoBlock,
   PdfBlock,
+  FileBlock,
   ImageBlock,
   Toggle,
   CustomBlock,

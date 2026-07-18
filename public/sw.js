@@ -1,5 +1,5 @@
 /* NoteVault offline shell cache */
-const CACHE = "notevault-shell-v1";
+const CACHE = "notevault-shell-v2";
 const PRECACHE = ["/", "/manifest.webmanifest", "/icons/icon-192.svg", "/icons/icon-512.svg"];
 
 self.addEventListener("install", (event) => {
@@ -23,10 +23,10 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // Never cache Convex / API / Next data / HMR
+  // Never cache API / Next runtime / HMR / Convex
   if (
     url.pathname.startsWith("/api") ||
-    url.pathname.includes("_next/webpack") ||
+    url.pathname.startsWith("/_next/") ||
     url.pathname.includes("hot-update") ||
     url.hostname.includes("convex")
   ) {
@@ -47,9 +47,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets: stale-while-revalidate
+  // Icons / manifest only (hashed Next chunks are never cached — avoids SW vs HMR)
   if (
-    url.pathname.startsWith("/_next/static") ||
     url.pathname.startsWith("/icons/") ||
     url.pathname.endsWith(".svg") ||
     url.pathname.endsWith(".webmanifest")

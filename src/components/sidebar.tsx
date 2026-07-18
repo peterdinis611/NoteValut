@@ -33,6 +33,7 @@ import { searchNotes } from "@/lib/search";
 import { CreateMenu } from "./create-menu";
 import { MoveDialog } from "./move-dialog";
 import { SharePanel } from "./share-panel";
+import { AuthControls } from "./auth-controls";
 import { useToast } from "./toast";
 import { VirtualList } from "./virtual-list";
 
@@ -577,7 +578,9 @@ export function Sidebar({
       </nav>
 
       <div className="sidebar-footer">
-        <div className="sidebar-footer-tools">
+        <div className="sidebar-footer-row">
+          <AuthControls />
+          <div className="sidebar-footer-tools">
           <button
             type="button"
             className="sidebar-tool"
@@ -634,6 +637,7 @@ export function Sidebar({
             <Trash2 className="size-3.5" />
             {trashCount > 0 && <span className="sidebar-tool-badge">{trashCount}</span>}
           </button>
+          </div>
         </div>
         {showBin && (
           <div className="sidebar-bin">

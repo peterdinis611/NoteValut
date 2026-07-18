@@ -15,6 +15,7 @@ export const get = query({
       ownerId: args.ownerId,
       sharingEnabled: false,
       publicReadonly: true,
+      backgroundImage: undefined as string | undefined,
       updatedAt: Date.now(),
     };
   },
@@ -25,6 +26,7 @@ export const update = mutation({
     ownerId: v.string(),
     sharingEnabled: v.optional(v.boolean()),
     publicReadonly: v.optional(v.boolean()),
+    backgroundImage: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -33,15 +35,14 @@ export const update = mutation({
       .first();
 
     const now = Date.now();
-    const patch = {
-      sharingEnabled: args.sharingEnabled,
-      publicReadonly: args.publicReadonly,
-    };
 
     if (existing) {
       const updates: Record<string, unknown> = { updatedAt: now };
-      if (patch.sharingEnabled !== undefined) updates.sharingEnabled = patch.sharingEnabled;
-      if (patch.publicReadonly !== undefined) updates.publicReadonly = patch.publicReadonly;
+      if (args.sharingEnabled !== undefined) updates.sharingEnabled = args.sharingEnabled;
+      if (args.publicReadonly !== undefined) updates.publicReadonly = args.publicReadonly;
+      if (args.backgroundImage !== undefined) {
+        updates.backgroundImage = args.backgroundImage ?? undefined;
+      }
       await ctx.db.patch(existing._id, updates);
       return existing._id;
     }
@@ -50,6 +51,7 @@ export const update = mutation({
       ownerId: args.ownerId,
       sharingEnabled: args.sharingEnabled ?? false,
       publicReadonly: args.publicReadonly ?? true,
+      backgroundImage: args.backgroundImage ?? undefined,
       updatedAt: now,
     });
   },

@@ -1,3 +1,4 @@
+import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import { ConvexClientProvider } from "@/components/providers";
@@ -52,8 +53,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full dark`}
     >
       <body className="min-h-full font-sans">
-        <ConvexClientProvider>{children}</ConvexClientProvider>
-        <PwaRegister />
+        <ClerkProvider>
+          <ConvexClientProvider>{children}</ConvexClientProvider>
+          <PwaRegister />
+        </ClerkProvider>
       </body>
     </html>
   );

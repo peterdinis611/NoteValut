@@ -22,7 +22,7 @@ import type {
   EditorOptions,
   SlashCommandDef,
 } from "./types";
-import { loadCustomBlockTemplates } from "./custom-blocks";
+import { loadCustomBlockTemplates, subscribeCustomBlocks } from "./custom-blocks";
 
 export function useEditor(options: EditorOptions) {
   const {
@@ -38,11 +38,7 @@ export function useEditor(options: EditorOptions) {
   const [customTick, setCustomTick] = useState(0);
 
   useEffect(() => {
-    function refresh() {
-      setCustomTick((n) => n + 1);
-    }
-    window.addEventListener("nv-custom-blocks-changed", refresh);
-    return () => window.removeEventListener("nv-custom-blocks-changed", refresh);
+    return subscribeCustomBlocks(() => setCustomTick((n) => n + 1));
   }, []);
 
   const slashCommands = useMemo(() => {
@@ -149,7 +145,11 @@ export function useEditor(options: EditorOptions) {
                   pageId: type === "pagelink" ? extras?.pageId : undefined,
                   language: type === "code" ? (extras?.language ?? "auto") : undefined,
                   url:
-                    type === "image" || type === "video" || type === "link" || type === "pdf"
+                    type === "image" ||
+                    type === "video" ||
+                    type === "link" ||
+                    type === "pdf" ||
+                    type === "file"
                       ? extras?.url
                       : undefined,
                   label:
@@ -544,7 +544,8 @@ export function useEditor(options: EditorOptions) {
       block.type !== "video" &&
       block.type !== "link" &&
       block.type !== "image" &&
-      block.type !== "pdf"
+      block.type !== "pdf" &&
+      block.type !== "file"
     ) {
       e.preventDefault();
       setSlashBlockId(null);
