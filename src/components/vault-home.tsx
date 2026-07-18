@@ -17,6 +17,7 @@ import {
   staggerItem,
 } from "@/lib/motion";
 import { PAGE_TEMPLATES } from "@/lib/templates";
+import { DailyCalendar } from "./daily-calendar";
 import { SharePanel } from "./share-panel";
 
 type Props = {
@@ -109,6 +110,10 @@ export function VaultHome({
           </p>
         )}
       </motion.header>
+
+      <motion.div variants={fadeUpVariants} transition={easeOutSoft}>
+        <DailyCalendar ownerId={ownerId} onOpenNote={onNavigate} />
+      </motion.div>
 
       <div className="vault-home-body">
         <motion.section className="vault-section" variants={fadeUpVariants} transition={easeOutSoft}>

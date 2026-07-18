@@ -25,6 +25,7 @@ export const blockValidator = v.object({
     v.literal("table"),
     v.literal("video"),
     v.literal("link"),
+    v.literal("pdf"),
   ),
   text: v.string(),
   checked: v.optional(v.boolean()),
@@ -38,4 +39,8 @@ export const blockValidator = v.object({
   rows: v.optional(v.array(v.array(v.string()))),
   color: v.optional(v.string()),
   bgColor: v.optional(v.string()),
+  width: v.optional(v.number()),
+  align: v.optional(
+    v.union(v.literal("left"), v.literal("center"), v.literal("right")),
+  ),
 });

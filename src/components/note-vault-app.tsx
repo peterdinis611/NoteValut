@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { VaultAccessProvider } from "@/context/vault-access";
+import { toDailyKey } from "@/lib/daily";
 import { easeOutSoft, easeQuick, pageVariants } from "@/lib/motion";
 import { getTemplate } from "@/lib/templates";
 import { downloadVaultBackup } from "@/lib/vault-backup";
@@ -24,12 +25,26 @@ import { VaultHome } from "./vault-home";
 
 type MainPanel = "home" | "note" | "settings" | "tags";
 
+function useIsMobile(breakpoint = 768) {
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+    const apply = () => setMobile(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, [breakpoint]);
+  return mobile;
+}
+
 export function NoteVaultApp() {
   const ownerId = useOwnerId();
   const toast = useToast();
+  const isMobile = useIsMobile();
   useVaultSettings();
   const seedDemo = useMutation(api.notes.seedDemo);
   const createNote = useMutation(api.notes.create);
+  const getOrCreateDaily = useMutation(api.notes.getOrCreateDaily);
   const notes = useQuery(
     api.notes.list,
     ownerId ? { ownerId, includeArchived: true } : "skip",
@@ -42,6 +57,10 @@ export function NoteVaultApp() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTags, setShowTags] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
+
+  useEffect(() => {
+    setSidebarOpen(!isMobile);
+  }, [isMobile]);
 
   useEffect(() => {
     if (!ownerId || seeded) return;
@@ -72,6 +91,25 @@ export function NoteVaultApp() {
     setShowTags(false);
   }, []);
 
+  const selectNote = useCallback(
+    (id: Id<"notes"> | null) => {
+      clearPanels();
+      setActiveId(id);
+      if (isMobile) setSidebarOpen(false);
+    },
+    [clearPanels, isMobile],
+  );
+
+  const openToday = useCallback(async () => {
+    if (!ownerId) return;
+    try {
+      const id = await getOrCreateDaily({ ownerId, dailyKey: toDailyKey() });
+      selectNote(id);
+    } catch {
+      toast.error("Couldn’t open today’s note");
+    }
+  }, [ownerId, getOrCreateDaily, selectNote, toast]);
+
   const handleCreateEntry = useCallback(
     async (parentId?: Id<"notes">, templateId = "blank") => {
       if (!ownerId) return;
@@ -92,6 +130,7 @@ export function NoteVaultApp() {
         });
         clearPanels();
         setActiveId(id);
+        if (isMobile) setSidebarOpen(false);
         toast.success(
           template.id === "blank" ? "Entry created" : `Created from ${template.name}`,
         );
@@ -99,7 +138,7 @@ export function NoteVaultApp() {
         toast.error("Couldn’t create entry");
       }
     },
-    [ownerId, createNote, toast, clearPanels],
+    [ownerId, createNote, toast, clearPanels, isMobile],
   );
 
   const handleCreateCollection = useCallback(
@@ -116,12 +155,13 @@ export function NoteVaultApp() {
         });
         clearPanels();
         setActiveId(id);
+        if (isMobile) setSidebarOpen(false);
         toast.success("Collection created");
       } catch {
         toast.error("Couldn’t create collection");
       }
     },
-    [ownerId, createNote, toast, clearPanels],
+    [ownerId, createNote, toast, clearPanels, isMobile],
   );
 
   const handleExport = useCallback(() => {
@@ -162,6 +202,14 @@ export function NoteVaultApp() {
         run: () => void handleCreateCollection(),
       },
       {
+        id: "today",
+        label: "Today’s note",
+        hint: "Open or create daily note",
+        icon: CommandIcons.today,
+        keywords: ["daily", "calendar", "today"],
+        run: () => void openToday(),
+      },
+      {
         id: "quick-capture",
         label: "Quick capture",
         icon: CommandIcons.capture,
@@ -199,7 +247,7 @@ export function NoteVaultApp() {
         run: handleExport,
       },
     ],
-    [clearPanels, handleCreateEntry, handleCreateCollection, handleExport],
+    [clearPanels, handleCreateEntry, handleCreateCollection, handleExport, openToday],
   );
 
   if (!ownerId) {
@@ -223,31 +271,43 @@ export function NoteVaultApp() {
 
   return (
     <VaultAccessProvider value={{ readOnly: false, isOwner: true }}>
-      <div className="app-shell">
+      <div className={`app-shell ${isMobile ? "app-shell-mobile" : ""} ${sidebarOpen ? "app-shell-sidebar-open" : ""}`}>
         <AnimatePresence initial={false}>
+          {isMobile && sidebarOpen && (
+            <motion.button
+              type="button"
+              className="sidebar-backdrop"
+              aria-label="Close sidebar"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={easeQuick}
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
           {sidebarOpen && (
             <Sidebar
               ownerId={ownerId}
               activeId={activeId}
               settingsActive={showSettings}
               tagsActive={showTags}
-              onSelect={(id) => {
-                clearPanels();
-                setActiveId(id);
-              }}
+              onSelect={selectNote}
               onGoHome={() => {
                 clearPanels();
                 setActiveId(null);
+                if (isMobile) setSidebarOpen(false);
               }}
               onOpenSettings={() => {
                 setActiveId(null);
                 setShowTags(false);
                 setShowSettings(true);
+                if (isMobile) setSidebarOpen(false);
               }}
               onOpenTags={() => {
                 setActiveId(null);
                 setShowSettings(false);
                 setShowTags(true);
+                if (isMobile) setSidebarOpen(false);
               }}
               onCollapse={() => setSidebarOpen(false)}
               onCreateEntry={handleCreateEntry}
@@ -296,31 +356,22 @@ export function NoteVaultApp() {
                 <TagsHub
                   ownerId={ownerId}
                   onClose={() => setShowTags(false)}
-                  onNavigate={(id) => {
-                    clearPanels();
-                    setActiveId(id);
-                  }}
+                  onNavigate={selectNote}
                 />
               ) : panel === "note" && activeId ? (
                 <NoteEditor
                   noteId={activeId}
                   ownerId={ownerId}
-                  onNavigate={(id) => {
-                    clearPanels();
-                    setActiveId(id);
-                  }}
+                  onNavigate={selectNote}
                   onToggleSidebar={() => setSidebarOpen(true)}
-                  sidebarCollapsed={!sidebarOpen}
+                  sidebarCollapsed={!sidebarOpen || isMobile}
                   onCreateEntry={handleCreateEntry}
                   onCreateCollection={handleCreateCollection}
                 />
               ) : (
                 <VaultHome
                   ownerId={ownerId}
-                  onNavigate={(id) => {
-                    clearPanels();
-                    setActiveId(id);
-                  }}
+                  onNavigate={selectNote}
                   onCreateEntry={(templateId) => handleCreateEntry(undefined, templateId)}
                   onCreateCollection={() => handleCreateCollection()}
                   onQuickCapture={() => setQuickCaptureOpen(true)}
@@ -334,20 +385,14 @@ export function NoteVaultApp() {
             ownerId={ownerId}
             open={quickCaptureOpen}
             onClose={() => setQuickCaptureOpen(false)}
-            onCreated={(id) => {
-              clearPanels();
-              setActiveId(id);
-            }}
+            onCreated={selectNote}
           />
           <CommandPalette
             open={cmdOpen}
             onClose={() => setCmdOpen(false)}
             notes={notes?.filter((n) => !n.archived && !n.trashed)}
             actions={cmdActions}
-            onNavigate={(id) => {
-              clearPanels();
-              setActiveId(id);
-            }}
+            onNavigate={selectNote}
           />
         </main>
       </div>

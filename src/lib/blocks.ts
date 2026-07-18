@@ -19,7 +19,8 @@ export type BlockType =
   | "custom"
   | "table"
   | "video"
-  | "link";
+  | "link"
+  | "pdf";
 
 export type CalloutVariant = "info" | "tip" | "warning";
 
@@ -39,6 +40,10 @@ export type Block = {
   color?: string;
   /** Highlight background id from HIGHLIGHT_COLORS */
   bgColor?: string;
+  /** Image width as % of editor content (20–100) */
+  width?: number;
+  /** Image horizontal alignment */
+  align?: "left" | "center" | "right";
 };
 
 export type SlashCommand = {
@@ -68,7 +73,7 @@ export function createBlock(
   type: BlockType,
   text = "",
   extras?: Partial<
-    Pick<Block, "checked" | "calloutVariant" | "pageId" | "language" | "url" | "label" | "rows" | "color" | "bgColor">
+    Pick<Block, "checked" | "calloutVariant" | "pageId" | "language" | "url" | "label" | "rows" | "color" | "bgColor" | "width" | "align">
   >,
 ): Block {
   return {
@@ -204,6 +209,9 @@ export function markdownToBlocks(md: string): Block[] {
     } else if (/^\[video\]\(([^)]+)\)$/i.test(line.trim())) {
       const m = line.trim().match(/^\[video\]\(([^)]+)\)$/i);
       if (m) blocks.push(createBlock("video", "", { url: m[1] }));
+    } else if (/^\[pdf(?::([^\]]*))?\]\(([^)]+)\)$/i.test(line.trim())) {
+      const m = line.trim().match(/^\[pdf(?::([^\]]*))?\]\(([^)]+)\)$/i);
+      if (m) blocks.push(createBlock("pdf", m[1] || "", { url: m[2] }));
     } else if (/^\[([^\]]+)\]\(([^)]+)\)$/.test(line.trim())) {
       const m = line.trim().match(/^\[([^\]]+)\]\(([^)]+)\)$/);
       if (m) blocks.push(createBlock("link", m[1], { url: m[2], label: m[1] }));
@@ -254,6 +262,10 @@ export function blocksToMarkdown(blocks: Block[]): string {
           return `![${block.text || "image"}](${block.url ?? ""})`;
         case "video":
           return `[video](${block.url ?? ""})`;
+        case "pdf":
+          return block.text.trim()
+            ? `[pdf:${block.text}](${block.url ?? ""})`
+            : `[pdf](${block.url ?? ""})`;
         case "link":
           return `[${block.label || block.text || "link"}](${block.url ?? ""})`;
         case "table": {

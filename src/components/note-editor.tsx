@@ -35,6 +35,7 @@ import { PageProperties } from "./page-properties";
 import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
 import { UiTooltip } from "./ui-tooltip";
+import { VersionHistoryPanel } from "./version-history-panel";
 
 type Props = {
   noteId: Id<"notes">;
@@ -70,6 +71,7 @@ export function NoteEditor({
   const [showIcon, setShowIcon] = useState(true);
   const [shareOpen, setShareOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
 
@@ -255,6 +257,12 @@ export function NoteEditor({
           icon: MoreActionIcons.template,
           onClick: saveAsTemplate,
         },
+        {
+          id: "history",
+          label: "Version history",
+          icon: MoreActionIcons.history,
+          onClick: () => setHistoryOpen(true),
+        },
       );
     }
     moreItems.push({
@@ -305,12 +313,20 @@ export function NoteEditor({
       onClick: () => void copyPageUrl(),
     });
     if (!isFolder(note)) {
-      moreItems.push({
-        id: "copy-md",
-        label: "Copy as Markdown",
-        icon: MoreActionIcons.copy,
-        onClick: () => void copyMarkdown(),
-      });
+      moreItems.push(
+        {
+          id: "copy-md",
+          label: "Copy as Markdown",
+          icon: MoreActionIcons.copy,
+          onClick: () => void copyMarkdown(),
+        },
+        {
+          id: "history",
+          label: "Version history",
+          icon: MoreActionIcons.history,
+          onClick: () => setHistoryOpen(true),
+        },
+      );
     }
   }
 
@@ -508,6 +524,14 @@ export function NoteEditor({
           noteId={noteId}
           noteTitle={note.title}
           currentParentId={note.parentId ?? null}
+        />
+      )}
+      {!isFolder(note) && (
+        <VersionHistoryPanel
+          open={historyOpen}
+          onClose={() => setHistoryOpen(false)}
+          noteId={noteId}
+          readOnly={readOnly}
         />
       )}
     </div>

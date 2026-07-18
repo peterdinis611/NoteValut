@@ -28,6 +28,8 @@ type Props = {
   variant: StatusVariant;
   title: string;
   description: string;
+  /** Optional technical detail (stack message, digest) — kept visually quiet. */
+  detail?: string;
   actions?: StatusAction[];
   children?: ReactNode;
   compact?: boolean;
@@ -37,6 +39,7 @@ export function LottieStatus({
   variant,
   title,
   description,
+  detail,
   actions,
   children,
   compact = false,
@@ -57,6 +60,12 @@ export function LottieStatus({
       <p className="status-kicker">NoteVault</p>
       <h1 className="status-title">{title}</h1>
       <p className="status-description">{description}</p>
+      {detail ? (
+        <details className="status-detail">
+          <summary>Technical details</summary>
+          <p className="status-meta">{detail}</p>
+        </details>
+      ) : null}
       {children}
       {actions && actions.length > 0 && (
         <div className="status-actions">

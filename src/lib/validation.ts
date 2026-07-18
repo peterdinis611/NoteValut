@@ -22,6 +22,7 @@ export const BlockTypeSchema = v.picklist([
   "table",
   "video",
   "link",
+  "pdf",
 ]);
 
 export const CalloutVariantSchema = v.picklist(["info", "tip", "warning"]);
@@ -39,6 +40,8 @@ export const BlockSchema = v.object({
   rows: v.optional(v.array(v.array(v.string()))),
   color: v.optional(v.string()),
   bgColor: v.optional(v.string()),
+  width: v.optional(v.number()),
+  align: v.optional(v.picklist(["left", "center", "right"])),
 });
 
 export const BlocksSchema = v.pipe(v.array(BlockSchema), v.minLength(1));

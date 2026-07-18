@@ -71,6 +71,22 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     ],
   },
   {
+    id: "daily",
+    name: "Daily note",
+    icon: "☀️",
+    description: "Today’s focus, log, and reflection",
+    tags: ["daily"],
+    blocks: [
+      createBlock("heading2", "Focus"),
+      createBlock("todo", "", { checked: false }),
+      createBlock("todo", "", { checked: false }),
+      createBlock("heading2", "Log"),
+      createBlock("paragraph", ""),
+      createBlock("heading2", "Reflection"),
+      createBlock("callout", "One thing I learned…", { calloutVariant: "tip" }),
+    ],
+  },
+  {
     id: "weekly-review",
     name: "Weekly review",
     icon: "📅",

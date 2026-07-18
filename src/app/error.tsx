@@ -13,23 +13,20 @@ export default function ErrorPage({ error, reset }: Props) {
     console.error(error);
   }, [error]);
 
+  const tech = [error.message?.trim(), error.digest ? `ID: ${error.digest}` : null]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <LottieStatus
       variant="error"
       title="Something went wrong"
-      description={
-        error.message?.trim()
-          ? error.message
-          : "An unexpected error occurred while loading this page."
-      }
+      description="This screen hit an unexpected snag. Try again — your vault data is safe."
+      detail={tech || undefined}
       actions={[
         { label: "Try again", onClick: reset, primary: true },
         { label: "Back to vault", href: "/" },
       ]}
-    >
-      {error.digest ? (
-        <p className="status-meta">Error ID: {error.digest}</p>
-      ) : null}
-    </LottieStatus>
+    />
   );
 }

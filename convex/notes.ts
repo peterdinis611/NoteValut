@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { blockValidator } from "./block";
+import { snapshotNote } from "./versions";
 
 const block = blockValidator;
 
@@ -333,6 +334,27 @@ export const update = mutation({
     if (patch.pinned !== undefined) updates.pinned = patch.pinned;
     if (patch.archived !== undefined) updates.archived = patch.archived;
     if (patch.parentId !== undefined) updates.parentId = patch.parentId ?? undefined;
+
+    const contentChanging =
+      patch.title !== undefined ||
+      patch.content !== undefined ||
+      patch.blocks !== undefined ||
+      patch.tags !== undefined;
+
+    if (contentChanging && existing.kind !== "folder") {
+      const titleSame = patch.title === undefined || patch.title === existing.title;
+      const contentSame = patch.content === undefined || patch.content === existing.content;
+      const blocksSame =
+        patch.blocks === undefined ||
+        JSON.stringify(patch.blocks) === JSON.stringify(existing.blocks ?? []);
+      const tagsSame =
+        patch.tags === undefined ||
+        JSON.stringify(patch.tags) === JSON.stringify(existing.tags);
+
+      if (!(titleSame && contentSame && blocksSame && tagsSame)) {
+        await snapshotNote(ctx, id);
+      }
+    }
 
     await ctx.db.patch(id, updates);
     return id;
@@ -666,5 +688,113 @@ export const seedDemo = mutation({
     });
 
     return { seeded: true };
+  },
+});
+
+function formatDailyTitleServer(key: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+  if (!m) return `Daily · ${key}`;
+  const date = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  return `Daily · ${date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  })}`;
+}
+
+export const getByDailyKey = query({
+  args: {
+    ownerId: v.string(),
+    dailyKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("notes")
+      .withIndex("by_owner_daily", (q) =>
+        q.eq("ownerId", args.ownerId).eq("dailyKey", args.dailyKey),
+      )
+      .first();
+  },
+});
+
+export const listDailyKeys = query({
+  args: {
+    ownerId: v.string(),
+    keys: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const found: Record<string, Id<"notes">> = {};
+    for (const key of args.keys) {
+      const note = await ctx.db
+        .query("notes")
+        .withIndex("by_owner_daily", (q) =>
+          q.eq("ownerId", args.ownerId).eq("dailyKey", key),
+        )
+        .first();
+      if (note && !note.trashed) found[key] = note._id;
+    }
+    return found;
+  },
+});
+
+export const getOrCreateDaily = mutation({
+  args: {
+    ownerId: v.string(),
+    dailyKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(args.dailyKey)) {
+      throw new Error("Invalid daily key");
+    }
+
+    const existing = await ctx.db
+      .query("notes")
+      .withIndex("by_owner_daily", (q) =>
+        q.eq("ownerId", args.ownerId).eq("dailyKey", args.dailyKey),
+      )
+      .first();
+
+    if (existing && !existing.trashed) return existing._id;
+
+    if (existing?.trashed) {
+      await ctx.db.patch(existing._id, {
+        trashed: false,
+        trashedAt: undefined,
+        archived: false,
+        updatedAt: Date.now(),
+      });
+      return existing._id;
+    }
+
+    const now = Date.now();
+    return await ctx.db.insert("notes", {
+      ownerId: args.ownerId,
+      title: formatDailyTitleServer(args.dailyKey),
+      content: "",
+      blocks: [
+        { id: newId(), type: "heading2", text: "Focus" },
+        { id: newId(), type: "todo", text: "", checked: false },
+        { id: newId(), type: "todo", text: "", checked: false },
+        { id: newId(), type: "heading2", text: "Log" },
+        { id: newId(), type: "paragraph", text: "" },
+        { id: newId(), type: "heading2", text: "Reflection" },
+        {
+          id: newId(),
+          type: "callout",
+          text: "One thing I learned…",
+          calloutVariant: "tip",
+        },
+      ],
+      icon: "☀️",
+      kind: "page",
+      pinned: false,
+      archived: false,
+      trashed: false,
+      tags: ["daily"],
+      dailyKey: args.dailyKey,
+      updatedAt: now,
+    });
   },
 });

@@ -4,6 +4,7 @@ import { ExternalLink, Film, Link2, Plus, Trash2 } from "lucide-react";
 import { emptyTable, youtubeEmbedUrl } from "@/lib/blocks";
 import { Extension } from "../create-extension";
 import type { BlockRenderProps } from "../types";
+import { PdfBlockView } from "../components/pdf-block-view";
 
 export const TableBlock = Extension({
   name: "table",
@@ -150,6 +151,24 @@ export const VideoBlock = Extension({
       </div>
     );
   },
+});
+
+export const PdfBlock = Extension({
+  name: "pdf",
+  types: ["pdf"],
+  atom: true,
+  slashCommands: [
+    {
+      id: "pdf",
+      type: "pdf",
+      label: "PDF",
+      description: "Embed a PDF with NoteVault viewer",
+      icon: "📄",
+      keywords: ["pdf", "document", "embed", "file", "reader"],
+      group: "Media",
+    },
+  ],
+  render: (props) => <PdfBlockView {...props} />,
 });
 
 export const WebLink = Extension({

@@ -9,16 +9,18 @@ type Props = {
 
 /** Catches errors in the root layout. Must define its own html/body. */
 export default function GlobalError({ error, reset }: Props) {
+  const tech = [error.message?.trim(), error.digest ? `ID: ${error.digest}` : null]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <html lang="en" className="h-full dark">
       <body className="min-h-full bg-[#12151c] font-sans text-white/90">
         <LottieStatus
           variant="error"
           title="NoteVault crashed"
-          description={
-            error.message?.trim() ||
-            "A critical error stopped the app from rendering."
-          }
+          description="A critical error stopped the app from rendering. Reload to get back in."
+          detail={tech || undefined}
           actions={[
             { label: "Reload", onClick: reset, primary: true },
             { label: "Go home", href: "/" },

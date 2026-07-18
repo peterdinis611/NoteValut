@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useDebouncedValue } from "@tanstack/react-pacer";
 import {
   Archive,
+  CalendarDays,
   ChevronDown,
   ChevronRight,
   Clock3,
@@ -15,7 +16,6 @@ import {
   Search,
   Settings2,
   Share2,
-  Sparkles,
   StickyNote,
   Tag,
   Trash2,
@@ -26,23 +26,16 @@ import { useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { getLabelColor } from "@/lib/colors";
-import { useCustomTemplates } from "@/hooks/use-custom-templates";
+import { toDailyKey } from "@/lib/daily";
 import { isFolder } from "@/lib/item-kinds";
 import { easeOutSoft, sidebarVariants } from "@/lib/motion";
 import { searchNotes } from "@/lib/search";
-import { PAGE_TEMPLATES } from "@/lib/templates";
 import { CreateMenu } from "./create-menu";
 import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
 import { VirtualList } from "./virtual-list";
 
-type BrowseMode =
-  | "vault"
-  | "favorites"
-  | "recent"
-  | "collections"
-  | "pages"
-  | "archive";
+type BrowseMode = "all" | "favorites" | "recent" | "collections" | "archive";
 
 type Props = {
   ownerId: string;
@@ -81,9 +74,8 @@ export function Sidebar({
   const [showBin, setShowBin] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showShare, setShowShare] = useState(false);
-  const [browse, setBrowse] = useState<BrowseMode>("vault");
+  const [browse, setBrowse] = useState<BrowseMode>("all");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const customTemplates = useCustomTemplates();
 
   const notes = useQuery(api.notes.list, { ownerId });
   const trashed = useQuery(api.notes.listTrashed, { ownerId });
@@ -93,6 +85,7 @@ export function Sidebar({
   const trashNote = useMutation(api.notes.trash);
   const restoreNote = useMutation(api.notes.restoreFromTrash);
   const emptyTrash = useMutation(api.notes.emptyTrash);
+  const getOrCreateDaily = useMutation(api.notes.getOrCreateDaily);
 
   async function handleTrash(id: Id<"notes">) {
     try {
@@ -152,10 +145,6 @@ export function Sidebar({
     () => activeItems.filter((n) => isFolder(n) && !n.parentId),
     [activeItems],
   );
-  const pages = useMemo(
-    () => activeItems.filter((n) => !isFolder(n) && !n.parentId),
-    [activeItems],
-  );
   const recent = useMemo(
     () =>
       [...activeItems]
@@ -189,13 +178,11 @@ export function Sidebar({
     !settingsActive &&
     !tagsActive &&
     !isSearching &&
-    browse === "vault" &&
     !showBin;
 
   function setBrowseMode(mode: BrowseMode) {
     setShowBin(false);
     setBrowse(mode);
-    if (mode === "vault") onGoHome();
   }
 
   return (
@@ -240,13 +227,29 @@ export function Sidebar({
           type="button"
           className={`sidebar-nav-btn ${homeActive ? "sidebar-nav-btn-active" : ""}`}
           onClick={() => {
-            setBrowse("vault");
+            setBrowse("all");
             setShowBin(false);
             onGoHome();
           }}
         >
           <Home className="size-3.5" />
           Home
+        </button>
+        <button
+          type="button"
+          className="sidebar-nav-btn"
+          onClick={async () => {
+            try {
+              const id = await getOrCreateDaily({ ownerId, dailyKey: toDailyKey() });
+              setShowBin(false);
+              onSelect(id);
+            } catch {
+              toast.error("Couldn’t open today");
+            }
+          }}
+        >
+          <CalendarDays className="size-3.5" />
+          Today
         </button>
         <button
           type="button"
@@ -265,15 +268,14 @@ export function Sidebar({
         />
       </div>
 
-      <div className="sidebar-shortcuts">
+      <div className="sidebar-filters" role="tablist" aria-label="Browse">
         {(
           [
-            { id: "vault", label: "Vault", icon: StickyNote, count: rootItems.length },
-            { id: "favorites", label: "Favorites", icon: Pin, count: pinned.length },
-            { id: "recent", label: "Recent", icon: Clock3, count: recent.length },
-            { id: "collections", label: "Collections", icon: FolderOpen, count: collections.length },
-            { id: "pages", label: "Pages", icon: StickyNote, count: pages.length },
-            { id: "archive", label: "Archive", icon: Archive, count: archivedItems.length },
+            { id: "all", label: "All", icon: StickyNote },
+            { id: "favorites", label: "Starred", icon: Pin },
+            { id: "recent", label: "Recent", icon: Clock3 },
+            { id: "collections", label: "Folders", icon: FolderOpen },
+            { id: "archive", label: "Archive", icon: Archive },
           ] as const
         ).map((item) => {
           const Icon = item.icon;
@@ -282,41 +284,17 @@ export function Sidebar({
             <button
               key={item.id}
               type="button"
-              className={`sidebar-shortcut ${active ? "sidebar-shortcut-active" : ""}`}
+              role="tab"
+              aria-selected={active}
+              className={`sidebar-filter ${active ? "sidebar-filter-active" : ""}`}
               onClick={() => setBrowseMode(item.id)}
+              title={item.label}
             >
               <Icon className="size-3.5" />
-              <span className="sidebar-shortcut-label">{item.label}</span>
-              <span className="sidebar-shortcut-count">{item.count}</span>
+              <span>{item.label}</span>
             </button>
           );
         })}
-      </div>
-
-      <div className="sidebar-templates">
-        <p className="sidebar-templates-label">
-          <Sparkles className="size-3" />
-          Quick start
-        </p>
-        <div className="sidebar-templates-row">
-          {[
-            ...customTemplates.slice(0, 3),
-            ...PAGE_TEMPLATES.filter((t) => t.id !== "blank"),
-          ]
-            .slice(0, 5)
-            .map((template) => (
-              <button
-                key={template.id}
-                type="button"
-                className="sidebar-template-chip"
-                title={template.description}
-                onClick={() => onCreateEntry(undefined, template.id)}
-              >
-                <span>{template.icon}</span>
-                <span className="truncate">{template.name}</span>
-              </button>
-            ))}
-        </div>
       </div>
 
       <nav className="sidebar-nav note-scroll">
@@ -348,7 +326,7 @@ export function Sidebar({
             )}
           </SidebarSection>
         ) : browse === "favorites" ? (
-          <SidebarSection title="Favorites">
+          <SidebarSection title="Starred">
             {pinned.length === 0 ? (
               <EmptyHint text="Pin entries to keep them here." />
             ) : (
@@ -362,7 +340,7 @@ export function Sidebar({
             )}
           </SidebarSection>
         ) : browse === "recent" ? (
-          <SidebarSection title="Recently edited">
+          <SidebarSection title="Recent">
             {recent.length === 0 ? (
               <EmptyHint text="Edited pages show up here." />
             ) : (
@@ -390,28 +368,6 @@ export function Sidebar({
             ) : (
               <VirtualNoteList
                 items={collections}
-                activeId={activeId}
-                onSelect={onSelect}
-                onTogglePin={handleTogglePin}
-                onTrash={handleTrash}
-              />
-            )}
-          </SidebarSection>
-        ) : browse === "pages" ? (
-          <SidebarSection title="Pages">
-            <button
-              type="button"
-              className="sidebar-inline-cta"
-              onClick={() => onCreateEntry()}
-            >
-              <Plus className="size-3.5" />
-              New page
-            </button>
-            {pages.length === 0 ? (
-              <EmptyHint text="Top-level pages live here." />
-            ) : (
-              <VirtualNoteList
-                items={pages}
                 activeId={activeId}
                 onSelect={onSelect}
                 onTogglePin={handleTogglePin}
@@ -451,7 +407,7 @@ export function Sidebar({
           </SidebarSection>
         ) : (
           <SidebarSection
-            title="Vault"
+            title="Notes"
             action={
               <button
                 type="button"
@@ -517,53 +473,64 @@ export function Sidebar({
       </nav>
 
       <div className="sidebar-footer">
-        <button type="button" className="sidebar-footer-btn" onClick={onQuickCapture}>
-          <Zap className="size-3.5" />
-          <span className="flex-1 text-left">Quick capture</span>
-        </button>
-        {onOpenSettings && (
+        <div className="sidebar-footer-tools">
           <button
             type="button"
-            className={`sidebar-footer-btn ${settingsActive ? "sidebar-footer-btn-open" : ""}`}
-            onClick={() => {
-              setShowBin(false);
-              onOpenSettings();
-            }}
+            className="sidebar-tool"
+            onClick={onQuickCapture}
+            title="Quick capture"
+            aria-label="Quick capture"
           >
-            <Settings2 className="size-3.5" />
-            <span className="flex-1 text-left">Settings</span>
+            <Zap className="size-3.5" />
           </button>
-        )}
-        {onOpenTags && (
+          {onOpenTags && (
+            <button
+              type="button"
+              className={`sidebar-tool ${tagsActive ? "sidebar-tool-active" : ""}`}
+              onClick={() => {
+                setShowBin(false);
+                onOpenTags();
+              }}
+              title="Tags"
+              aria-label="Tags"
+            >
+              <Tag className="size-3.5" />
+            </button>
+          )}
           <button
             type="button"
-            className={`sidebar-footer-btn ${tagsActive ? "sidebar-footer-btn-open" : ""}`}
-            onClick={() => {
-              setShowBin(false);
-              onOpenTags();
-            }}
+            className="sidebar-tool"
+            onClick={() => setShowShare(true)}
+            title="Share vault"
+            aria-label="Share vault"
           >
-            <Tag className="size-3.5" />
-            <span className="flex-1 text-left">Tags</span>
+            <Share2 className="size-3.5" />
           </button>
-        )}
-        <button
-          type="button"
-          className="sidebar-footer-btn"
-          onClick={() => setShowShare(true)}
-        >
-          <Share2 className="size-3.5" />
-          <span className="flex-1 text-left">Share vault</span>
-        </button>
-        <button
-          type="button"
-          className={`sidebar-footer-btn ${showBin ? "sidebar-footer-btn-open" : ""}`}
-          onClick={() => setShowBin((v) => !v)}
-        >
-          <Trash2 className="size-3.5" />
-          <span className="flex-1 text-left">Bin</span>
-          {trashCount > 0 && <span className="sidebar-count">{trashCount}</span>}
-        </button>
+          {onOpenSettings && (
+            <button
+              type="button"
+              className={`sidebar-tool ${settingsActive ? "sidebar-tool-active" : ""}`}
+              onClick={() => {
+                setShowBin(false);
+                onOpenSettings();
+              }}
+              title="Settings"
+              aria-label="Settings"
+            >
+              <Settings2 className="size-3.5" />
+            </button>
+          )}
+          <button
+            type="button"
+            className={`sidebar-tool ${showBin ? "sidebar-tool-active" : ""}`}
+            onClick={() => setShowBin((v) => !v)}
+            title="Bin"
+            aria-label="Bin"
+          >
+            <Trash2 className="size-3.5" />
+            {trashCount > 0 && <span className="sidebar-tool-badge">{trashCount}</span>}
+          </button>
+        </div>
         {showBin && (
           <div className="sidebar-bin">
             {trashCount === 0 ? (

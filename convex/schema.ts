@@ -27,11 +27,26 @@ export default defineSchema({
     trashed: v.optional(v.boolean()),
     trashedAt: v.optional(v.number()),
     tags: v.array(v.string()),
+    /** YYYY-MM-DD when this note is a daily note */
+    dailyKey: v.optional(v.string()),
     updatedAt: v.number(),
   })
     .index("by_owner", ["ownerId"])
     .index("by_owner_updated", ["ownerId", "updatedAt"])
-    .index("by_parent", ["parentId"]),
+    .index("by_parent", ["parentId"])
+    .index("by_owner_daily", ["ownerId", "dailyKey"]),
+
+  noteVersions: defineTable({
+    noteId: v.id("notes"),
+    ownerId: v.string(),
+    title: v.string(),
+    content: v.string(),
+    blocks: v.optional(v.array(blockValidator)),
+    tags: v.array(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_note", ["noteId", "createdAt"])
+    .index("by_owner", ["ownerId"]),
 
   vaultSettings: defineTable({
     ownerId: v.string(),

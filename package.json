@@ -10,6 +10,13 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@embedpdf/core": "^2.14.4",
+    "@embedpdf/engines": "^2.14.4",
+    "@embedpdf/plugin-document-manager": "^2.14.4",
+    "@embedpdf/plugin-render": "^2.14.4",
+    "@embedpdf/plugin-scroll": "^2.14.4",
+    "@embedpdf/plugin-viewport": "^2.14.4",
+    "@embedpdf/plugin-zoom": "^2.14.4",
     "@fluentui/react-components": "^9.74.3",
     "@tanstack/db": "^0.6.16",
     "@tanstack/react-db": "^0.1.94",

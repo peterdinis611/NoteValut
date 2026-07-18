@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronDown, ChevronRight, ImageIcon } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { blockToneStyle } from "@/lib/colors";
 import { Extension } from "../create-extension";
 import { BlockTextInput } from "../components/block-text-input";
+import { ImageBlockView } from "../components/image-block-view";
 
 export const NumberedList = Extension({
   name: "numbered",
@@ -141,41 +142,6 @@ export const ImageBlock = Extension({
       group: "Media",
     },
   ],
-  render: (props) => (
-    <div className="nv-image">
-      {!props.readOnly && (
-        <div className="nv-image-fields">
-          <input
-            className="nv-image-url"
-            placeholder="https://… image URL"
-            value={props.block.url ?? ""}
-            onChange={(e) =>
-              props.commands.updateBlock(props.block.id, { url: e.target.value })
-            }
-            onFocus={props.onFocus}
-          />
-          <input
-            className="nv-image-alt"
-            placeholder="Alt text"
-            value={props.block.text}
-            onChange={(e) => props.onTextChange(e.target.value)}
-            onFocus={props.onFocus}
-          />
-        </div>
-      )}
-      {props.block.url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={props.block.url}
-          alt={props.block.text || "Image"}
-          className="nv-image-preview"
-        />
-      ) : (
-        <div className="nv-image-empty">
-          <ImageIcon className="size-5" />
-          <span>Paste an image URL</span>
-        </div>
-      )}
-    </div>
-  ),
+  render: (props) => <ImageBlockView {...props} />,
 });
+

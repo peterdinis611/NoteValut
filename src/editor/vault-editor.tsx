@@ -1,6 +1,7 @@
 "use client";
 
-import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { GripVertical, Paintbrush, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import type { Block } from "@/lib/blocks";
 import { StarterKit } from "./extensions";
@@ -39,6 +40,13 @@ export function VaultEditor({
     linkablePages,
     onNavigate,
   });
+  const [colorToolbarId, setColorToolbarId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (colorToolbarId && editor.focusedId !== colorToolbarId) {
+      setColorToolbarId(null);
+    }
+  }, [editor.focusedId, colorToolbarId]);
 
   return (
     <div className={`nv-editor ${readOnly ? "nv-editor-readonly" : ""}`}>
@@ -50,8 +58,9 @@ export function VaultEditor({
         const isHovered = editor.hoveredId === block.id;
         const isFocused = editor.focusedId === block.id;
         const showChrome = isHovered || isFocused;
+        const canColor = !readOnly && canColorBlock(block.type);
         const showToolbar =
-          !readOnly && isFocused && !slashOpen && canColorBlock(block.type);
+          canColor && colorToolbarId === block.id && !slashOpen;
         const isEmptyHint =
           !readOnly &&
           !block.text &&
@@ -85,6 +94,22 @@ export function VaultEditor({
                 >
                   <GripVertical className="size-3.5" />
                 </button>
+                {canColor && (
+                  <button
+                    type="button"
+                    className={`nv-gutter-btn ${showToolbar ? "nv-gutter-btn-active" : ""}`}
+                    aria-label="Text color"
+                    aria-expanded={showToolbar}
+                    title="Text & fill color"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      editor.setFocusedId(block.id);
+                      setColorToolbarId((id) => (id === block.id ? null : block.id));
+                    }}
+                  >
+                    <Paintbrush className="size-3.5" />
+                  </button>
+                )}
                 <button
                   type="button"
                   className="nv-gutter-btn nv-gutter-danger"

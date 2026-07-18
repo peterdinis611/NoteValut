@@ -132,7 +132,7 @@ export function useEditor(options: EditorOptions) {
                   pageId: type === "pagelink" ? extras?.pageId : undefined,
                   language: type === "code" ? (extras?.language ?? "auto") : undefined,
                   url:
-                    type === "image" || type === "video" || type === "link"
+                    type === "image" || type === "video" || type === "link" || type === "pdf"
                       ? extras?.url
                       : undefined,
                   label:
@@ -385,7 +385,8 @@ export function useEditor(options: EditorOptions) {
       block.type !== "table" &&
       block.type !== "video" &&
       block.type !== "link" &&
-      block.type !== "image"
+      block.type !== "image" &&
+      block.type !== "pdf"
     ) {
       e.preventDefault();
       setSlashBlockId(null);
