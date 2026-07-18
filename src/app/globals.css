@@ -587,36 +587,102 @@ body {
 }
 
 .clerk-auth-page {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
   display: flex;
-  min-height: 100vh;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.25rem;
   padding: 1.5rem;
+  overflow: auto;
   background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent),
-    var(--background, #0c0f14);
+    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(62, 207, 190, 0.16), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 100% 100%, rgba(90, 120, 180, 0.1), transparent 50%),
+    radial-gradient(ellipse 40% 35% at 0% 80%, rgba(62, 207, 190, 0.06), transparent 45%),
+    #0c0f14;
+}
+.clerk-auth-shell {
+  display: flex;
+  width: min(26rem, 100%);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.35rem;
 }
 .clerk-auth-brand {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  font-size: 1.05rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--foreground, #f4f6fa);
+  gap: 0.75rem;
+}
+.clerk-auth-brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.clerk-auth-product {
+  margin: 0;
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+  font-size: 1.65rem;
+  font-weight: 550;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: rgba(255, 255, 255, 0.95);
+}
+.clerk-auth-tagline {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.48);
 }
 .clerk-auth-mark {
   display: grid;
   place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 0.45rem;
-  background: var(--accent-soft, rgba(45, 212, 191, 0.15));
-  color: var(--accent, #2dd4bf);
-  font-size: 0.85rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  border-radius: 0.65rem;
+  background: linear-gradient(145deg, rgba(62, 207, 190, 0.28), rgba(62, 207, 190, 0.08));
+  border: 1px solid rgba(62, 207, 190, 0.28);
+  color: #3ecfbe;
+  font-size: 1.05rem;
   font-weight: 700;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+.clerk-root-box {
+  width: 100% !important;
+  margin: 0 auto !important;
+}
+.clerk-card {
+  width: 100% !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+.clerk-primary-btn {
+  background: #3ecfbe !important;
+  color: #0c0f14 !important;
+  font-weight: 600 !important;
+}
+.clerk-primary-btn:hover {
+  background: #4dd9c8 !important;
+}
+.clerk-footer-link {
+  color: #3ecfbe !important;
+}
+.clerk-social-btn {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+.clerk-auth-hint {
+  margin: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+.clerk-auth-hint-link {
+  color: #3ecfbe;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.clerk-auth-hint-link:hover {
+  color: #4dd9c8;
 }
 
 .sidebar-tool {

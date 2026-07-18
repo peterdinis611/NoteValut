@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import { ConvexClientProvider } from "@/components/providers";
 import { PwaRegister } from "@/components/pwa-register";
+import { clerkAppearance } from "@/lib/clerk-appearance";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -53,7 +54,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full dark`}
     >
       <body className="min-h-full font-sans">
-        <ClerkProvider>
+        <ClerkProvider appearance={clerkAppearance}>
           <ConvexClientProvider>{children}</ConvexClientProvider>
           <PwaRegister />
         </ClerkProvider>
