@@ -3,15 +3,40 @@
 import { useEffect, useSyncExternalStore } from "react";
 import {
   applyTheme,
-  getSettings,
+  ensureSettingsRow,
+  readSettings,
   settingsCollection,
   SERVER_SETTINGS_SNAPSHOT,
   type SettingsRecord,
 } from "@/db/settings-collection";
 import { migrateLegacyLocalStorageOnce } from "@/db/migrate-legacy";
 
+let snapshot: SettingsRecord = SERVER_SETTINGS_SNAPSHOT;
+
+function settingsEqual(a: SettingsRecord, b: SettingsRecord): boolean {
+  return (
+    a.themeId === b.themeId &&
+    a.customCss === b.customCss &&
+    a.customCssName === b.customCssName &&
+    a.fontMode === b.fontMode &&
+    a.fontFamily === b.fontFamily &&
+    a.fontFileName === b.fontFileName &&
+    a.fontDataUrl === b.fontDataUrl &&
+    a.fontUrl === b.fontUrl &&
+    a.updatedAt === b.updatedAt
+  );
+}
+
+function pullSnapshot(): SettingsRecord {
+  const next = readSettings();
+  if (settingsEqual(snapshot, next)) return snapshot;
+  snapshot = next;
+  return snapshot;
+}
+
 /**
  * Subscribe to the TanStack DB settings collection (SSR-safe snapshot).
+ * getSnapshot must be pure and referentially stable when data is unchanged.
  */
 function subscribeSettings(onStoreChange: () => void) {
   if (typeof window === "undefined") return () => {};
@@ -21,23 +46,19 @@ function subscribeSettings(onStoreChange: () => void) {
   } catch {
     /* collection may already be syncing */
   }
+  ensureSettingsRow();
+  pullSnapshot();
+
   const subscription = settingsCollection.subscribeChanges(() => {
-    clientCache = null;
-    onStoreChange();
+    const prev = snapshot;
+    const next = pullSnapshot();
+    if (prev !== next) onStoreChange();
   });
   return () => subscription.unsubscribe();
 }
 
-let clientCache: SettingsRecord | null = null;
-let clientCacheKey = "";
-
 function getClientSnapshot(): SettingsRecord {
-  const row = settingsCollection.get("vault");
-  const key = row ? JSON.stringify(row) : "__default__";
-  if (clientCache && clientCacheKey === key) return clientCache;
-  clientCacheKey = key;
-  clientCache = getSettings();
-  return clientCache;
+  return pullSnapshot();
 }
 
 function getServerSnapshot(): SettingsRecord {
@@ -53,6 +74,7 @@ export function useVaultSettings(): SettingsRecord {
 
   useEffect(() => {
     migrateLegacyLocalStorageOnce();
+    ensureSettingsRow();
     applyTheme(record);
   }, [record]);
 

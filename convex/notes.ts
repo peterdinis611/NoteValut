@@ -4,6 +4,14 @@ import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { blockValidator } from "./block";
 import { snapshotNote } from "./versions";
+import {
+  assertTags,
+  mergeTag,
+  normalizeTag,
+  removeTag,
+  renameTag as renameTagInList,
+  tagKey,
+} from "./tags";
 
 const block = blockValidator;
 
@@ -125,18 +133,22 @@ export const listTags = query({
       .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
       .collect();
 
-    const counts = new Map<string, number>();
+    /** key -> { display, count } */
+    const counts = new Map<string, { tag: string; count: number }>();
     for (const note of notes) {
       if (note.trashed || note.archived) continue;
-      for (const tag of note.tags) {
-        const key = tag.trim();
-        if (!key) continue;
-        counts.set(key, (counts.get(key) ?? 0) + 1);
+      for (const raw of note.tags) {
+        const tag = normalizeTag(raw);
+        if (!tag) continue;
+        const key = tagKey(tag);
+        const prev = counts.get(key);
+        if (prev) prev.count += 1;
+        else counts.set(key, { tag, count: 1 });
       }
     }
 
     return [...counts.entries()]
-      .map(([tag, count]) => ({ tag, count }))
+      .map(([key, { tag, count }]) => ({ tag, count, key }))
       .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
   },
 });
@@ -274,7 +286,7 @@ export const create = mutation({
       pinned: false,
       archived: false,
       trashed: false,
-      tags: args.tags ?? [],
+      tags: assertTags(args.tags ?? []),
       updatedAt: now,
     });
   },
@@ -335,7 +347,7 @@ export const update = mutation({
     }
     if (patch.isLocked !== undefined) updates.isLocked = patch.isLocked;
     if (patch.status !== undefined) updates.status = patch.status ?? undefined;
-    if (patch.tags !== undefined) updates.tags = patch.tags;
+    if (patch.tags !== undefined) updates.tags = assertTags(patch.tags);
     if (patch.pinned !== undefined) updates.pinned = patch.pinned;
     if (patch.archived !== undefined) updates.archived = patch.archived;
     if (patch.parentId !== undefined) updates.parentId = patch.parentId ?? undefined;
@@ -445,6 +457,7 @@ export const bulkUpdate = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    const tags = args.tags !== undefined ? assertTags(args.tags) : undefined;
     let updated = 0;
     for (const id of args.ids) {
       const note = await ctx.db.get(id);
@@ -452,10 +465,126 @@ export const bulkUpdate = mutation({
       const patch: Record<string, unknown> = { updatedAt: now };
       if (args.pinned !== undefined) patch.pinned = args.pinned;
       if (args.archived !== undefined) patch.archived = args.archived;
-      if (args.tags !== undefined) patch.tags = args.tags;
+      if (tags !== undefined) patch.tags = tags;
       if (args.status !== undefined) patch.status = args.status ?? undefined;
       if (args.parentId !== undefined) patch.parentId = args.parentId ?? undefined;
       await ctx.db.patch(id, patch);
+      updated += 1;
+    }
+    return updated;
+  },
+});
+
+/** Merge one tag onto many notes. */
+export const bulkAddTag = mutation({
+  args: {
+    ownerId: v.string(),
+    ids: v.array(v.id("notes")),
+    tag: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const tag = normalizeTag(args.tag);
+    if (!tag) throw new Error("Enter a tag first");
+    // Validate single tag via assertTags
+    assertTags([tag]);
+
+    const now = Date.now();
+    let updated = 0;
+    for (const id of args.ids) {
+      const note = await ctx.db.get(id);
+      if (!note || note.trashed || note.ownerId !== args.ownerId) continue;
+      const next = mergeTag(note.tags ?? [], tag);
+      if (JSON.stringify(next) === JSON.stringify(note.tags ?? [])) continue;
+      if (note.kind !== "folder") await snapshotNote(ctx, id);
+      await ctx.db.patch(id, { tags: next, updatedAt: now });
+      updated += 1;
+    }
+    return updated;
+  },
+});
+
+/** Remove one tag from many notes. */
+export const bulkRemoveTag = mutation({
+  args: {
+    ownerId: v.string(),
+    ids: v.array(v.id("notes")),
+    tag: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const key = tagKey(normalizeTag(args.tag));
+    if (!key) throw new Error("Enter a tag first");
+
+    const now = Date.now();
+    let updated = 0;
+    for (const id of args.ids) {
+      const note = await ctx.db.get(id);
+      if (!note || note.trashed || note.ownerId !== args.ownerId) continue;
+      const next = removeTag(note.tags ?? [], args.tag);
+      if (next.length === (note.tags ?? []).length) continue;
+      if (note.kind !== "folder") await snapshotNote(ctx, id);
+      await ctx.db.patch(id, { tags: next, updatedAt: now });
+      updated += 1;
+    }
+    return updated;
+  },
+});
+
+/** Rename a tag across the vault (case-insensitive match). */
+export const renameTag = mutation({
+  args: {
+    ownerId: v.string(),
+    from: v.string(),
+    to: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const fromKey = tagKey(normalizeTag(args.from));
+    const toTag = normalizeTag(args.to);
+    if (!fromKey) throw new Error("Source tag is empty");
+    assertTags([toTag]);
+
+    const notes = await ctx.db
+      .query("notes")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+
+    const now = Date.now();
+    let updated = 0;
+    for (const note of notes) {
+      if (note.trashed) continue;
+      if (!(note.tags ?? []).some((t) => tagKey(t) === fromKey)) continue;
+      const next = renameTagInList(note.tags ?? [], args.from, toTag);
+      if (JSON.stringify(next) === JSON.stringify(note.tags ?? [])) continue;
+      if (note.kind !== "folder") await snapshotNote(ctx, note._id);
+      await ctx.db.patch(note._id, { tags: next, updatedAt: now });
+      updated += 1;
+    }
+    return updated;
+  },
+});
+
+/** Delete a tag from every note in the vault. */
+export const deleteTag = mutation({
+  args: {
+    ownerId: v.string(),
+    tag: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const key = tagKey(normalizeTag(args.tag));
+    if (!key) throw new Error("Tag is empty");
+
+    const notes = await ctx.db
+      .query("notes")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+
+    const now = Date.now();
+    let updated = 0;
+    for (const note of notes) {
+      if (note.trashed) continue;
+      if (!(note.tags ?? []).some((t) => tagKey(t) === key)) continue;
+      const next = removeTag(note.tags ?? [], args.tag);
+      if (note.kind !== "folder") await snapshotNote(ctx, note._id);
+      await ctx.db.patch(note._id, { tags: next, updatedAt: now });
       updated += 1;
     }
     return updated;
@@ -545,7 +674,7 @@ export const importVault = mutation({
         pinned: !!note.pinned,
         archived: !!note.archived,
         trashed: false,
-        tags: note.tags ?? [],
+        tags: assertTags(note.tags ?? []),
         updatedAt: note.updatedAt || now,
       });
       idMap.set(note.id, newId);

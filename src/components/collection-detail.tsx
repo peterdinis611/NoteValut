@@ -550,7 +550,9 @@ function CollectionTable({
         const st = item.status || "";
         if (statusFilter === "none" ? st !== "" : st !== statusFilter) return false;
       }
-      if (tagFilter && !(item.tags ?? []).includes(tagFilter)) return false;
+      if (tagFilter && !(item.tags ?? []).some((t) => t.toLowerCase() === tagFilter.toLowerCase())) {
+        return false;
+      }
       return true;
     });
   }, [items, statusFilter, tagFilter]);
@@ -624,9 +626,15 @@ function CollectionTable({
                 </td>
                 <td className="db-table-tags">
                   {(item.tags ?? []).slice(0, 3).map((t) => (
-                    <span key={t} className="db-tag">
+                    <button
+                      key={t}
+                      type="button"
+                      className="db-tag"
+                      title={`Filter by #${t}`}
+                      onClick={() => setTagFilter(t)}
+                    >
                       {t}
-                    </span>
+                    </button>
                   ))}
                 </td>
                 <td className="db-table-muted">{formatRelativeTime(item.updatedAt)}</td>

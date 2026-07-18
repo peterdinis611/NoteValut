@@ -256,16 +256,17 @@ function SortableBlockRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`nv-row ${isFocused ? "nv-row-focused" : ""} ${isDragging ? "nv-row-dragging" : ""}`}
+      className={`nv-row ${isFocused ? "nv-row-focused" : ""} ${isDragging ? "nv-row-dragging" : ""} ${isEmptyHint ? "nv-row-empty" : ""} ${block.pinned ? "nv-row-pinned" : ""}`}
       onMouseEnter={() => editor.setHoveredId(block.id)}
       onMouseLeave={() => editor.setHoveredId(null)}
     >
       {!readOnly && (
-        <div className={`nv-gutter ${showChrome ? "nv-gutter-visible" : ""}`}>
+        <div className={`nv-gutter ${showChrome ? "nv-gutter-visible" : ""}`} role="toolbar" aria-label="Block actions">
           <button
             type="button"
             className="nv-gutter-btn"
             aria-label="Add block"
+            title="Add block below"
             onClick={() => editor.commands.insertBlockAfter(block.id)}
           >
             <Plus className="size-3.5" />
@@ -280,6 +281,7 @@ function SortableBlockRow({
           >
             <GripVertical className="size-3.5" />
           </button>
+          <span className="nv-gutter-sep" aria-hidden />
           {canColor && (
             <button
               type="button"
@@ -355,7 +357,16 @@ function SortableBlockRow({
         )}
 
         {isEmptyHint && (
-          <p className="nv-hint">/ commands · [[ link page · drop files · paste markdown</p>
+          <div className="nv-hint" aria-hidden>
+            <span className="nv-hint-chip">
+              <kbd>/</kbd> commands
+            </span>
+            <span className="nv-hint-chip">
+              <kbd>[[</kbd> link page
+            </span>
+            <span className="nv-hint-chip">drop files</span>
+            <span className="nv-hint-chip">paste markdown</span>
+          </div>
         )}
 
         {slashOpen && (

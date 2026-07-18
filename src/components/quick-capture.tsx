@@ -7,6 +7,7 @@ import { useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { createBlock } from "@/lib/blocks";
+import { normalizeTags } from "@/lib/tags";
 import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
 import { useToast } from "./toast";
 
@@ -35,13 +36,14 @@ export function QuickCapture({ ownerId, open, onClose, onCreated }: Props) {
         ? [createBlock("paragraph", body.trim())]
         : [createBlock("paragraph", "")];
 
+      const captureTags = normalizeTags(["capture"]);
       const id = await createNote({
         ownerId,
         title: title.trim() || "Quick capture",
         parentId: inbox?._id,
         kind: "page",
         icon: "⚡",
-        tags: ["capture"],
+        tags: captureTags.success ? captureTags.tags : ["capture"],
         blocks,
       });
 

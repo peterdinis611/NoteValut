@@ -3,6 +3,7 @@ import {
   markdownToBlocks,
   type Block,
 } from "@/lib/blocks";
+import { normalizeTags } from "@/lib/tags";
 
 export type ImportedNoteDraft = {
   id: string;
@@ -132,7 +133,8 @@ export function markdownFileToDraft(
   let blocks = markdownToBlocks(body);
   if (!blocks.length) blocks = [createBlock("paragraph", "")];
 
-  const tags = meta.tags ?? [];
+  const tagsResult = normalizeTags(meta.tags ?? []);
+  const tags = tagsResult.success ? tagsResult.tags : [];
   const icon = meta.icon?.trim() || "📝";
 
   return {

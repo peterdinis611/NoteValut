@@ -12,6 +12,7 @@ import type * as block from "../block.js";
 import type * as files from "../files.js";
 import type * as notes from "../notes.js";
 import type * as shares from "../shares.js";
+import type * as tags from "../tags.js";
 import type * as vaultSettings from "../vaultSettings.js";
 import type * as versions from "../versions.js";
 
@@ -26,6 +27,7 @@ declare const fullApi: ApiFromModules<{
   files: typeof files;
   notes: typeof notes;
   shares: typeof shares;
+  tags: typeof tags;
   vaultSettings: typeof vaultSettings;
   versions: typeof versions;
 }>;

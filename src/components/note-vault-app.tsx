@@ -58,6 +58,7 @@ export function NoteVaultApp() {
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showTags, setShowTags] = useState(false);
+  const [focusTag, setFocusTag] = useState<string | null>(null);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
@@ -99,7 +100,19 @@ export function NoteVaultApp() {
   const clearPanels = useCallback(() => {
     setShowSettings(false);
     setShowTags(false);
+    setFocusTag(null);
   }, []);
+
+  const openTags = useCallback(
+    (tag?: string | null) => {
+      setActiveId(null);
+      setShowSettings(false);
+      setFocusTag(tag ?? null);
+      setShowTags(true);
+      if (isMobile) setSidebarOpen(false);
+    },
+    [isMobile],
+  );
 
   const selectNote = useCallback(
     (id: Id<"notes"> | null) => {
@@ -232,9 +245,7 @@ export function NoteVaultApp() {
         icon: CommandIcons.tags,
         keywords: ["tag", "filter"],
         run: () => {
-          setActiveId(null);
-          setShowSettings(false);
-          setShowTags(true);
+          openTags();
         },
       },
       {
@@ -245,6 +256,7 @@ export function NoteVaultApp() {
         run: () => {
           setActiveId(null);
           setShowTags(false);
+          setFocusTag(null);
           setShowSettings(true);
         },
       },
@@ -273,7 +285,7 @@ export function NoteVaultApp() {
         run: () => setGraphOpen(true),
       },
     ],
-    [clearPanels, handleCreateEntry, handleCreateCollection, handleExport, openToday],
+    [clearPanels, handleCreateEntry, handleCreateCollection, handleExport, openToday, openTags],
   );
 
   if (!ownerId) {
@@ -326,15 +338,11 @@ export function NoteVaultApp() {
               onOpenSettings={() => {
                 setActiveId(null);
                 setShowTags(false);
+                setFocusTag(null);
                 setShowSettings(true);
                 if (isMobile) setSidebarOpen(false);
               }}
-              onOpenTags={() => {
-                setActiveId(null);
-                setShowSettings(false);
-                setShowTags(true);
-                if (isMobile) setSidebarOpen(false);
-              }}
+              onOpenTags={() => openTags()}
               onCollapse={() => setSidebarOpen(false)}
               onCreateEntry={handleCreateEntry}
               onCreateCollection={handleCreateCollection}
@@ -381,7 +389,11 @@ export function NoteVaultApp() {
               ) : panel === "tags" ? (
                 <TagsHub
                   ownerId={ownerId}
-                  onClose={() => setShowTags(false)}
+                  initialTag={focusTag}
+                  onClose={() => {
+                    setShowTags(false);
+                    setFocusTag(null);
+                  }}
                   onNavigate={selectNote}
                 />
               ) : panel === "note" && activeId ? (
@@ -393,6 +405,7 @@ export function NoteVaultApp() {
                   sidebarCollapsed={!sidebarOpen || isMobile}
                   onCreateEntry={handleCreateEntry}
                   onCreateCollection={handleCreateCollection}
+                  onOpenTag={(tag) => openTags(tag)}
                 />
               ) : (
                 <VaultHome

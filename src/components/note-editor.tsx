@@ -22,7 +22,8 @@ import {
 } from "@/lib/blocks";
 import { isFolder } from "@/lib/item-kinds";
 import { downloadPageMarkdown, exportPagePdf } from "@/lib/export-page";
-import { firstIssue, parseBlocks, parseTags, parseTemplateName } from "@/lib/validation";
+import { firstIssue, parseBlocks, parseTemplateName } from "@/lib/validation";
+import { normalizeTags } from "@/lib/tags";
 import { useVaultAccess } from "@/context/vault-access";
 import { TableOfContents } from "./table-of-contents";
 import { BacklinksPanel } from "./backlinks-panel";
@@ -49,6 +50,7 @@ type Props = {
   sidebarCollapsed: boolean;
   onCreateEntry: (parentId?: Id<"notes">, templateId?: string) => void;
   onCreateCollection: (parentId?: Id<"notes">) => void;
+  onOpenTag?: (tag: string) => void;
 };
 
 export function NoteEditor({
@@ -59,6 +61,7 @@ export function NoteEditor({
   sidebarCollapsed,
   onCreateEntry,
   onCreateCollection,
+  onOpenTag,
 }: Props) {
   const toast = useToast();
   const { readOnly: globalReadOnly } = useVaultAccess();
@@ -106,11 +109,12 @@ export function NoteEditor({
       }
     }
     if (patch.tags) {
-      const parsed = parseTags(patch.tags);
+      const parsed = normalizeTags(patch.tags);
       if (!parsed.success) {
-        toast.error(firstIssue(parsed));
+        toast.error(parsed.error);
         return;
       }
+      patch.tags = parsed.tags;
     }
 
     setSaveState("saving");
@@ -474,7 +478,9 @@ export function NoteEditor({
             <PageProperties
               tags={tags}
               updatedAt={note.updatedAt}
+              ownerId={ownerId}
               readOnly={readOnly}
+              onOpenTag={onOpenTag}
               onChange={(next) => {
                 setTags(next);
                 scheduleSave({ tags: next });

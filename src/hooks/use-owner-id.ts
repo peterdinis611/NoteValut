@@ -5,9 +5,15 @@ import { migrateLegacyLocalStorageOnce } from "@/db/migrate-legacy";
 import {
   getOwnerId,
   ownerCollection,
-  readOwnerRecord,
   SERVER_OWNER_SNAPSHOT,
 } from "@/db/owner-collection";
+
+let snapshot = SERVER_OWNER_SNAPSHOT.ownerId;
+
+function readOwnerIdPure(): string {
+  if (typeof window === "undefined") return SERVER_OWNER_SNAPSHOT.ownerId;
+  return ownerCollection.get("owner")?.ownerId ?? snapshot;
+}
 
 function subscribe(onStoreChange: () => void) {
   if (typeof window === "undefined") return () => {};
@@ -17,23 +23,24 @@ function subscribe(onStoreChange: () => void) {
   } catch {
     /* already syncing */
   }
-  getOwnerId();
+  // Side effects only in subscribe, never in getSnapshot
+  const id = getOwnerId();
+  if (snapshot !== id) snapshot = id;
+
   const sub = ownerCollection.subscribeChanges(() => {
-    cache = null;
+    const next = ownerCollection.get("owner")?.ownerId ?? snapshot;
+    if (next === snapshot) return;
+    snapshot = next;
     onStoreChange();
   });
   return () => sub.unsubscribe();
 }
 
-let cache: string | null = null;
-let cacheKey = "";
-
 function getClientSnapshot(): string {
-  const record = readOwnerRecord();
-  if (cache && cacheKey === record.ownerId) return cache;
-  cacheKey = record.ownerId;
-  cache = record.ownerId;
-  return cache;
+  const next = readOwnerIdPure();
+  if (next === snapshot) return snapshot;
+  snapshot = next;
+  return snapshot;
 }
 
 function getServerSnapshot(): string {

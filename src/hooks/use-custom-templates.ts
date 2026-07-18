@@ -10,6 +10,22 @@ import { migrateLegacyLocalStorageOnce } from "@/db/migrate-legacy";
 
 const SERVER_TEMPLATES: CustomPageTemplate[] = [];
 
+let snapshot: CustomPageTemplate[] = SERVER_TEMPLATES;
+let snapshotKey = "";
+
+function templatesKey(rows: CustomPageTemplate[]): string {
+  return JSON.stringify(rows.map((r) => [r.id, r.createdAt, r.name]));
+}
+
+function pullSnapshot(): CustomPageTemplate[] {
+  const rows = loadCustomTemplates();
+  const key = templatesKey(rows);
+  if (snapshotKey === key) return snapshot;
+  snapshotKey = key;
+  snapshot = rows;
+  return snapshot;
+}
+
 function subscribeTemplates(onStoreChange: () => void) {
   if (typeof window === "undefined") return () => {};
   migrateLegacyLocalStorageOnce();
@@ -18,23 +34,17 @@ function subscribeTemplates(onStoreChange: () => void) {
   } catch {
     /* already syncing */
   }
+  pullSnapshot();
   const subscription = templatesCollection.subscribeChanges(() => {
-    clientCache = null;
-    onStoreChange();
+    const prev = snapshot;
+    const next = pullSnapshot();
+    if (prev !== next) onStoreChange();
   });
   return () => subscription.unsubscribe();
 }
 
-let clientCache: CustomPageTemplate[] | null = null;
-let clientCacheKey = "";
-
 function getClientSnapshot(): CustomPageTemplate[] {
-  const rows = loadCustomTemplates();
-  const key = JSON.stringify(rows.map((r) => [r.id, r.createdAt, r.name]));
-  if (clientCache && clientCacheKey === key) return clientCache;
-  clientCacheKey = key;
-  clientCache = [...rows].sort((a, b) => b.createdAt - a.createdAt);
-  return clientCache;
+  return pullSnapshot();
 }
 
 function getServerSnapshot(): CustomPageTemplate[] {

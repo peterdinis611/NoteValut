@@ -89,6 +89,8 @@ export function Sidebar({
   const updateNote = useMutation(api.notes.update);
   const bulkUpdate = useMutation(api.notes.bulkUpdate);
   const bulkTrash = useMutation(api.notes.bulkTrash);
+  const bulkAddTag = useMutation(api.notes.bulkAddTag);
+  const bulkRemoveTag = useMutation(api.notes.bulkRemoveTag);
   const trashNote = useMutation(api.notes.trash);
   const restoreNote = useMutation(api.notes.restoreFromTrash);
   const emptyTrash = useMutation(api.notes.emptyTrash);
@@ -108,7 +110,7 @@ export function Sidebar({
   }
 
   async function runBulk(
-    action: "archive" | "unarchive" | "pin" | "unpin" | "trash" | "tag",
+    action: "archive" | "unarchive" | "pin" | "unpin" | "trash" | "tag" | "untag",
   ) {
     const ids = [...selectedIds] as Id<"notes">[];
     if (!ids.length) return;
@@ -116,19 +118,21 @@ export function Sidebar({
       if (action === "trash") {
         await bulkTrash({ ids });
         toast.success(`Moved ${ids.length} to bin`);
-      } else if (action === "tag") {
+      } else if (action === "tag" || action === "untag") {
         const tag = bulkTag.trim();
         if (!tag) {
           toast.error("Enter a tag first");
           return;
         }
-        for (const id of ids) {
-          const note = notes?.find((n) => n._id === id);
-          if (!note) continue;
-          const tags = [...new Set([...(note.tags ?? []), tag])];
-          await updateNote({ id, tags });
-        }
-        toast.success(`Tagged ${ids.length} items`);
+        const n =
+          action === "tag"
+            ? await bulkAddTag({ ownerId, ids, tag })
+            : await bulkRemoveTag({ ownerId, ids, tag });
+        toast.success(
+          action === "tag"
+            ? `Tagged ${n} item${n === 1 ? "" : "s"}`
+            : `Removed tag from ${n} item${n === 1 ? "" : "s"}`,
+        );
         setBulkTag("");
       } else {
         await bulkUpdate({
@@ -141,8 +145,8 @@ export function Sidebar({
         toast.success(`Updated ${ids.length} items`);
       }
       clearSelection();
-    } catch {
-      toast.error("Bulk action failed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Bulk action failed");
     }
   }
 
@@ -381,13 +385,16 @@ export function Sidebar({
               <input
                 value={bulkTag}
                 onChange={(e) => setBulkTag(e.target.value)}
-                placeholder="Add tag…"
+                placeholder="Tag name…"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void runBulk("tag");
                 }}
               />
               <button type="button" onClick={() => void runBulk("tag")}>
-                Tag
+                Add
+              </button>
+              <button type="button" onClick={() => void runBulk("untag")}>
+                Remove
               </button>
             </div>
           </div>

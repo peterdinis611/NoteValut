@@ -1431,6 +1431,19 @@ body {
   padding: 0.125rem 0.5rem;
   font-size: 0.8125rem;
 }
+.page-tag-label {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.page-tag-label:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
 .page-tag-remove {
   border-radius: 0.125rem;
@@ -1459,6 +1472,46 @@ body {
   font-size: 0.8125rem;
   color: var(--foreground);
   outline: none;
+}
+.page-tag-suggest-wrap {
+  position: relative;
+}
+.page-tag-suggest {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  z-index: 20;
+  min-width: 10rem;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  border-radius: 0.45rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--sidebar) 96%, #000);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.4);
+}
+.page-tag-suggest-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.3rem;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+.page-tag-suggest-item:hover,
+.page-tag-suggest-item-active {
+  background: var(--hover);
+}
+.page-tag-suggest-count {
+  font-size: 0.65rem;
+  color: var(--muted);
 }
 
 .page-body {
@@ -2830,10 +2883,11 @@ body {
 .nv-editor {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.2rem;
   width: 100%;
   max-width: 42rem;
   color: var(--foreground);
+  padding-bottom: 3rem;
 }
 
 .nv-editor-continue {
@@ -2851,50 +2905,105 @@ body {
   position: relative;
   display: flex;
   align-items: flex-start;
-  min-height: 1.85rem;
-  padding: 0.05rem 0;
-  border-radius: 0.45rem;
-  transition: background 0.12s ease;
+  min-height: 2rem;
+  padding: 0.12rem 0.35rem 0.12rem 0.2rem;
+  margin: 0 -0.35rem;
+  border-radius: 0.55rem;
+  transition: background 0.14s ease, box-shadow 0.14s ease;
+}
+.nv-row:hover {
+  background: rgba(255, 255, 255, 0.015);
 }
 .nv-row-focused {
-  background: rgba(255, 255, 255, 0.018);
+  background: color-mix(in srgb, var(--accent) 4%, rgba(255, 255, 255, 0.02));
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.nv-row-pinned:not(.nv-row-focused) {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.nv-row-empty {
+  margin-top: 0.15rem;
+}
+.nv-row-empty .nv-content {
+  border-radius: 0.55rem;
+  border: 1px dashed color-mix(in srgb, var(--border) 85%, transparent);
+  background: color-mix(in srgb, var(--panel) 35%, transparent);
+  padding: 0.65rem 0.85rem 0.55rem;
+  transition: border-color 0.14s, background 0.14s, box-shadow 0.14s;
+}
+.nv-row-empty.nv-row-focused .nv-content {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent) 5%, var(--panel));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.nv-row-dragging {
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+  border-radius: 0.55rem;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 25%, var(--border)),
+    0 12px 28px rgb(0 0 0 / 0.35);
 }
 
 .nv-gutter {
   position: absolute;
   right: 100%;
-  top: 0.15rem;
-  margin-right: 0.15rem;
+  top: 0.2rem;
+  margin-right: 0.35rem;
   display: flex;
   align-items: center;
-  gap: 0.05rem;
+  gap: 0.1rem;
   opacity: 0;
-  transition: opacity 0.12s;
+  pointer-events: none;
+  transition: opacity 0.14s ease, transform 0.14s ease, background 0.14s ease;
   width: max-content;
+  padding: 0.15rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  transform: translateX(4px);
 }
-.nv-gutter-visible { opacity: 1; }
+.nv-gutter-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+  border-color: color-mix(in srgb, var(--border) 90%, transparent);
+  background: color-mix(in srgb, var(--sidebar) 88%, #000);
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.28);
+}
+.nv-gutter-sep {
+  width: 1px;
+  height: 0.9rem;
+  margin: 0 0.1rem;
+  background: var(--border);
+  flex-shrink: 0;
+}
 
 .nv-gutter-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 1.35rem;
-  width: 1.35rem;
-  border-radius: 0.3rem;
+  height: 1.5rem;
+  width: 1.5rem;
+  border-radius: 0.35rem;
   color: var(--muted);
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.12s, color 0.12s, transform 0.12s;
 }
 .nv-gutter-btn:hover {
   background: var(--hover);
   color: var(--foreground);
 }
 .nv-gutter-btn-active {
-  background: var(--hover-strong);
+  background: var(--accent-soft);
   color: var(--accent);
 }
 .nv-gutter-danger:hover {
   background: rgba(248, 113, 113, 0.14);
   color: #f87171;
+}
+.nv-gutter-grip {
+  cursor: grab;
+}
+.nv-gutter-grip:active {
+  cursor: grabbing;
 }
 
 .nv-content {
@@ -2914,13 +3023,18 @@ body {
   color: inherit;
   outline: none;
   resize: none;
-  line-height: 1.65;
-  font-size: 1rem;
+  line-height: 1.7;
+  font-size: 1.02rem;
+  letter-spacing: -0.01em;
 }
 .nv-input::placeholder {
-  color: rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.34);
+  font-weight: 450;
 }
-
+.nv-row-empty .nv-input::placeholder {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 1.05rem;
+}
 .nv-h1 {
   font-family: var(--font-display), "Iowan Old Style", serif;
   font-size: 1.85rem;
@@ -3070,9 +3184,31 @@ body {
 }
 
 .nv-hint {
-  margin-top: 0.2rem;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.28);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+.nv-hint-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.38);
+  letter-spacing: 0.01em;
+}
+.nv-hint-chip kbd {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--accent) 75%, white);
+  background: var(--accent-soft);
+  border-radius: 0.25rem;
+  padding: 0.05rem 0.28rem;
 }
 
 .nv-missing {
@@ -5876,6 +6012,16 @@ body {
   gap: 0.45rem;
   margin-bottom: 1.5rem;
 }
+.tags-chip-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  border-radius: 999px;
+  padding-right: 0.15rem;
+}
+.tags-chip-wrap-active {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
 .tags-chip {
   display: inline-flex;
   align-items: center;
@@ -5905,6 +6051,50 @@ body {
 }
 .tags-chip-active .tags-chip-count {
   color: var(--accent);
+}
+.tags-chip-actions {
+  display: inline-flex;
+  gap: 0.05rem;
+  opacity: 0.55;
+}
+.tags-chip-wrap:hover .tags-chip-actions {
+  opacity: 1;
+}
+.tags-chip-action {
+  display: grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tags-chip-action:hover {
+  background: var(--hover);
+  color: var(--foreground);
+}
+.tags-chip-action-danger:hover {
+  color: #fca5a5;
+}
+.tags-chip-rename {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: var(--accent-soft);
+}
+.tags-chip-rename-input {
+  width: 6.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 550;
+  outline: none;
 }
 .tags-results-title {
   margin: 0 0 0.75rem;
@@ -6280,19 +6470,6 @@ body {
   color: var(--muted);
   font-size: 0.8125rem;
   text-align: center;
-}
-
-.nv-row-dragging {
-  background: color-mix(in srgb, var(--panel) 80%, transparent);
-  border-radius: 0.4rem;
-}
-
-.nv-gutter-grip {
-  cursor: grab;
-}
-
-.nv-gutter-grip:active {
-  cursor: grabbing;
 }
 
 /* Keyboard shortcuts overlay */
@@ -6705,9 +6882,15 @@ body {
 .db-tag {
   padding: 0.1rem 0.35rem;
   border-radius: 999px;
+  border: 0;
   background: var(--hover);
   font-size: 0.7rem;
   color: var(--muted);
+  cursor: pointer;
+}
+.db-tag:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .db-table-muted {

@@ -180,13 +180,12 @@ const DEFAULT_SETTINGS: SettingsRecord = {
   fontFileName: undefined,
   fontDataUrl: undefined,
   fontUrl: undefined,
-  updatedAt: Date.now(),
+  updatedAt: 0,
 };
 
 /** Stable snapshot for SSR (`useSyncExternalStore` getServerSnapshot). */
 export const SERVER_SETTINGS_SNAPSHOT: SettingsRecord = Object.freeze({
   ...DEFAULT_SETTINGS,
-  updatedAt: 0,
 });
 
 function normalizeSettings(raw: SettingsRecord): SettingsRecord {
@@ -197,14 +196,27 @@ function normalizeSettings(raw: SettingsRecord): SettingsRecord {
   };
 }
 
-export function getSettings(): SettingsRecord {
+/** Pure read — never inserts. Safe for `useSyncExternalStore` getSnapshot. */
+export function readSettings(): SettingsRecord {
+  const existing = settingsCollection.get("vault");
+  if (existing) return normalizeSettings(existing);
+  return SERVER_SETTINGS_SNAPSHOT;
+}
+
+/** Ensure a settings row exists (call from effects / mutations, not getSnapshot). */
+export function ensureSettingsRow(): SettingsRecord {
   const existing = settingsCollection.get("vault");
   if (existing) return normalizeSettings(existing);
   const defaults: SettingsRecord = { ...DEFAULT_SETTINGS, updatedAt: Date.now() };
-  if (typeof window !== "undefined" && !settingsCollection.has("vault")) {
+  if (typeof window !== "undefined") {
     settingsCollection.insert(defaults);
   }
   return defaults;
+}
+
+export function getSettings(): SettingsRecord {
+  if (typeof window === "undefined") return SERVER_SETTINGS_SNAPSHOT;
+  return ensureSettingsRow();
 }
 
 function writeSettings(next: SettingsRecord) {
