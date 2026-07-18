@@ -59,6 +59,7 @@ export const PAGE_ICON_GROUPS = [
 
 export const PAGE_ICONS = PAGE_ICON_GROUPS.flatMap((g) => [...g.icons]);
 
+/** Simple substring filter; prefer searchIcons from @/lib/search for fuzzy match. */
 export function filterIcons(query: string) {
   const q = query.trim().toLowerCase();
   if (!q) return PAGE_ICON_GROUPS.map((g) => ({ ...g, icons: [...g.icons] }));
@@ -73,3 +74,4 @@ export function filterIcons(query: string) {
     ),
   })).filter((g) => g.icons.length > 0);
 }
+

@@ -3,10 +3,11 @@
 import { useQuery } from "convex/react";
 import { ArrowRight, FolderOpen, Plus, Share2, Zap } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { countOpenTasks } from "@/lib/blocks";
+import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { formatRelativeTime } from "@/lib/format";
 import { isFolder } from "@/lib/item-kinds";
 import {
@@ -38,6 +39,11 @@ export function VaultHome({
   onQuickCapture,
 }: Props) {
   const [shareOpen, setShareOpen] = useState(false);
+  const customTemplates = useCustomTemplates();
+  const templates = useMemo(
+    () => [...customTemplates, ...PAGE_TEMPLATES.filter((t) => t.id !== "blank")],
+    [customTemplates],
+  );
   const stats = useQuery(api.notes.getVaultStats, { ownerId });
   const notes = useQuery(api.notes.list, { ownerId });
 
@@ -51,8 +57,6 @@ export function VaultHome({
     notes
       ?.filter((n) => !isFolder(n) && countOpenTasks(n.blocks) > 0)
       .slice(0, 5) ?? [];
-
-  const templates = PAGE_TEMPLATES.filter((t) => t.id !== "blank");
 
   return (
     <motion.div

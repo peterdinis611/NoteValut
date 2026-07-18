@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
+import { useDebouncedValue } from "@tanstack/react-pacer";
 import {
   ChevronDown,
   ChevronRight,
@@ -11,6 +12,7 @@ import {
   Pin,
   Plus,
   Search,
+  Settings2,
   Share2,
   Sparkles,
   StickyNote,
@@ -22,20 +24,25 @@ import { useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { getLabelColor } from "@/lib/colors";
+import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { isFolder } from "@/lib/item-kinds";
 import { easeOutSoft, sidebarVariants } from "@/lib/motion";
+import { searchNotes } from "@/lib/search";
 import { PAGE_TEMPLATES } from "@/lib/templates";
 import { CreateMenu } from "./create-menu";
 import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
+import { VirtualList } from "./virtual-list";
 
 type BrowseMode = "vault" | "favorites" | "recent" | "collections" | "pages";
 
 type Props = {
   ownerId: string;
   activeId: Id<"notes"> | null;
+  settingsActive?: boolean;
   onSelect: (id: Id<"notes"> | null) => void;
   onGoHome: () => void;
+  onOpenSettings?: () => void;
   onCollapse: () => void;
   onCreateEntry: (parentId?: Id<"notes">, templateId?: string) => void;
   onCreateCollection: (parentId?: Id<"notes">) => void;
@@ -45,8 +52,10 @@ type Props = {
 export function Sidebar({
   ownerId,
   activeId,
+  settingsActive = false,
   onSelect,
   onGoHome,
+  onOpenSettings,
   onCollapse,
   onCreateEntry,
   onCreateCollection,
@@ -54,13 +63,17 @@ export function Sidebar({
 }: Props) {
   const toast = useToast();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, searchDebouncer] = useDebouncedValue(search, { wait: 200 }, (state) => ({
+    isPending: state.isPending,
+  }));
   const [showBin, setShowBin] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [browse, setBrowse] = useState<BrowseMode>("vault");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const customTemplates = useCustomTemplates();
 
-  const notes = useQuery(api.notes.list, { ownerId, search: search || undefined });
+  const notes = useQuery(api.notes.list, { ownerId });
   const trashed = useQuery(api.notes.listTrashed, { ownerId });
 
   const updateNote = useMutation(api.notes.update);
@@ -106,7 +119,12 @@ export function Sidebar({
   }
 
   const isSearching = !!search.trim();
+  const searchPending = isSearching && searchDebouncer.state.isPending;
   const activeItems = useMemo(() => notes ?? [], [notes]);
+  const searchResults = useMemo(
+    () => searchNotes(activeItems, debouncedSearch),
+    [activeItems, debouncedSearch],
+  );
   const pinned = useMemo(() => activeItems.filter((n) => n.pinned), [activeItems]);
   const collections = useMemo(
     () => activeItems.filter((n) => isFolder(n) && !n.parentId),
@@ -143,7 +161,12 @@ export function Sidebar({
 
   const rootItems = childrenByParent.get("root") ?? [];
   const trashCount = trashed?.length ?? 0;
-  const homeActive = activeId === null && !isSearching && browse === "vault" && !showBin;
+  const homeActive =
+    activeId === null &&
+    !settingsActive &&
+    !isSearching &&
+    browse === "vault" &&
+    !showBin;
 
   function setBrowseMode(mode: BrowseMode) {
     setShowBin(false);
@@ -177,13 +200,14 @@ export function Sidebar({
         </button>
       </div>
 
-      <div className="sidebar-search-wrap">
+      <div className={`sidebar-search-wrap ${searchPending ? "sidebar-search-pending" : ""}`}>
         <Search className="sidebar-search-icon" />
         <input
           className="sidebar-search"
           placeholder="Search vault…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          aria-busy={searchPending}
         />
       </div>
 
@@ -250,18 +274,23 @@ export function Sidebar({
           Quick start
         </p>
         <div className="sidebar-templates-row">
-          {PAGE_TEMPLATES.filter((t) => t.id !== "blank").slice(0, 4).map((template) => (
-            <button
-              key={template.id}
-              type="button"
-              className="sidebar-template-chip"
-              title={template.description}
-              onClick={() => onCreateEntry(undefined, template.id)}
-            >
-              <span>{template.icon}</span>
-              <span className="truncate">{template.name}</span>
-            </button>
-          ))}
+          {[
+            ...customTemplates.slice(0, 3),
+            ...PAGE_TEMPLATES.filter((t) => t.id !== "blank"),
+          ]
+            .slice(0, 5)
+            .map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                className="sidebar-template-chip"
+                title={template.description}
+                onClick={() => onCreateEntry(undefined, template.id)}
+              >
+                <span>{template.icon}</span>
+                <span className="truncate">{template.name}</span>
+              </button>
+            ))}
         </div>
       </div>
 
@@ -269,20 +298,28 @@ export function Sidebar({
         {notes === undefined ? (
           <p className="sidebar-empty">Loading…</p>
         ) : isSearching ? (
-          <SidebarSection title="Results">
-            {notes.length === 0 ? (
+          <SidebarSection
+            title={searchPending ? "Searching…" : `Results · ${searchResults.length}`}
+          >
+            {searchResults.length === 0 ? (
               <p className="sidebar-empty">No matches</p>
             ) : (
-              notes.map((item) => (
-                <SidebarItem
-                  key={item._id}
-                  item={item}
-                  active={item._id === activeId}
-                  onSelect={() => onSelect(item._id)}
-                  onTogglePin={() => handleTogglePin(item._id, item.pinned)}
-                  onTrash={() => handleTrash(item._id)}
-                />
-              ))
+              <VirtualList
+                items={searchResults}
+                estimateSize={36}
+                overscan={10}
+                className="sidebar-virtual"
+                getKey={(item) => item._id}
+                renderItem={(item) => (
+                  <SidebarItem
+                    item={item}
+                    active={item._id === activeId}
+                    onSelect={() => onSelect(item._id)}
+                    onTogglePin={() => handleTogglePin(item._id, item.pinned)}
+                    onTrash={() => handleTrash(item._id)}
+                  />
+                )}
+              />
             )}
           </SidebarSection>
         ) : browse === "favorites" ? (
@@ -290,16 +327,13 @@ export function Sidebar({
             {pinned.length === 0 ? (
               <EmptyHint text="Pin entries to keep them here." />
             ) : (
-              pinned.map((item) => (
-                <SidebarItem
-                  key={item._id}
-                  item={item}
-                  active={item._id === activeId}
-                  onSelect={() => onSelect(item._id)}
-                  onTogglePin={() => handleTogglePin(item._id, item.pinned)}
-                  onTrash={() => handleTrash(item._id)}
-                />
-              ))
+              <VirtualNoteList
+                items={pinned}
+                activeId={activeId}
+                onSelect={onSelect}
+                onTogglePin={handleTogglePin}
+                onTrash={handleTrash}
+              />
             )}
           </SidebarSection>
         ) : browse === "recent" ? (
@@ -307,16 +341,13 @@ export function Sidebar({
             {recent.length === 0 ? (
               <EmptyHint text="Edited pages show up here." />
             ) : (
-              recent.map((item) => (
-                <SidebarItem
-                  key={item._id}
-                  item={item}
-                  active={item._id === activeId}
-                  onSelect={() => onSelect(item._id)}
-                  onTogglePin={() => handleTogglePin(item._id, item.pinned)}
-                  onTrash={() => handleTrash(item._id)}
-                />
-              ))
+              <VirtualNoteList
+                items={recent}
+                activeId={activeId}
+                onSelect={onSelect}
+                onTogglePin={handleTogglePin}
+                onTrash={handleTrash}
+              />
             )}
           </SidebarSection>
         ) : browse === "collections" ? (
@@ -332,16 +363,13 @@ export function Sidebar({
             {collections.length === 0 ? (
               <EmptyHint text="Group related pages into collections." />
             ) : (
-              collections.map((item) => (
-                <SidebarItem
-                  key={item._id}
-                  item={item}
-                  active={item._id === activeId}
-                  onSelect={() => onSelect(item._id)}
-                  onTogglePin={() => handleTogglePin(item._id, item.pinned)}
-                  onTrash={() => handleTrash(item._id)}
-                />
-              ))
+              <VirtualNoteList
+                items={collections}
+                activeId={activeId}
+                onSelect={onSelect}
+                onTogglePin={handleTogglePin}
+                onTrash={handleTrash}
+              />
             )}
           </SidebarSection>
         ) : browse === "pages" ? (
@@ -357,16 +385,13 @@ export function Sidebar({
             {pages.length === 0 ? (
               <EmptyHint text="Top-level pages live here." />
             ) : (
-              pages.map((item) => (
-                <SidebarItem
-                  key={item._id}
-                  item={item}
-                  active={item._id === activeId}
-                  onSelect={() => onSelect(item._id)}
-                  onTogglePin={() => handleTogglePin(item._id, item.pinned)}
-                  onTrash={() => handleTrash(item._id)}
-                />
-              ))
+              <VirtualNoteList
+                items={pages}
+                activeId={activeId}
+                onSelect={onSelect}
+                onTogglePin={handleTogglePin}
+                onTrash={handleTrash}
+              />
             )}
           </SidebarSection>
         ) : (
@@ -441,6 +466,19 @@ export function Sidebar({
           <Zap className="size-3.5" />
           <span className="flex-1 text-left">Quick capture</span>
         </button>
+        {onOpenSettings && (
+          <button
+            type="button"
+            className={`sidebar-footer-btn ${settingsActive ? "sidebar-footer-btn-open" : ""}`}
+            onClick={() => {
+              setShowBin(false);
+              onOpenSettings();
+            }}
+          >
+            <Settings2 className="size-3.5" />
+            <span className="flex-1 text-left">Settings</span>
+          </button>
+        )}
         <button
           type="button"
           className="sidebar-footer-btn"
@@ -505,6 +543,39 @@ export function Sidebar({
 
 function EmptyHint({ text }: { text: string }) {
   return <p className="sidebar-empty-hint">{text}</p>;
+}
+
+function VirtualNoteList({
+  items,
+  activeId,
+  onSelect,
+  onTogglePin,
+  onTrash,
+}: {
+  items: Doc<"notes">[];
+  activeId: Id<"notes"> | null;
+  onSelect: (id: Id<"notes"> | null) => void;
+  onTogglePin: (id: Id<"notes">, pinned: boolean) => void;
+  onTrash: (id: Id<"notes">) => void;
+}) {
+  return (
+    <VirtualList
+      items={items}
+      estimateSize={36}
+      overscan={8}
+      className="sidebar-virtual"
+      getKey={(item) => item._id}
+      renderItem={(item) => (
+        <SidebarItem
+          item={item}
+          active={item._id === activeId}
+          onSelect={() => onSelect(item._id)}
+          onTogglePin={() => onTogglePin(item._id, item.pinned)}
+          onTrash={() => onTrash(item._id)}
+        />
+      )}
+    />
+  );
 }
 
 function SidebarSection({

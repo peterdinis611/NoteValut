@@ -13,7 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import {
@@ -26,6 +26,7 @@ import { getLabelColor, LABEL_COLORS } from "@/lib/colors";
 import { formatRelativeTime } from "@/lib/format";
 import { isFolder } from "@/lib/item-kinds";
 import { easeQuick, pageVariants } from "@/lib/motion";
+import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { PAGE_TEMPLATES } from "@/lib/templates";
 import { useVaultAccess } from "@/context/vault-access";
 import { VaultEditor } from "@/editor";
@@ -59,6 +60,11 @@ export function CollectionDetail({
   const [tab, setTab] = useState<Tab>("overview");
   const [folderBlocks, setFolderBlocks] = useState<Block[]>(defaultBlocks());
   const [shareOpen, setShareOpen] = useState(false);
+  const customTemplates = useCustomTemplates();
+  const templateOptions = useMemo(
+    () => [...customTemplates, ...PAGE_TEMPLATES],
+    [customTemplates],
+  );
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
 
@@ -340,7 +346,7 @@ export function CollectionDetail({
                   updateNote({ id: folder._id, defaultTemplateId: e.target.value })
                 }
               >
-                {PAGE_TEMPLATES.map((t) => (
+                {templateOptions.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.icon} {t.name}
                   </option>

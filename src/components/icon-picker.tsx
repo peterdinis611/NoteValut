@@ -1,8 +1,10 @@
 "use client";
 
+import { useDebouncedValue } from "@tanstack/react-pacer";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { filterIcons } from "@/lib/icons";
+import { searchIconsFlat } from "@/lib/search";
 
 type Props = {
   value: string;
@@ -10,10 +12,15 @@ type Props = {
   size?: "sm" | "lg";
 };
 
+const COLS = 8;
+const CELL = 36;
+
 export function IconPicker({ value, onChange, size = "lg" }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [debouncedQuery] = useDebouncedValue(query, { wait: 160 });
   const ref = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -28,7 +35,15 @@ export function IconPicker({ value, onChange, size = "lg" }: Props) {
     if (!open) setQuery("");
   }, [open]);
 
-  const groups = useMemo(() => filterIcons(query), [query]);
+  const icons = useMemo(() => searchIconsFlat(debouncedQuery), [debouncedQuery]);
+  const rowCount = Math.ceil(icons.length / COLS) || 0;
+
+  const virtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => CELL,
+    overscan: 4,
+  });
 
   return (
     <div ref={ref} className="relative">
@@ -54,32 +69,45 @@ export function IconPicker({ value, onChange, size = "lg" }: Props) {
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
-          <div className="icon-picker-scroll">
-            {groups.length === 0 ? (
+          <div ref={scrollRef} className="icon-picker-scroll icon-picker-virtual">
+            {icons.length === 0 ? (
               <p className="icon-picker-empty">No matches</p>
             ) : (
-              groups.map((group) => (
-                <section key={group.id} className="icon-picker-group">
-                  <p className="icon-picker-group-label">{group.label}</p>
-                  <div className="icon-picker-grid">
-                    {group.icons.map((icon) => (
-                      <button
-                        key={`${group.id}-${icon}`}
-                        type="button"
-                        className={`icon-picker-item ${
-                          value === icon ? "icon-picker-item-active" : ""
-                        }`}
-                        onClick={() => {
-                          onChange(icon);
-                          setOpen(false);
-                        }}
-                      >
-                        {icon}
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              ))
+              <div
+                className="icon-picker-virtual-inner"
+                style={{ height: virtualizer.getTotalSize() }}
+              >
+                {virtualizer.getVirtualItems().map((row) => {
+                  const start = row.index * COLS;
+                  const slice = icons.slice(start, start + COLS);
+                  return (
+                    <div
+                      key={row.key}
+                      data-index={row.index}
+                      ref={virtualizer.measureElement}
+                      className="icon-picker-virtual-row"
+                      style={{ transform: `translateY(${row.start}px)` }}
+                    >
+                      {slice.map((item) => (
+                        <button
+                          key={`${item.groupId}-${item.icon}`}
+                          type="button"
+                          className={`icon-picker-item ${
+                            value === item.icon ? "icon-picker-item-active" : ""
+                          }`}
+                          title={item.groupLabel}
+                          onClick={() => {
+                            onChange(item.icon);
+                            setOpen(false);
+                          }}
+                        >
+                          {item.icon}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>

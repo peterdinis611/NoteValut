@@ -1,13 +1,14 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { Eye, FileText, FolderOpen, Lock } from "lucide-react";
+import { Eye, FileText, FolderOpen } from "lucide-react";
 import { useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { VaultAccessProvider } from "@/context/vault-access";
 import { isFolder } from "@/lib/item-kinds";
 import { permissionLabel } from "@/lib/share";
+import { LottieStatus } from "./lottie-status";
 import { NoteEditor } from "./note-editor";
 
 type Props = {
@@ -25,16 +26,26 @@ export function SharedVaultApp({ token }: Props) {
   }, [bundle?.notes]);
 
   if (bundle === undefined) {
-    return <div className="page-empty text-muted">Loading shared vault…</div>;
+    return (
+      <LottieStatus
+        compact
+        variant="loading"
+        title="Opening shared vault…"
+        description="Checking your share link and loading notes."
+      />
+    );
   }
 
   if (!bundle) {
     return (
-      <div className="page-empty">
-        <Lock className="size-10 text-muted" />
-        <h2 className="text-lg font-medium">Link unavailable</h2>
-        <p className="text-sm text-muted">This share link is invalid or has been revoked.</p>
-      </div>
+      <LottieStatus
+        variant="not-authorized"
+        title="Not authorized"
+        description="This share link is invalid, expired, or has been revoked. Ask the owner for a new invite."
+        actions={[
+          { label: "Back to NoteVault", href: "/", primary: true },
+        ]}
+      />
     );
   }
 

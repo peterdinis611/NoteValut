@@ -1,8 +1,10 @@
 "use client";
 
-import { FileText, FolderOpen } from "lucide-react";
+import { FileText, FolderOpen, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef } from "react";
+import { removeCustomTemplate } from "@/db/templates-collection";
+import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { dropdownVariants, easeOutSoft } from "@/lib/motion";
 import { PAGE_TEMPLATES } from "@/lib/templates";
 
@@ -15,6 +17,7 @@ type Props = {
 
 export function CreateMenu({ open, onClose, onCreateEntry, onCreateCollection }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  const custom = useCustomTemplates();
 
   useEffect(() => {
     if (!open) return;
@@ -57,7 +60,45 @@ export function CreateMenu({ open, onClose, onCreateEntry, onCreateCollection }:
             </span>
           </button>
 
-          <p className="create-menu-divider">Entry templates</p>
+          {custom.length > 0 && (
+            <>
+              <p className="create-menu-divider">Your templates</p>
+              {custom.map((template) => (
+                <div key={template.id} className="create-menu-row">
+                  <button
+                    type="button"
+                    className="create-menu-item"
+                    onClick={() => {
+                      onCreateEntry(template.id);
+                      onClose();
+                    }}
+                  >
+                    <span className="text-lg">{template.icon}</span>
+                    <span>
+                      <span className="block text-sm font-medium">{template.name}</span>
+                      <span className="block text-xs text-muted">
+                        {template.description || "Custom template"}
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="create-menu-remove"
+                    aria-label={`Delete template ${template.name}`}
+                    title="Delete template"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeCustomTemplate(template.id);
+                    }}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              ))}
+            </>
+          )}
+
+          <p className="create-menu-divider">Default templates</p>
           {PAGE_TEMPLATES.map((template) => (
             <button
               key={template.id}

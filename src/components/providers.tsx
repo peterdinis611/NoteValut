@@ -1,5 +1,6 @@
 "use client";
 
+import { PacerProvider } from "@tanstack/react-pacer";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import {
   createDarkTheme,
@@ -63,7 +64,9 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
   return (
     <FluentProvider theme={theme}>
       <ConvexProvider client={client}>
-        <ToastProvider>{children}</ToastProvider>
+        <PacerProvider defaultOptions={{ debouncer: { wait: 200 } }}>
+          <ToastProvider>{children}</ToastProvider>
+        </PacerProvider>
       </ConvexProvider>
     </FluentProvider>
   );

@@ -77,6 +77,17 @@ export const CustomBlockContentSchema = v.pipe(
   v.maxLength(20_000, "Content is too long"),
 );
 
+export const TemplateNameSchema = v.pipe(
+  v.string(),
+  v.trim(),
+  v.minLength(1, "Template name is required"),
+  v.maxLength(60, "Name is too long"),
+);
+
+export function parseTemplateName(input: string) {
+  return v.safeParse(TemplateNameSchema, input);
+}
+
 export type ValidBlock = v.InferOutput<typeof BlockSchema>;
 
 export function parseBlocks(input: unknown) {

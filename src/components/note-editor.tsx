@@ -5,7 +5,6 @@ import {
   ChevronRight,
   Copy,
   Eye,
-  MoreHorizontal,
   PanelLeft,
   Pin,
   Share2,
@@ -16,16 +15,19 @@ import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import {
   type Block,
+  blocksToMarkdown,
   blocksToPlainText,
   defaultBlocks,
   migrateContentToBlocks,
 } from "@/lib/blocks";
 import { isFolder } from "@/lib/item-kinds";
-import { firstIssue, parseBlocks, parseTags } from "@/lib/validation";
+import { firstIssue, parseBlocks, parseTags, parseTemplateName } from "@/lib/validation";
 import { useVaultAccess } from "@/context/vault-access";
 import { VaultEditor } from "@/editor";
+import { saveCustomTemplate } from "@/db/templates-collection";
 import { CollectionDetail } from "./collection-detail";
 import { IconPicker } from "./icon-picker";
+import { MoreActionIcons, MoreActionsMenu, type MoreActionItem } from "./more-actions-menu";
 import { PageBreadcrumbs } from "./page-breadcrumbs";
 import { PageHeaderActions } from "./page-header-actions";
 import { PageProperties } from "./page-properties";
@@ -149,6 +151,75 @@ export function NoteEditor({
     }
   }
 
+  async function handleToggleArchive() {
+    if (!note || readOnly) return;
+    try {
+      await updateNote({ id: note._id, archived: !note.archived });
+      toast.success(note.archived ? "Unarchived" : "Archived");
+      if (!note.archived) onNavigate(null);
+    } catch {
+      toast.error("Couldn’t update archive");
+    }
+  }
+
+  async function copyMarkdown() {
+    const md = `# ${title || "Untitled"}\n\n${blocksToMarkdown(blocks)}`;
+    try {
+      await navigator.clipboard.writeText(md);
+      toast.success("Copied as Markdown");
+    } catch {
+      toast.error("Couldn’t copy");
+    }
+  }
+
+  function downloadMarkdown() {
+    const md = `# ${title || "Untitled"}\n\n${blocksToMarkdown(blocks)}`;
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(title || "untitled").replace(/[^\w\-]+/g, "-").toLowerCase()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Downloaded Markdown");
+  }
+
+  async function copyPageUrl() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Link copied");
+    } catch {
+      toast.error("Couldn’t copy link");
+    }
+  }
+
+  function saveAsTemplate() {
+    if (!note || isFolder(note) || readOnly) return;
+    const nameResult = parseTemplateName(title || note.icon || "Untitled template");
+    if (!nameResult.success) {
+      toast.error(firstIssue(nameResult));
+      return;
+    }
+    const blocksResult = parseBlocks(blocks.length ? blocks : defaultBlocks());
+    if (!blocksResult.success) {
+      toast.error(firstIssue(blocksResult));
+      return;
+    }
+    saveCustomTemplate({
+      id: `custom-${crypto.randomUUID()}`,
+      name: nameResult.output,
+      icon: note.icon || "✦",
+      description: "Saved from your vault",
+      tags: [...tags],
+      blocks: blocksResult.output.map((b) => ({
+        ...b,
+        id: crypto.randomUUID(),
+        rows: b.rows?.map((row) => [...row]),
+      })),
+    });
+    toast.success(`Template “${nameResult.output}” saved`);
+  }
+
   if (note === undefined) {
     return <div className="page-empty text-muted">Loading…</div>;
   }
@@ -159,6 +230,81 @@ export function NoteEditor({
 
   const linkablePages =
     allNotes?.filter((n) => n.kind !== "folder" && n._id !== noteId) ?? [];
+
+  const moreItems: MoreActionItem[] = [];
+  if (!readOnly) {
+    if (!isFolder(note)) {
+      moreItems.push(
+        {
+          id: "copy-md",
+          label: "Copy as Markdown",
+          icon: MoreActionIcons.copy,
+          onClick: () => void copyMarkdown(),
+        },
+        {
+          id: "download-md",
+          label: "Download Markdown",
+          icon: MoreActionIcons.download,
+          onClick: downloadMarkdown,
+        },
+        {
+          id: "save-template",
+          label: "Save as template",
+          icon: MoreActionIcons.template,
+          onClick: saveAsTemplate,
+        },
+      );
+    }
+    moreItems.push({
+      id: "copy-link",
+      label: "Copy page link",
+      icon: MoreActionIcons.link,
+      onClick: () => void copyPageUrl(),
+    });
+    if (!isFolder(note)) {
+      moreItems.push({
+        id: "toggle-icon",
+        label: showIcon ? "Hide icon" : "Show icon",
+        icon: showIcon ? MoreActionIcons.hideIcon : MoreActionIcons.showIcon,
+        onClick: () => setShowIcon((v) => !v),
+      });
+    }
+    moreItems.push(
+      {
+        id: "nested-entry",
+        label: "New nested entry",
+        icon: MoreActionIcons.entry,
+        onClick: () => onCreateEntry(noteId),
+      },
+      {
+        id: "nested-collection",
+        label: "New nested collection",
+        icon: MoreActionIcons.collection,
+        onClick: () => onCreateCollection(noteId),
+      },
+      {
+        id: "archive",
+        label: note.archived ? "Unarchive" : "Archive",
+        icon: note.archived ? MoreActionIcons.unarchive : MoreActionIcons.archive,
+        onClick: () => void handleToggleArchive(),
+      },
+    );
+  } else {
+    moreItems.push({
+      id: "copy-link",
+      label: "Copy page link",
+      icon: MoreActionIcons.link,
+      onClick: () => void copyPageUrl(),
+    });
+    if (!isFolder(note)) {
+      moreItems.push({
+        id: "copy-md",
+        label: "Copy as Markdown",
+        icon: MoreActionIcons.copy,
+        onClick: () => void copyMarkdown(),
+      });
+    }
+  }
 
   return (
     <div className="page-view">
@@ -217,11 +363,7 @@ export function NoteEditor({
               </button>
             </UiTooltip>
           )}
-          <UiTooltip label="More actions">
-            <button type="button" className="topbar-btn" aria-label="More actions">
-              <MoreHorizontal className="size-4" />
-            </button>
-          </UiTooltip>
+          <MoreActionsMenu items={moreItems} />
         </div>
       </header>
 

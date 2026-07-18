@@ -10,8 +10,11 @@ import { VaultAccessProvider } from "@/context/vault-access";
 import { easeOutSoft, easeQuick, pageVariants } from "@/lib/motion";
 import { getTemplate } from "@/lib/templates";
 import { useOwnerId } from "@/hooks/use-owner-id";
+import { useVaultSettings } from "@/hooks/use-vault-settings";
+import { LottieStatus } from "./lottie-status";
 import { NoteEditor } from "./note-editor";
 import { QuickCapture, QuickCaptureFab } from "./quick-capture";
+import { SettingsPage } from "./settings-page";
 import { Sidebar } from "./sidebar";
 import { useToast } from "./toast";
 import { VaultHome } from "./vault-home";
@@ -19,6 +22,7 @@ import { VaultHome } from "./vault-home";
 export function NoteVaultApp() {
   const ownerId = useOwnerId();
   const toast = useToast();
+  useVaultSettings();
   const seedDemo = useMutation(api.notes.seedDemo);
   const createNote = useMutation(api.notes.create);
   const notes = useQuery(api.notes.list, ownerId ? { ownerId } : "skip");
@@ -26,6 +30,7 @@ export function NoteVaultApp() {
   const [seeded, setSeeded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (!ownerId || seeded) return;
@@ -51,7 +56,11 @@ export function NoteVaultApp() {
           title: template.id === "blank" ? "Untitled" : template.name,
           icon: template.icon,
           tags: template.tags,
-          blocks: template.blocks.map((b) => ({ ...b, id: crypto.randomUUID() })),
+          blocks: template.blocks.map((b) => ({
+            ...b,
+            id: crypto.randomUUID(),
+            rows: b.rows?.map((row) => [...row]),
+          })),
         });
         setActiveId(id);
         toast.success(
@@ -87,7 +96,12 @@ export function NoteVaultApp() {
 
   if (!ownerId) {
     return (
-      <div className="flex flex-1 items-center justify-center text-muted">Loading workspace…</div>
+      <LottieStatus
+        compact
+        variant="loading"
+        title="Loading workspace…"
+        description="Preparing your local vault identity."
+      />
     );
   }
 
@@ -99,8 +113,19 @@ export function NoteVaultApp() {
             <Sidebar
               ownerId={ownerId}
               activeId={activeId}
-              onSelect={setActiveId}
-              onGoHome={() => setActiveId(null)}
+              settingsActive={showSettings}
+              onSelect={(id) => {
+                setShowSettings(false);
+                setActiveId(id);
+              }}
+              onGoHome={() => {
+                setShowSettings(false);
+                setActiveId(null);
+              }}
+              onOpenSettings={() => {
+                setActiveId(null);
+                setShowSettings(true);
+              }}
               onCollapse={() => setSidebarOpen(false)}
               onCreateEntry={handleCreateEntry}
               onCreateCollection={handleCreateCollection}
@@ -130,7 +155,7 @@ export function NoteVaultApp() {
 
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeId ?? "home"}
+              key={showSettings ? "settings" : (activeId ?? "home")}
               className="app-main-view"
               variants={pageVariants}
               initial="hidden"
@@ -138,11 +163,16 @@ export function NoteVaultApp() {
               exit="exit"
               transition={easeQuick}
             >
-              {activeId ? (
+              {showSettings ? (
+                <SettingsPage onClose={() => setShowSettings(false)} />
+              ) : activeId ? (
                 <NoteEditor
                   noteId={activeId}
                   ownerId={ownerId}
-                  onNavigate={setActiveId}
+                  onNavigate={(id) => {
+                    setShowSettings(false);
+                    setActiveId(id);
+                  }}
                   onToggleSidebar={() => setSidebarOpen(true)}
                   sidebarCollapsed={!sidebarOpen}
                   onCreateEntry={handleCreateEntry}
@@ -151,7 +181,10 @@ export function NoteVaultApp() {
               ) : (
                 <VaultHome
                   ownerId={ownerId}
-                  onNavigate={setActiveId}
+                  onNavigate={(id) => {
+                    setShowSettings(false);
+                    setActiveId(id);
+                  }}
                   onCreateEntry={(templateId) => handleCreateEntry(undefined, templateId)}
                   onCreateCollection={() => handleCreateCollection()}
                   onQuickCapture={() => setQuickCaptureOpen(true)}
