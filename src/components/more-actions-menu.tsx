@@ -6,12 +6,14 @@ import {
   Copy,
   Download,
   FilePlus2,
+  FileText,
   FolderInput,
   FolderPlus,
   History,
   LayoutTemplate,
   Link2,
   MoreHorizontal,
+  Printer,
   Smile,
   SmilePlus,
 } from "lucide-react";
@@ -116,4 +118,6 @@ export const MoreActionIcons = {
   showIcon: <SmilePlus className="size-3.5" />,
   hideIcon: <Smile className="size-3.5" />,
   template: <LayoutTemplate className="size-3.5" />,
+  markdown: <FileText className="size-3.5" />,
+  pdf: <Printer className="size-3.5" />,
 };

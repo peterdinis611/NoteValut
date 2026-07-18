@@ -21,6 +21,7 @@ import {
   migrateContentToBlocks,
 } from "@/lib/blocks";
 import { isFolder } from "@/lib/item-kinds";
+import { downloadPageMarkdown, exportPagePdf } from "@/lib/export-page";
 import { firstIssue, parseBlocks, parseTags, parseTemplateName } from "@/lib/validation";
 import { useVaultAccess } from "@/context/vault-access";
 import { TableOfContents } from "./table-of-contents";
@@ -180,15 +181,17 @@ export function NoteEditor({
   }
 
   function downloadMarkdown() {
-    const md = `# ${title || "Untitled"}\n\n${blocksToMarkdown(blocks)}`;
-    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${(title || "untitled").replace(/[^\w\-]+/g, "-").toLowerCase()}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadPageMarkdown(title || "Untitled", blocks);
     toast.success("Downloaded Markdown");
+  }
+
+  function downloadPdf() {
+    try {
+      exportPagePdf(title || "Untitled", note?.icon || "", blocks);
+      toast.success("Print dialog opened — choose Save as PDF");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn’t export PDF");
+    }
   }
 
   async function copyPageUrl() {
@@ -251,8 +254,14 @@ export function NoteEditor({
         {
           id: "download-md",
           label: "Download Markdown",
-          icon: MoreActionIcons.download,
+          icon: MoreActionIcons.markdown,
           onClick: downloadMarkdown,
+        },
+        {
+          id: "export-pdf",
+          label: "Export PDF…",
+          icon: MoreActionIcons.pdf,
+          onClick: downloadPdf,
         },
         {
           id: "save-template",
@@ -322,6 +331,18 @@ export function NoteEditor({
           label: "Copy as Markdown",
           icon: MoreActionIcons.copy,
           onClick: () => void copyMarkdown(),
+        },
+        {
+          id: "download-md",
+          label: "Download Markdown",
+          icon: MoreActionIcons.markdown,
+          onClick: downloadMarkdown,
+        },
+        {
+          id: "export-pdf",
+          label: "Export PDF…",
+          icon: MoreActionIcons.pdf,
+          onClick: downloadPdf,
         },
         {
           id: "history",
@@ -430,6 +451,7 @@ export function NoteEditor({
                   })
                 }
                 onRemoveCover={() => scheduleSave({ coverColor: null, coverImage: null })}
+                onUploadError={(msg) => toast.error(msg)}
               />
             )}
           </div>

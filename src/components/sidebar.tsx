@@ -31,6 +31,7 @@ import { isFolder } from "@/lib/item-kinds";
 import { easeOutSoft, sidebarVariants } from "@/lib/motion";
 import { searchNotes } from "@/lib/search";
 import { CreateMenu } from "./create-menu";
+import { MoveDialog } from "./move-dialog";
 import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
 import { VirtualList } from "./virtual-list";
@@ -78,6 +79,7 @@ export function Sidebar({
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkTag, setBulkTag] = useState("");
+  const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
 
   const notes = useQuery(api.notes.list, { ownerId });
   const trashed = useQuery(api.notes.listTrashed, { ownerId });
@@ -360,6 +362,9 @@ export function Sidebar({
             <div className="sidebar-bulk-actions">
               <button type="button" onClick={() => void runBulk("pin")}>
                 Star
+              </button>
+              <button type="button" onClick={() => setBulkMoveOpen(true)}>
+                Move
               </button>
               <button type="button" onClick={() => void runBulk("archive")}>
                 Archive
@@ -670,6 +675,13 @@ export function Sidebar({
         onClose={() => setShowShare(false)}
         scope="vault"
         title="NoteVault"
+      />
+      <MoveDialog
+        open={bulkMoveOpen}
+        onClose={() => setBulkMoveOpen(false)}
+        onMoved={clearSelection}
+        ownerId={ownerId}
+        noteIds={[...selectedIds] as Id<"notes">[]}
       />
     </motion.aside>
   );

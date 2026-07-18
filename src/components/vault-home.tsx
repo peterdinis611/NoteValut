@@ -1,12 +1,12 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { ArrowRight, FolderOpen, Plus, Share2, Zap } from "lucide-react";
+import { ArrowRight, CalendarClock, FolderOpen, Network, Plus, Share2, Zap } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
-import { countOpenTasks } from "@/lib/blocks";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
+import { countOpenTasks, countOverdueTasks } from "@/lib/blocks";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { formatRelativeTime } from "@/lib/format";
 import { isFolder } from "@/lib/item-kinds";
@@ -26,7 +26,42 @@ type Props = {
   onCreateEntry: (templateId?: string) => void;
   onCreateCollection: () => void;
   onQuickCapture: () => void;
+  onOpenGraph?: () => void;
 };
+
+type DueTaskHit = {
+  noteId: Id<"notes">;
+  noteTitle: string;
+  noteIcon: string;
+  text: string;
+  dueAt: number;
+  overdue: boolean;
+};
+
+function collectDueTasks(
+  notes: Doc<"notes">[] | undefined,
+  now = Date.now(),
+): DueTaskHit[] {
+  if (!notes) return [];
+  const week = now + 7 * 24 * 60 * 60 * 1000;
+  const hits: DueTaskHit[] = [];
+  for (const note of notes) {
+    if (isFolder(note) || note.trashed || note.archived) continue;
+    for (const block of note.blocks ?? []) {
+      if (block.type !== "todo" || block.checked || block.dueAt === undefined) continue;
+      if (block.dueAt > week) continue;
+      hits.push({
+        noteId: note._id,
+        noteTitle: note.title || "Untitled",
+        noteIcon: note.icon || "📝",
+        text: block.text.trim() || "Untitled task",
+        dueAt: block.dueAt,
+        overdue: block.dueAt < now,
+      });
+    }
+  }
+  return hits.sort((a, b) => a.dueAt - b.dueAt).slice(0, 8);
+}
 
 function plural(n: number, one: string, many: string) {
   return `${n} ${n === 1 ? one : many}`;
@@ -38,6 +73,7 @@ export function VaultHome({
   onCreateEntry,
   onCreateCollection,
   onQuickCapture,
+  onOpenGraph,
 }: Props) {
   const [shareOpen, setShareOpen] = useState(false);
   const customTemplates = useCustomTemplates();
@@ -58,6 +94,13 @@ export function VaultHome({
     notes
       ?.filter((n) => !isFolder(n) && countOpenTasks(n.blocks) > 0)
       .slice(0, 5) ?? [];
+
+  const dueTasks = useMemo(() => collectDueTasks(notes), [notes]);
+  const overdueCount = useMemo(
+    () =>
+      notes?.reduce((sum, n) => sum + (isFolder(n) ? 0 : countOverdueTasks(n.blocks)), 0) ?? 0,
+    [notes],
+  );
 
   return (
     <motion.div
@@ -98,6 +141,12 @@ export function VaultHome({
             <Share2 className="size-3.5" />
             Share
           </button>
+          {onOpenGraph && (
+            <button type="button" className="vault-link-btn" onClick={onOpenGraph}>
+              <Network className="size-3.5" />
+              Graph
+            </button>
+          )}
         </div>
 
         {stats && (
@@ -107,6 +156,14 @@ export function VaultHome({
             {plural(stats.collections, "collection", "collections")}
             <span className="vault-meta-dot" />
             {plural(stats.openTasks, "open task", "open tasks")}
+            {overdueCount > 0 && (
+              <>
+                <span className="vault-meta-dot" />
+                <span className="vault-meta-overdue">
+                  {plural(overdueCount, "overdue", "overdue")}
+                </span>
+              </>
+            )}
           </p>
         )}
       </motion.header>
@@ -151,6 +208,44 @@ export function VaultHome({
             </motion.ul>
           )}
         </motion.section>
+
+        {dueTasks.length > 0 && (
+          <motion.section className="vault-section" variants={fadeUpVariants} transition={easeOutSoft}>
+            <div className="vault-section-head">
+              <h2 className="vault-section-title">
+                <CalendarClock className="inline size-4 mr-1.5 opacity-70" />
+                Due soon
+              </h2>
+            </div>
+            <ul className="vault-row-list">
+              {dueTasks.map((task) => (
+                <li key={`${task.noteId}-${task.dueAt}-${task.text}`}>
+                  <button
+                    type="button"
+                    className="vault-row"
+                    onClick={() => onNavigate(task.noteId)}
+                  >
+                    <span className="vault-row-icon">{task.noteIcon}</span>
+                    <span className="vault-row-main">
+                      <span className="vault-row-title">{task.text}</span>
+                      <span className="vault-row-hint">{task.noteTitle}</span>
+                    </span>
+                    <span
+                      className={`vault-row-badge ${task.overdue ? "vault-row-badge-overdue" : ""}`}
+                    >
+                      {task.overdue
+                        ? "Overdue"
+                        : new Date(task.dueAt).toLocaleDateString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </motion.section>
+        )}
 
         {openTaskEntries.length > 0 && (
           <motion.section className="vault-section" variants={fadeUpVariants} transition={easeOutSoft}>

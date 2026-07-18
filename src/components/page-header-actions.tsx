@@ -1,9 +1,10 @@
 "use client";
 
-import { COVER_GRADIENTS } from "@/lib/blocks";
+import { COVER_GALLERY, COVER_GRADIENTS } from "@/lib/blocks";
 import { firstIssue, parseCoverImage } from "@/lib/validation";
-import { ImageIcon, Link2, Smile, X } from "lucide-react";
-import { useState } from "react";
+import { useVaultUpload } from "@/hooks/use-vault-upload";
+import { ImageIcon, Link2, Loader2, Smile, Upload, X } from "lucide-react";
+import { useRef, useState } from "react";
 
 type Props = {
   hasCover: boolean;
@@ -14,6 +15,7 @@ type Props = {
   onAddCover: (cover: string) => void;
   onSetCoverImage: (url: string | null) => void;
   onRemoveCover: () => void;
+  onUploadError?: (message: string) => void;
 };
 
 export function PageHeaderActions({
@@ -25,10 +27,14 @@ export function PageHeaderActions({
   onAddCover,
   onSetCoverImage,
   onRemoveCover,
+  onUploadError,
 }: Props) {
   const [showCovers, setShowCovers] = useState(false);
   const [imageDraft, setImageDraft] = useState(coverImage ?? "");
   const [imageError, setImageError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const { uploadFile } = useVaultUpload();
 
   function applyImageUrl() {
     const trimmed = imageDraft.trim();
@@ -44,6 +50,26 @@ export function PageHeaderActions({
     }
     setImageError(null);
     onSetCoverImage(parsed.output);
+  }
+
+  async function onPickFile(file: File | null) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      onUploadError?.("Choose an image file");
+      return;
+    }
+    setUploading(true);
+    try {
+      const uploaded = await uploadFile(file);
+      setImageDraft(uploaded.url);
+      setImageError(null);
+      onSetCoverImage(uploaded.url);
+    } catch {
+      onUploadError?.("Couldn’t upload cover image");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
   }
 
   return (
@@ -77,6 +103,24 @@ export function PageHeaderActions({
 
       {showCovers && (
         <div className="cover-picker-panel">
+          <p className="cover-picker-label">Gallery</p>
+          <div className="cover-gallery-grid">
+            {COVER_GALLERY.map((cover) => (
+              <button
+                key={cover.id}
+                type="button"
+                className={`cover-gallery-item ${coverImage === cover.url ? "cover-gallery-item-active" : ""}`}
+                title={cover.label}
+                aria-label={cover.label}
+                style={{ backgroundImage: `url(${cover.url})` }}
+                onClick={() => {
+                  setImageDraft(cover.url);
+                  onSetCoverImage(cover.url);
+                }}
+              />
+            ))}
+          </div>
+
           <p className="cover-picker-label">Gradient</p>
           <div className="cover-picker-swatches">
             {COVER_GRADIENTS.filter((c) => c.id).map((cover) => (
@@ -95,10 +139,31 @@ export function PageHeaderActions({
               />
             ))}
           </div>
+
           <p className="cover-picker-label">
-            <Link2 className="inline size-3" /> Background image
+            <Upload className="inline size-3" /> Upload or paste URL
           </p>
           <div className="cover-image-row">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => void onPickFile(e.target.files?.[0] ?? null)}
+            />
+            <button
+              type="button"
+              className="cover-image-upload"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+            >
+              {uploading ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Upload className="size-3.5" />
+              )}
+              {uploading ? "Uploading…" : "Upload"}
+            </button>
             <input
               className="cover-image-input"
               placeholder="https://… image URL"
@@ -115,6 +180,7 @@ export function PageHeaderActions({
               }}
             />
             <button type="button" className="cover-image-apply" onClick={applyImageUrl}>
+              <Link2 className="size-3.5" />
               Apply
             </button>
           </div>

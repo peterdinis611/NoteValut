@@ -73,7 +73,55 @@ export const COVER_GRADIENTS = [
   { id: "from-amber-500/35 to-orange-600/25", label: "Sunset" },
   { id: "from-rose-600/35 to-pink-500/25", label: "Rose" },
   { id: "from-slate-600/40 to-zinc-500/25", label: "Slate" },
+  { id: "from-lime-600/30 to-teal-700/25", label: "Moss" },
+  { id: "from-sky-500/35 to-indigo-700/30", label: "Dusk" },
+  { id: "from-fuchsia-600/30 to-rose-700/25", label: "Bloom" },
+  { id: "from-stone-500/40 to-neutral-700/30", label: "Stone" },
 ];
+
+/** Curated cover photos (hotlink-friendly Unsplash source URLs). */
+export const COVER_GALLERY = [
+  {
+    id: "peaks",
+    label: "Peaks",
+    url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    id: "forest",
+    label: "Forest",
+    url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    id: "coast",
+    label: "Coast",
+    url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    id: "desert",
+    label: "Desert",
+    url: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    id: "city",
+    label: "City",
+    url: "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    id: "library",
+    label: "Library",
+    url: "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    id: "desk",
+    label: "Desk",
+    url: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    id: "night",
+    label: "Night",
+    url: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=1600&q=80",
+  },
+] as const;
 
 export function emptyTable(rows = 3, cols = 3): string[][] {
   return Array.from({ length: rows }, () => Array.from({ length: cols }, () => ""));

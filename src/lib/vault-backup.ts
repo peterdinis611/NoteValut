@@ -19,10 +19,11 @@ export const VaultBackupSchema = v.object({
       kind: v.optional(v.picklist(["page", "folder"])),
       color: v.optional(v.string()),
       description: v.optional(v.string()),
-      viewMode: v.optional(v.picklist(["grid", "list"])),
+      viewMode: v.optional(v.picklist(["grid", "list", "table"])),
       sortMode: v.optional(v.picklist(["updated", "name", "kind"])),
       defaultTemplateId: v.optional(v.string()),
       isLocked: v.optional(v.boolean()),
+      status: v.optional(v.string()),
       pinned: v.boolean(),
       archived: v.boolean(),
       tags: v.array(v.string()),
@@ -49,10 +50,11 @@ export type ExportVaultPayload = {
     kind?: "page" | "folder";
     color?: string;
     description?: string;
-    viewMode?: "grid" | "list";
+    viewMode?: "grid" | "list" | "table";
     sortMode?: "updated" | "name" | "kind";
     defaultTemplateId?: string;
     isLocked?: boolean;
+    status?: string;
     pinned: boolean;
     archived: boolean;
     tags: string[];

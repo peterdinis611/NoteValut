@@ -3,6 +3,7 @@
 import {
   Database,
   FileUp,
+  FileText,
   Palette,
   RotateCcw,
   Settings2,
@@ -29,6 +30,7 @@ import {
 import { removeCustomTemplate } from "@/db/templates-collection";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { useVaultSettings } from "@/hooks/use-vault-settings";
+import { importMarkdownFiles } from "@/lib/import-notes";
 import { easeOutSoft, fadeUpVariants } from "@/lib/motion";
 import { listDefaultTemplates } from "@/lib/templates";
 import { parseVaultBackupFile } from "@/lib/vault-backup";
@@ -51,12 +53,16 @@ export function SettingsPage({ ownerId, onClose, onExport }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const fontFileRef = useRef<HTMLInputElement>(null);
   const backupFileRef = useRef<HTMLInputElement>(null);
+  const mdImportRef = useRef<HTMLInputElement>(null);
   const [cssDraft, setCssDraft] = useState(settings.customCss);
   const [dragging, setDragging] = useState(false);
   const [fontFamilyDraft, setFontFamilyDraft] = useState(settings.fontFamily ?? "");
   const [fontUrlDraft, setFontUrlDraft] = useState(settings.fontUrl ?? "");
   const [fontDragging, setFontDragging] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [importSource, setImportSource] = useState<"markdown" | "obsidian" | "notion">(
+    "markdown",
+  );
 
   useEffect(() => {
     setCssDraft(settings.customCss);
@@ -158,6 +164,35 @@ export function SettingsPage({ ownerId, onClose, onExport }: Props) {
       toast.success(`Imported ${result.imported} items`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn’t import backup");
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  async function handleImportMarkdown(files: FileList | null) {
+    if (!files?.length) return;
+    setImporting(true);
+    try {
+      const drafts = await importMarkdownFiles(files, importSource);
+      const result = await importVault({
+        ownerId,
+        notes: drafts.map((n) => ({
+          id: n.id,
+          title: n.title,
+          content: n.content,
+          blocks: n.blocks,
+          icon: n.icon,
+          parentId: null,
+          kind: "page" as const,
+          pinned: false,
+          archived: false,
+          tags: n.tags,
+          updatedAt: n.updatedAt,
+        })),
+      });
+      toast.success(`Imported ${result.imported} Markdown pages (${importSource})`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn’t import Markdown");
     } finally {
       setImporting(false);
     }
@@ -470,6 +505,62 @@ export function SettingsPage({ ownerId, onClose, onExport }: Props) {
         <p className="settings-hint">
           Export includes pages and collections (not trash). Import merges as new items and
           remaps parent links.
+        </p>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-section-head">
+          <FileText className="size-4 text-accent" />
+          <div>
+            <h2>Import notes</h2>
+            <p>Markdown from Obsidian, Notion export, or plain .md files</p>
+          </div>
+        </div>
+        <div className="settings-import-source">
+          {(
+            [
+              { id: "markdown", label: "Markdown" },
+              { id: "obsidian", label: "Obsidian" },
+              { id: "notion", label: "Notion" },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              className={`settings-source-chip ${importSource === opt.id ? "is-active" : ""}`}
+              onClick={() => setImportSource(opt.id)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <div className="settings-css-toolbar">
+          <button
+            type="button"
+            className="settings-btn"
+            disabled={importing}
+            onClick={() => mdImportRef.current?.click()}
+          >
+            <FileUp className="size-3.5" />
+            {importing ? "Importing…" : "Choose .md files"}
+          </button>
+          <input
+            ref={mdImportRef}
+            type="file"
+            accept=".md,.markdown,.txt,text/markdown,text/plain"
+            multiple
+            className="sr-only"
+            onChange={(e) => {
+              const files = e.target.files;
+              e.target.value = "";
+              void handleImportMarkdown(files);
+            }}
+          />
+        </div>
+        <p className="settings-hint">
+          Obsidian: reads YAML frontmatter and <code>[[wikilinks]]</code>. Notion: picks
+          exported Markdown pages (export as Markdown &amp; CSV, then select the .md files).
+          Each file becomes a new page.
         </p>
       </section>
 

@@ -401,6 +401,7 @@ export function NoteVaultApp() {
                   onCreateEntry={(templateId) => handleCreateEntry(undefined, templateId)}
                   onCreateCollection={() => handleCreateCollection()}
                   onQuickCapture={() => setQuickCaptureOpen(true)}
+                  onOpenGraph={() => setGraphOpen(true)}
                 />
               )}
             </motion.div>

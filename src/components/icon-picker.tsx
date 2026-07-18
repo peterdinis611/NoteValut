@@ -4,6 +4,7 @@ import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { PAGE_ICON_GROUPS } from "@/lib/icons";
 import { searchIconsFlat } from "@/lib/search";
 
 type Props = {
@@ -18,6 +19,7 @@ const CELL = 36;
 export function IconPicker({ value, onChange, size = "lg" }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [groupId, setGroupId] = useState<string>("all");
   const [debouncedQuery] = useDebouncedValue(query, { wait: 160 });
   const ref = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -32,10 +34,18 @@ export function IconPicker({ value, onChange, size = "lg" }: Props) {
   }, [open]);
 
   useEffect(() => {
-    if (!open) setQuery("");
+    if (!open) {
+      setQuery("");
+      setGroupId("all");
+    }
   }, [open]);
 
-  const icons = useMemo(() => searchIconsFlat(debouncedQuery), [debouncedQuery]);
+  const icons = useMemo(() => {
+    const hits = searchIconsFlat(debouncedQuery);
+    if (groupId === "all") return hits;
+    return hits.filter((h) => h.groupId === groupId);
+  }, [debouncedQuery, groupId]);
+
   const rowCount = Math.ceil(icons.length / COLS) || 0;
 
   const virtualizer = useVirtualizer({
@@ -44,6 +54,10 @@ export function IconPicker({ value, onChange, size = "lg" }: Props) {
     estimateSize: () => CELL,
     overscan: 4,
   });
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [groupId, debouncedQuery]);
 
   return (
     <div ref={ref} className="relative">
@@ -58,16 +72,39 @@ export function IconPicker({ value, onChange, size = "lg" }: Props) {
 
       {open && (
         <div className="icon-picker-popover">
-          <p className="icon-picker-label">Emoji</p>
+          <p className="icon-picker-label">Icon gallery</p>
           <div className="icon-picker-search">
             <Search className="size-3.5 text-muted" />
             <input
               autoFocus
               className="icon-picker-search-input"
-              placeholder="Search groups…"
+              placeholder="Search icons…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
+          </div>
+          <div className="icon-picker-groups" role="tablist" aria-label="Icon groups">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={groupId === "all"}
+              className={`icon-picker-group-chip ${groupId === "all" ? "is-active" : ""}`}
+              onClick={() => setGroupId("all")}
+            >
+              All
+            </button>
+            {PAGE_ICON_GROUPS.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                role="tab"
+                aria-selected={groupId === g.id}
+                className={`icon-picker-group-chip ${groupId === g.id ? "is-active" : ""}`}
+                onClick={() => setGroupId(g.id)}
+              >
+                {g.label}
+              </button>
+            ))}
           </div>
           <div ref={scrollRef} className="icon-picker-scroll icon-picker-virtual">
             {icons.length === 0 ? (
