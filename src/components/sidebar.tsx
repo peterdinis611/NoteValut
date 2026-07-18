@@ -25,7 +25,6 @@ import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
-import { getLabelColor } from "@/lib/colors";
 import { toDailyKey } from "@/lib/daily";
 import { isFolder } from "@/lib/item-kinds";
 import { easeOutSoft, sidebarVariants } from "@/lib/motion";
@@ -248,6 +247,14 @@ export function Sidebar({
     setBrowse(mode);
   }
 
+  const browseItems = [
+    { id: "all" as const, label: "All pages", icon: StickyNote },
+    { id: "favorites" as const, label: "Favorites", icon: Pin },
+    { id: "recent" as const, label: "Recent", icon: Clock3 },
+    { id: "collections" as const, label: "Folders", icon: FolderOpen },
+    { id: "archive" as const, label: "Archive", icon: Archive },
+  ];
+
   return (
     <motion.aside
       className="sidebar"
@@ -263,6 +270,7 @@ export function Sidebar({
             N
           </span>
           <span className="sidebar-brand">NoteVault</span>
+          <ChevronDown className="sidebar-workspace-chevron" aria-hidden />
         </button>
         <button
           type="button"
@@ -278,29 +286,29 @@ export function Sidebar({
         <Search className="sidebar-search-icon" />
         <input
           className="sidebar-search"
-          placeholder="Search vault…"
+          placeholder="Search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           aria-busy={searchPending}
         />
       </div>
 
-      <div className="sidebar-quick">
+      <div className="sidebar-menu">
         <button
           type="button"
-          className={`sidebar-nav-btn ${homeActive ? "sidebar-nav-btn-active" : ""}`}
+          className={`sidebar-link ${homeActive ? "sidebar-link-active" : ""}`}
           onClick={() => {
             setBrowse("all");
             setShowBin(false);
             onGoHome();
           }}
         >
-          <Home className="size-3.5" />
-          Home
+          <Home className="size-4" />
+          <span>Home</span>
         </button>
         <button
           type="button"
-          className="sidebar-nav-btn"
+          className="sidebar-link"
           onClick={async () => {
             try {
               const id = await getOrCreateDaily({ ownerId, dailyKey: toDailyKey() });
@@ -311,49 +319,41 @@ export function Sidebar({
             }
           }}
         >
-          <CalendarDays className="size-3.5" />
-          Today
+          <CalendarDays className="size-4" />
+          <span>Today</span>
         </button>
-        <button
-          type="button"
-          data-create-trigger
-          className="sidebar-nav-btn sidebar-nav-btn-accent"
-          onClick={() => setShowCreate((v) => !v)}
-        >
-          <Plus className="size-3.5" />
-          New
-        </button>
-        <CreateMenu
-          open={showCreate}
-          onClose={() => setShowCreate(false)}
-          onCreateEntry={(templateId) => onCreateEntry(undefined, templateId)}
-          onCreateCollection={() => onCreateCollection()}
-        />
-      </div>
 
-      <div className="sidebar-filters" role="tablist" aria-label="Browse">
-        {(
-          [
-            { id: "all", label: "All", icon: StickyNote },
-            { id: "favorites", label: "Starred", icon: Pin },
-            { id: "recent", label: "Recent", icon: Clock3 },
-            { id: "collections", label: "Folders", icon: FolderOpen },
-            { id: "archive", label: "Archive", icon: Archive },
-          ] as const
-        ).map((item) => {
+        <div className="sidebar-menu-divider" />
+
+        <div className="sidebar-create-wrap">
+          <button
+            type="button"
+            data-create-trigger
+            className="sidebar-link"
+            onClick={() => setShowCreate((v) => !v)}
+          >
+            <Plus className="size-4" />
+            <span>New page</span>
+          </button>
+          <CreateMenu
+            open={showCreate}
+            onClose={() => setShowCreate(false)}
+            onCreateEntry={(templateId) => onCreateEntry(undefined, templateId)}
+            onCreateCollection={() => onCreateCollection()}
+          />
+        </div>
+
+        {browseItems.map((item) => {
           const Icon = item.icon;
           const active = !isSearching && !showBin && !tagsActive && browse === item.id;
           return (
             <button
               key={item.id}
               type="button"
-              role="tab"
-              aria-selected={active}
-              className={`sidebar-filter ${active ? "sidebar-filter-active" : ""}`}
+              className={`sidebar-link ${active ? "sidebar-link-active" : ""}`}
               onClick={() => setBrowseMode(item.id)}
-              title={item.label}
             >
-              <Icon className="size-3.5" />
+              <Icon className="size-4" />
               <span>{item.label}</span>
             </button>
           );
@@ -430,7 +430,7 @@ export function Sidebar({
             )}
           </SidebarSection>
         ) : browse === "favorites" ? (
-          <SidebarSection title="Starred">
+          <SidebarSection title="Favorites">
             {pinned.length === 0 ? (
               <EmptyHint text="Pin entries to keep them here." />
             ) : (
@@ -517,7 +517,7 @@ export function Sidebar({
           </SidebarSection>
         ) : (
           <SidebarSection
-            title="Notes"
+            title="Private"
             action={
               <button
                 type="button"
@@ -585,71 +585,11 @@ export function Sidebar({
       </nav>
 
       <div className="sidebar-footer">
-        <div className="sidebar-footer-row">
-          <AuthControls />
-          <div className="sidebar-footer-tools">
-          <button
-            type="button"
-            className="sidebar-tool"
-            onClick={onQuickCapture}
-            title="Quick capture"
-            aria-label="Quick capture"
-          >
-            <Zap className="size-3.5" />
-          </button>
-          {onOpenTags && (
-            <button
-              type="button"
-              className={`sidebar-tool ${tagsActive ? "sidebar-tool-active" : ""}`}
-              onClick={() => {
-                setShowBin(false);
-                onOpenTags();
-              }}
-              title="Tags"
-              aria-label="Tags"
-            >
-              <Tag className="size-3.5" />
-            </button>
-          )}
-          <button
-            type="button"
-            className="sidebar-tool"
-            onClick={() => setShowShare(true)}
-            title="Share vault"
-            aria-label="Share vault"
-          >
-            <Share2 className="size-3.5" />
-          </button>
-          {onOpenSettings && (
-            <button
-              type="button"
-              className={`sidebar-tool ${settingsActive ? "sidebar-tool-active" : ""}`}
-              onClick={() => {
-                setShowBin(false);
-                onOpenSettings();
-              }}
-              title="Settings"
-              aria-label="Settings"
-            >
-              <Settings2 className="size-3.5" />
-            </button>
-          )}
-          <button
-            type="button"
-            className={`sidebar-tool ${showBin ? "sidebar-tool-active" : ""}`}
-            onClick={() => setShowBin((v) => !v)}
-            title="Bin"
-            aria-label="Bin"
-          >
-            <Trash2 className="size-3.5" />
-            {trashCount > 0 && <span className="sidebar-tool-badge">{trashCount}</span>}
-          </button>
-          </div>
-        </div>
         {showBin && (
           <div className="sidebar-bin">
+            <p className="sidebar-bin-title">Trash</p>
             {trashCount === 0 ? (
-              <p className="sidebar-empty">Bin is empty</p>
+              <p className="sidebar-empty">Trash is empty</p>
             ) : (
               <>
                 {trashed?.map((item) => (
@@ -672,12 +612,70 @@ export function Sidebar({
                   className="sidebar-empty-bin"
                   onClick={handleEmptyTrash}
                 >
-                  Empty bin
+                  Empty trash
                 </button>
               </>
             )}
           </div>
         )}
+
+        <div className="sidebar-footer-links">
+          <button
+            type="button"
+            className="sidebar-link"
+            onClick={onQuickCapture}
+          >
+            <Zap className="size-4" />
+            <span>Quick capture</span>
+          </button>
+          {onOpenTags && (
+            <button
+              type="button"
+              className={`sidebar-link ${tagsActive ? "sidebar-link-active" : ""}`}
+              onClick={() => {
+                setShowBin(false);
+                onOpenTags();
+              }}
+            >
+              <Tag className="size-4" />
+              <span>Tags</span>
+            </button>
+          )}
+          <button
+            type="button"
+            className="sidebar-link"
+            onClick={() => setShowShare(true)}
+          >
+            <Share2 className="size-4" />
+            <span>Share</span>
+          </button>
+          {onOpenSettings && (
+            <button
+              type="button"
+              className={`sidebar-link ${settingsActive ? "sidebar-link-active" : ""}`}
+              onClick={() => {
+                setShowBin(false);
+                onOpenSettings();
+              }}
+            >
+              <Settings2 className="size-4" />
+              <span>Settings</span>
+            </button>
+          )}
+          <button
+            type="button"
+            className={`sidebar-link ${showBin ? "sidebar-link-active" : ""}`}
+            onClick={() => setShowBin((v) => !v)}
+          >
+            <Trash2 className="size-4" />
+            <span>Trash</span>
+            {trashCount > 0 && <span className="sidebar-count">{trashCount}</span>}
+          </button>
+        </div>
+
+        <div className="sidebar-footer-user">
+          <AuthControls />
+        </div>
       </div>
 
       <SharePanel
@@ -780,7 +778,6 @@ function SidebarItem({
   onTogglePin: () => void;
   onTrash: () => void;
 }) {
-  const label = getLabelColor(item.color);
   const folder = isFolder(item);
 
   return (
@@ -790,7 +787,7 @@ function SidebarItem({
       {onToggleSelect && (
         <input
           type="checkbox"
-          className="sidebar-item-check"
+          className={`sidebar-item-check ${selected ? "sidebar-item-check-visible" : ""}`}
           checked={!!selected}
           onChange={onToggleSelect}
           onClick={(e) => e.stopPropagation()}
@@ -798,9 +795,8 @@ function SidebarItem({
         />
       )}
       <button type="button" className="sidebar-item-btn" onClick={onSelect}>
-        <span className="sidebar-item-stripe" style={{ background: label.hex }} />
         {folder ? (
-          <FolderOpen className="size-3.5 shrink-0 text-muted" />
+          <FolderOpen className="sidebar-item-icon" />
         ) : (
           <span className="sidebar-item-emoji">{item.icon}</span>
         )}
@@ -813,7 +809,7 @@ function SidebarItem({
         <ActionBtn label="Favorite" onClick={onTogglePin}>
           <Pin className={`size-3 ${item.pinned ? "fill-accent text-accent" : ""}`} />
         </ActionBtn>
-        <ActionBtn label="Move to bin" onClick={onTrash}>
+        <ActionBtn label="Move to trash" onClick={onTrash}>
           <Trash2 className="size-3" />
         </ActionBtn>
       </div>
@@ -857,7 +853,7 @@ function TreeNode({
 
   return (
     <li>
-      <div className="sidebar-tree-row group" style={{ paddingLeft: depth * 12 }}>
+      <div className="sidebar-tree-row group" style={{ paddingLeft: `${0.15 + depth * 0.85}rem` }}>
         <button
           type="button"
           className={`sidebar-tree-toggle ${hasChildren || folder ? "" : "invisible"}`}
