@@ -95,12 +95,25 @@ export function useEditor(options: EditorOptions) {
 
   const commit = useCallback(
     (next: Block[]) => {
-      const safe = next.length ? next : defaultBlocks();
+      const base = next.length ? next : defaultBlocks();
+      const last = base[base.length - 1];
+      const endsWithAtom =
+        !!last && !!getExtensionForType(extensions, last.type)?.atom;
+      const safe = endsWithAtom ? [...base, createBlock("paragraph", "")] : base;
       setBlocks(safe);
       onUpdate(safe);
     },
-    [onUpdate],
+    [onUpdate, extensions],
   );
+
+  // Notes that already end on an atom get a writable line below on load.
+  useEffect(() => {
+    if (readOnly) return;
+    const list = blocksRef.current;
+    const last = list[list.length - 1];
+    if (!last || !getExtensionForType(extensions, last.type)?.atom) return;
+    commit(list);
+  }, [contentKey, readOnly, commit, extensions]);
 
   const commands: EditorCommands = useMemo(() => {
     const api: EditorCommands = {

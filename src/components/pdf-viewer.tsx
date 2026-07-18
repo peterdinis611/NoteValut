@@ -92,8 +92,8 @@ export function PdfViewer({
         {({ activeDocumentId }) =>
           activeDocumentId ? (
             <DocumentContent documentId={activeDocumentId}>
-              {({ isLoaded, isLoading: docLoading, error: docError }) => {
-                if (docError) {
+              {({ isLoaded, isLoading: docLoading, isError }) => {
+                if (isError) {
                   return (
                     <div className="nv-pdf-status nv-pdf-status-error">
                       <FileText className="size-5" />

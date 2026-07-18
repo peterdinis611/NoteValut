@@ -1,10 +1,11 @@
 "use client";
 
-import { ExternalLink, Film, Link2, Plus, Trash2 } from "lucide-react";
-import { emptyTable, youtubeEmbedUrl } from "@/lib/blocks";
+import { ExternalLink, Link2, Plus, Trash2 } from "lucide-react";
+import { emptyTable } from "@/lib/blocks";
 import { Extension } from "../create-extension";
 import type { BlockRenderProps } from "../types";
 import { PdfBlockView } from "../components/pdf-block-view";
+import { VideoBlockView } from "../components/video-block-view";
 
 export const TableBlock = Extension({
   name: "table",
@@ -112,45 +113,25 @@ export const VideoBlock = Extension({
       id: "video",
       type: "video",
       label: "Video",
-      description: "YouTube or Vimeo embed",
+      description: "YouTube, Twitch, TikTok, files & more",
       icon: "▶",
-      keywords: ["video", "youtube", "vimeo", "embed"],
+      keywords: [
+        "video",
+        "youtube",
+        "vimeo",
+        "loom",
+        "twitch",
+        "tiktok",
+        "dailymotion",
+        "streamable",
+        "wistia",
+        "mp4",
+        "embed",
+      ],
       group: "Media",
     },
   ],
-  render: (props) => {
-    const embed = props.block.url ? youtubeEmbedUrl(props.block.url) : null;
-    return (
-      <div className="nv-video">
-        {!props.readOnly && (
-          <input
-            className="nv-video-url"
-            placeholder="Paste YouTube or Vimeo URL…"
-            value={props.block.url ?? ""}
-            onChange={(e) =>
-              props.commands.updateBlock(props.block.id, { url: e.target.value })
-            }
-            onFocus={props.onFocus}
-          />
-        )}
-        {embed ? (
-          <div className="nv-video-frame">
-            <iframe
-              src={embed}
-              title={props.block.label || "Video"}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        ) : (
-          <div className="nv-video-empty">
-            <Film className="size-5" />
-            <span>Add a video URL to embed</span>
-          </div>
-        )}
-      </div>
-    );
-  },
+  render: (props) => <VideoBlockView {...props} />,
 });
 
 export const PdfBlock = Extension({

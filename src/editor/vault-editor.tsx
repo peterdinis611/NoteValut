@@ -183,6 +183,24 @@ export function VaultEditor({
           </div>
         );
       })}
+
+      {!readOnly && (
+        <button
+          type="button"
+          className="nv-editor-continue"
+          aria-label="Continue writing"
+          onClick={() => {
+            const list = editor.blocks;
+            const last = list[list.length - 1];
+            if (!last) return;
+            if (editor.getExtension(last.type)?.atom || last.type !== "paragraph") {
+              editor.commands.insertBlockAfter(last.id, "paragraph");
+              return;
+            }
+            editor.commands.focusBlock(last.id, "end");
+          }}
+        />
+      )}
     </div>
   );
 }
