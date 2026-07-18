@@ -76,16 +76,72 @@ export function Sidebar({
   const [showShare, setShowShare] = useState(false);
   const [browse, setBrowse] = useState<BrowseMode>("all");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkTag, setBulkTag] = useState("");
 
   const notes = useQuery(api.notes.list, { ownerId });
   const trashed = useQuery(api.notes.listTrashed, { ownerId });
   const archived = useQuery(api.notes.listArchived, { ownerId });
 
   const updateNote = useMutation(api.notes.update);
+  const bulkUpdate = useMutation(api.notes.bulkUpdate);
+  const bulkTrash = useMutation(api.notes.bulkTrash);
   const trashNote = useMutation(api.notes.trash);
   const restoreNote = useMutation(api.notes.restoreFromTrash);
   const emptyTrash = useMutation(api.notes.emptyTrash);
   const getOrCreateDaily = useMutation(api.notes.getOrCreateDaily);
+
+  function toggleSelect(id: Id<"notes">) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  async function runBulk(
+    action: "archive" | "unarchive" | "pin" | "unpin" | "trash" | "tag",
+  ) {
+    const ids = [...selectedIds] as Id<"notes">[];
+    if (!ids.length) return;
+    try {
+      if (action === "trash") {
+        await bulkTrash({ ids });
+        toast.success(`Moved ${ids.length} to bin`);
+      } else if (action === "tag") {
+        const tag = bulkTag.trim();
+        if (!tag) {
+          toast.error("Enter a tag first");
+          return;
+        }
+        for (const id of ids) {
+          const note = notes?.find((n) => n._id === id);
+          if (!note) continue;
+          const tags = [...new Set([...(note.tags ?? []), tag])];
+          await updateNote({ id, tags });
+        }
+        toast.success(`Tagged ${ids.length} items`);
+        setBulkTag("");
+      } else {
+        await bulkUpdate({
+          ids,
+          ...(action === "archive" ? { archived: true } : {}),
+          ...(action === "unarchive" ? { archived: false } : {}),
+          ...(action === "pin" ? { pinned: true } : {}),
+          ...(action === "unpin" ? { pinned: false } : {}),
+        });
+        toast.success(`Updated ${ids.length} items`);
+      }
+      clearSelection();
+    } catch {
+      toast.error("Bulk action failed");
+    }
+  }
 
   async function handleTrash(id: Id<"notes">) {
     try {
@@ -298,6 +354,38 @@ export function Sidebar({
       </div>
 
       <nav className="sidebar-nav note-scroll">
+        {selectedIds.size > 0 && (
+          <div className="sidebar-bulk">
+            <span className="sidebar-bulk-count">{selectedIds.size} selected</span>
+            <div className="sidebar-bulk-actions">
+              <button type="button" onClick={() => void runBulk("pin")}>
+                Star
+              </button>
+              <button type="button" onClick={() => void runBulk("archive")}>
+                Archive
+              </button>
+              <button type="button" onClick={() => void runBulk("trash")}>
+                Bin
+              </button>
+              <button type="button" onClick={clearSelection}>
+                Clear
+              </button>
+            </div>
+            <div className="sidebar-bulk-tag">
+              <input
+                value={bulkTag}
+                onChange={(e) => setBulkTag(e.target.value)}
+                placeholder="Add tag…"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void runBulk("tag");
+                }}
+              />
+              <button type="button" onClick={() => void runBulk("tag")}>
+                Tag
+              </button>
+            </div>
+          </div>
+        )}
         {notes === undefined ? (
           <p className="sidebar-empty">Loading…</p>
         ) : isSearching ? (
@@ -317,6 +405,9 @@ export function Sidebar({
                   <SidebarItem
                     item={item}
                     active={item._id === activeId}
+                    selected={selectedIds.has(item._id)}
+                    snippet={"snippet" in item ? (item as { snippet?: string }).snippet : undefined}
+                    onToggleSelect={() => toggleSelect(item._id)}
                     onSelect={() => onSelect(item._id)}
                     onTogglePin={() => handleTogglePin(item._id, item.pinned)}
                     onTrash={() => handleTrash(item._id)}
@@ -333,7 +424,9 @@ export function Sidebar({
               <VirtualNoteList
                 items={pinned}
                 activeId={activeId}
+                selectedIds={selectedIds}
                 onSelect={onSelect}
+                onToggleSelect={toggleSelect}
                 onTogglePin={handleTogglePin}
                 onTrash={handleTrash}
               />
@@ -347,7 +440,9 @@ export function Sidebar({
               <VirtualNoteList
                 items={recent}
                 activeId={activeId}
+                selectedIds={selectedIds}
                 onSelect={onSelect}
+                onToggleSelect={toggleSelect}
                 onTogglePin={handleTogglePin}
                 onTrash={handleTrash}
               />
@@ -369,7 +464,9 @@ export function Sidebar({
               <VirtualNoteList
                 items={collections}
                 activeId={activeId}
+                selectedIds={selectedIds}
                 onSelect={onSelect}
+                onToggleSelect={toggleSelect}
                 onTogglePin={handleTogglePin}
                 onTrash={handleTrash}
               />
@@ -454,12 +551,14 @@ export function Sidebar({
                     item={item}
                     depth={0}
                     activeId={activeId}
+                    selectedIds={selectedIds}
                     childrenByParent={childrenByParent}
                     expanded={expanded}
                     onToggleExpanded={(id, next) =>
                       setExpanded((e) => ({ ...e, [id]: next }))
                     }
                     onSelect={onSelect}
+                    onToggleSelect={toggleSelect}
                     onCreateEntry={onCreateEntry}
                     onCreateCollection={onCreateCollection}
                     onTogglePin={handleTogglePin}
@@ -583,13 +682,17 @@ function EmptyHint({ text }: { text: string }) {
 function VirtualNoteList({
   items,
   activeId,
+  selectedIds,
   onSelect,
+  onToggleSelect,
   onTogglePin,
   onTrash,
 }: {
   items: Doc<"notes">[];
   activeId: Id<"notes"> | null;
+  selectedIds: Set<string>;
   onSelect: (id: Id<"notes"> | null) => void;
+  onToggleSelect: (id: Id<"notes">) => void;
   onTogglePin: (id: Id<"notes">, pinned: boolean) => void;
   onTrash: (id: Id<"notes">) => void;
 }) {
@@ -604,6 +707,8 @@ function VirtualNoteList({
         <SidebarItem
           item={item}
           active={item._id === activeId}
+          selected={selectedIds.has(item._id)}
+          onToggleSelect={() => onToggleSelect(item._id)}
           onSelect={() => onSelect(item._id)}
           onTogglePin={() => onTogglePin(item._id, item.pinned)}
           onTrash={() => onTrash(item._id)}
@@ -636,13 +741,19 @@ function SidebarSection({
 function SidebarItem({
   item,
   active,
+  selected,
+  snippet,
   onSelect,
+  onToggleSelect,
   onTogglePin,
   onTrash,
 }: {
   item: Doc<"notes">;
   active: boolean;
+  selected?: boolean;
+  snippet?: string | null;
   onSelect: () => void;
+  onToggleSelect?: () => void;
   onTogglePin: () => void;
   onTrash: () => void;
 }) {
@@ -650,7 +761,19 @@ function SidebarItem({
   const folder = isFolder(item);
 
   return (
-    <div className={`sidebar-item group ${active ? "sidebar-item-active" : ""}`}>
+    <div
+      className={`sidebar-item group ${active ? "sidebar-item-active" : ""} ${selected ? "sidebar-item-selected" : ""}`}
+    >
+      {onToggleSelect && (
+        <input
+          type="checkbox"
+          className="sidebar-item-check"
+          checked={!!selected}
+          onChange={onToggleSelect}
+          onClick={(e) => e.stopPropagation()}
+          aria-label="Select item"
+        />
+      )}
       <button type="button" className="sidebar-item-btn" onClick={onSelect}>
         <span className="sidebar-item-stripe" style={{ background: label.hex }} />
         {folder ? (
@@ -658,7 +781,10 @@ function SidebarItem({
         ) : (
           <span className="sidebar-item-emoji">{item.icon}</span>
         )}
-        <span className="truncate">{item.title || "Untitled"}</span>
+        <span className="sidebar-item-copy">
+          <span className="truncate">{item.title || "Untitled"}</span>
+          {snippet && <span className="sidebar-item-snippet">{snippet}</span>}
+        </span>
       </button>
       <div className="sidebar-item-actions">
         <ActionBtn label="Favorite" onClick={onTogglePin}>
@@ -676,10 +802,12 @@ function TreeNode({
   item,
   depth,
   activeId,
+  selectedIds,
   childrenByParent,
   expanded,
   onToggleExpanded,
   onSelect,
+  onToggleSelect,
   onCreateEntry,
   onCreateCollection,
   onTogglePin,
@@ -688,10 +816,12 @@ function TreeNode({
   item: Doc<"notes">;
   depth: number;
   activeId: Id<"notes"> | null;
+  selectedIds: Set<string>;
   childrenByParent: Map<string, Doc<"notes">[]>;
   expanded: Record<string, boolean>;
   onToggleExpanded: (id: Id<"notes">, next: boolean) => void;
   onSelect: (id: Id<"notes">) => void;
+  onToggleSelect: (id: Id<"notes">) => void;
   onCreateEntry: (parentId?: Id<"notes">, templateId?: string) => void;
   onCreateCollection: (parentId?: Id<"notes">) => void;
   onTogglePin: (id: Id<"notes">, pinned: boolean) => void;
@@ -717,6 +847,8 @@ function TreeNode({
           <SidebarItem
             item={item}
             active={item._id === activeId}
+            selected={selectedIds.has(item._id)}
+            onToggleSelect={() => onToggleSelect(item._id)}
             onSelect={() => onSelect(item._id)}
             onTogglePin={() => onTogglePin(item._id, item.pinned)}
             onTrash={() => onTrash(item._id)}
@@ -741,10 +873,12 @@ function TreeNode({
               item={child}
               depth={depth + 1}
               activeId={activeId}
+              selectedIds={selectedIds}
               childrenByParent={childrenByParent}
               expanded={expanded}
               onToggleExpanded={onToggleExpanded}
               onSelect={onSelect}
+              onToggleSelect={onToggleSelect}
               onCreateEntry={onCreateEntry}
               onCreateCollection={onCreateCollection}
               onTogglePin={onTogglePin}

@@ -1,21 +1,39 @@
 import Fuse, { type IFuseOptions } from "fuse.js";
 import type { Doc } from "../../convex/_generated/dataModel";
+import { blocksToSearchText, snippetAround } from "@/lib/block-search";
 import { PAGE_ICON_GROUPS } from "@/lib/icons";
 
-export type NoteSearchHit = Doc<"notes">;
+export type NoteSearchHit = Doc<"notes"> & {
+  searchBody?: string;
+  snippet?: string | null;
+};
 
-const NOTE_FUSE_OPTIONS: IFuseOptions<NoteSearchHit> = {
+type IndexedNote = NoteSearchHit & { searchBody: string };
+
+const NOTE_FUSE_OPTIONS: IFuseOptions<IndexedNote> = {
   keys: [
-    { name: "title", weight: 0.4 },
-    { name: "description", weight: 0.2 },
-    { name: "tags", weight: 0.2 },
+    { name: "title", weight: 0.35 },
+    { name: "description", weight: 0.15 },
+    { name: "tags", weight: 0.15 },
     { name: "content", weight: 0.15 },
-    { name: "icon", weight: 0.05 },
+    { name: "searchBody", weight: 0.25 },
+    { name: "status", weight: 0.08 },
+    { name: "icon", weight: 0.02 },
   ],
-  threshold: 0.38,
+  threshold: 0.36,
   ignoreLocation: true,
   includeScore: true,
+  includeMatches: true,
 };
+
+function indexNotes(notes: NoteSearchHit[]): IndexedNote[] {
+  return notes.map((n) => ({
+    ...n,
+    searchBody: [n.content, blocksToSearchText(n.blocks), blocksToSearchText(n.folderBlocks)]
+      .filter(Boolean)
+      .join("\n"),
+  }));
+}
 
 export function searchNotes(
   notes: NoteSearchHit[],
@@ -23,8 +41,16 @@ export function searchNotes(
 ): NoteSearchHit[] {
   const q = query.trim();
   if (!q) return notes;
-  const fuse = new Fuse(notes, NOTE_FUSE_OPTIONS);
-  return fuse.search(q).map((hit) => hit.item);
+  const indexed = indexNotes(notes);
+  const fuse = new Fuse(indexed, NOTE_FUSE_OPTIONS);
+  return fuse.search(q).map((hit) => {
+    const item = hit.item;
+    const snip =
+      snippetAround(item.searchBody, q) ||
+      snippetAround(item.content || "", q) ||
+      snippetAround(item.title || "", q);
+    return { ...item, snippet: snip };
+  });
 }
 
 export type IconSearchItem = {

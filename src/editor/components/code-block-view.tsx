@@ -2,9 +2,10 @@
 
 import { Check, Copy } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CODE_LANGUAGES, highlightCode } from "@/lib/highlight";
+import { highlightCode } from "@/lib/highlight";
 import type { BlockRenderProps } from "../types";
 import { BlockTextInput } from "./block-text-input";
+import { CodeLanguagePicker } from "./code-language-picker";
 
 export function CodeBlockView(props: BlockRenderProps) {
   const { block, readOnly, commands, onTextChange, onKeyDown, onFocus, isFocused } = props;
@@ -43,23 +44,14 @@ export function CodeBlockView(props: BlockRenderProps) {
   return (
     <div className="nv-code-block" ref={wrapRef}>
       <div className="nv-code-toolbar">
-        <select
-          className="nv-code-lang"
-          disabled={readOnly}
+        <CodeLanguagePicker
           value={language}
-          onChange={(e) => commands.updateBlock(block.id, { language: e.target.value })}
+          disabled={readOnly}
+          detected={language === "auto" && block.text ? preview.language : undefined}
           onFocus={onFocus}
-          aria-label="Language"
-        >
-          {CODE_LANGUAGES.map((lang) => (
-            <option key={lang.id} value={lang.id}>
-              {lang.label}
-            </option>
-          ))}
-        </select>
-        <span className="nv-code-detected">
-          {language === "auto" && block.text ? preview.language : ""}
-        </span>
+          onChange={(next) => commands.updateBlock(block.id, { language: next })}
+        />
+        <span className="nv-code-toolbar-spacer" />
         <button type="button" className="nv-code-copy" onClick={copyCode} aria-label="Copy code">
           {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
           {copied ? "Copied" : "Copy"}

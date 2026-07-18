@@ -44,6 +44,16 @@ export type Block = {
   width?: number;
   /** Image horizontal alignment */
   align?: "left" | "center" | "right";
+  /** Nesting level for lists / todos (0–5) */
+  indent?: number;
+  /** Todo due date (ms epoch) */
+  dueAt?: number;
+  /** Bookmarked within the page */
+  pinned?: boolean;
+  /** Shared id for column layout */
+  layoutGroupId?: string;
+  columnIndex?: number;
+  columnCount?: number;
 };
 
 export type SlashCommand = {
@@ -73,7 +83,26 @@ export function createBlock(
   type: BlockType,
   text = "",
   extras?: Partial<
-    Pick<Block, "checked" | "calloutVariant" | "pageId" | "language" | "url" | "label" | "rows" | "color" | "bgColor" | "width" | "align">
+    Pick<
+      Block,
+      | "checked"
+      | "calloutVariant"
+      | "pageId"
+      | "language"
+      | "url"
+      | "label"
+      | "rows"
+      | "color"
+      | "bgColor"
+      | "width"
+      | "align"
+      | "indent"
+      | "dueAt"
+      | "pinned"
+      | "layoutGroupId"
+      | "columnIndex"
+      | "columnCount"
+    >
   >,
 ): Block {
   return {
@@ -118,6 +147,21 @@ export function notePreviewFromBlocks(blocks: Block[] | undefined, content: stri
 
 export function countOpenTasks(blocks: Block[] | undefined): number {
   return blocks?.filter((b) => b.type === "todo" && !b.checked).length ?? 0;
+}
+
+export function countOverdueTasks(blocks: Block[] | undefined, now = Date.now()): number {
+  return (
+    blocks?.filter(
+      (b) => b.type === "todo" && !b.checked && b.dueAt !== undefined && b.dueAt < now,
+    ).length ?? 0
+  );
+}
+
+export const MAX_INDENT = 5;
+
+export function clampIndent(n: number | undefined): number {
+  if (!n || n < 0) return 0;
+  return Math.min(MAX_INDENT, Math.floor(n));
 }
 
 export function filterSlashCommands(

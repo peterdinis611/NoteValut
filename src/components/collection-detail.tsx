@@ -10,6 +10,7 @@ import {
   Plus,
   Settings2,
   Share2,
+  Table2,
   Trash2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -237,6 +238,7 @@ export function CollectionDetail({
                     type="button"
                     className={viewMode === "grid" ? "view-toggle-active" : ""}
                     onClick={() => !readOnly && updateNote({ id: folder._id, viewMode: "grid" })}
+                    title="Grid"
                   >
                     <Grid3X3 className="size-4" />
                   </button>
@@ -244,8 +246,17 @@ export function CollectionDetail({
                     type="button"
                     className={viewMode === "list" ? "view-toggle-active" : ""}
                     onClick={() => !readOnly && updateNote({ id: folder._id, viewMode: "list" })}
+                    title="List"
                   >
                     <LayoutList className="size-4" />
+                  </button>
+                  <button
+                    type="button"
+                    className={viewMode === "table" ? "view-toggle-active" : ""}
+                    onClick={() => !readOnly && updateNote({ id: folder._id, viewMode: "table" })}
+                    title="Table"
+                  >
+                    <Table2 className="size-4" />
                   </button>
                 </div>
               </div>
@@ -270,6 +281,13 @@ export function CollectionDetail({
                   />
                 ))}
               </div>
+            ) : viewMode === "table" ? (
+              <CollectionTable
+                items={children}
+                readOnly={readOnly}
+                onNavigate={onNavigate}
+                onUpdate={(id, patch) => void updateNote({ id, ...patch })}
+              />
             ) : (
               <div className="collection-list">
                 {children.map((child) => (
@@ -469,6 +487,139 @@ function ChildCard({
           <Trash2 className="size-3.5" />
         </button>
       )}
+    </div>
+  );
+}
+
+const STATUS_OPTIONS = ["", "Todo", "Doing", "Done", "Blocked"] as const;
+
+function CollectionTable({
+  items,
+  readOnly,
+  onNavigate,
+  onUpdate,
+}: {
+  items: Doc<"notes">[];
+  readOnly?: boolean;
+  onNavigate: (id: Id<"notes">) => void;
+  onUpdate: (
+    id: Id<"notes">,
+    patch: { status?: string | null; tags?: string[]; pinned?: boolean },
+  ) => void;
+}) {
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [tagFilter, setTagFilter] = useState("");
+
+  const tags = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of items) {
+      for (const t of item.tags ?? []) set.add(t);
+    }
+    return [...set].sort();
+  }, [items]);
+
+  const filtered = useMemo(() => {
+    return items.filter((item) => {
+      if (statusFilter !== "all") {
+        const st = item.status || "";
+        if (statusFilter === "none" ? st !== "" : st !== statusFilter) return false;
+      }
+      if (tagFilter && !(item.tags ?? []).includes(tagFilter)) return false;
+      return true;
+    });
+  }, [items, statusFilter, tagFilter]);
+
+  return (
+    <div className="db-table-wrap">
+      <div className="db-table-filters">
+        <label className="db-filter">
+          <span>Status</span>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="all">All</option>
+            <option value="none">No status</option>
+            {STATUS_OPTIONS.filter(Boolean).map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="db-filter">
+          <span>Tag</span>
+          <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
+            <option value="">All tags</option>
+            {tags.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="db-table note-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Status</th>
+              <th>Tags</th>
+              <th>Updated</th>
+              <th>Star</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((item) => (
+              <tr key={item._id}>
+                <td>
+                  <button
+                    type="button"
+                    className="db-table-name"
+                    onClick={() => onNavigate(item._id)}
+                  >
+                    <span>{isFolder(item) ? "🗂️" : item.icon}</span>
+                    <span>{item.title || "Untitled"}</span>
+                  </button>
+                </td>
+                <td>
+                  <select
+                    className="db-table-select"
+                    value={item.status ?? ""}
+                    disabled={readOnly || isFolder(item)}
+                    onChange={(e) =>
+                      onUpdate(item._id, { status: e.target.value || null })
+                    }
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s || "none"} value={s}>
+                        {s || "—"}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="db-table-tags">
+                  {(item.tags ?? []).slice(0, 3).map((t) => (
+                    <span key={t} className="db-tag">
+                      {t}
+                    </span>
+                  ))}
+                </td>
+                <td className="db-table-muted">{formatRelativeTime(item.updatedAt)}</td>
+                <td>
+                  <button
+                    type="button"
+                    className={`db-star ${item.pinned ? "is-on" : ""}`}
+                    disabled={readOnly}
+                    aria-label="Toggle star"
+                    onClick={() => onUpdate(item._id, { pinned: !item.pinned })}
+                  >
+                    {item.pinned ? "★" : "☆"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

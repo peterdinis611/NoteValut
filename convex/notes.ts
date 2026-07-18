@@ -291,12 +291,15 @@ export const update = mutation({
     coverImage: v.optional(v.union(v.string(), v.null())),
     color: v.optional(v.union(v.string(), v.null())),
     description: v.optional(v.union(v.string(), v.null())),
-    viewMode: v.optional(v.union(v.literal("grid"), v.literal("list"))),
+    viewMode: v.optional(
+      v.union(v.literal("grid"), v.literal("list"), v.literal("table")),
+    ),
     sortMode: v.optional(
       v.union(v.literal("updated"), v.literal("name"), v.literal("kind")),
     ),
     defaultTemplateId: v.optional(v.union(v.string(), v.null())),
     isLocked: v.optional(v.boolean()),
+    status: v.optional(v.union(v.string(), v.null())),
     tags: v.optional(v.array(v.string())),
     pinned: v.optional(v.boolean()),
     archived: v.optional(v.boolean()),
@@ -330,6 +333,7 @@ export const update = mutation({
       updates.defaultTemplateId = patch.defaultTemplateId ?? undefined;
     }
     if (patch.isLocked !== undefined) updates.isLocked = patch.isLocked;
+    if (patch.status !== undefined) updates.status = patch.status ?? undefined;
     if (patch.tags !== undefined) updates.tags = patch.tags;
     if (patch.pinned !== undefined) updates.pinned = patch.pinned;
     if (patch.archived !== undefined) updates.archived = patch.archived;
@@ -392,6 +396,83 @@ export const move = mutation({
       updatedAt: Date.now(),
     });
     return args.id;
+  },
+});
+
+/** Pages that link to this note via pagelink blocks. */
+export const listBacklinks = query({
+  args: {
+    ownerId: v.string(),
+    noteId: v.id("notes"),
+  },
+  handler: async (ctx, args) => {
+    const notes = await ctx.db
+      .query("notes")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+    const target = args.noteId as string;
+    return notes
+      .filter(
+        (n) =>
+          n._id !== args.noteId &&
+          !n.trashed &&
+          n.kind !== "folder" &&
+          n.blocks?.some((b) => b.type === "pagelink" && b.pageId === target),
+      )
+      .map((n) => ({
+        _id: n._id,
+        title: n.title,
+        icon: n.icon,
+        updatedAt: n.updatedAt,
+        count:
+          n.blocks?.filter((b) => b.type === "pagelink" && b.pageId === target)
+            .length ?? 0,
+      }))
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  },
+});
+
+/** Apply the same patch to many notes (sidebar bulk actions). */
+export const bulkUpdate = mutation({
+  args: {
+    ids: v.array(v.id("notes")),
+    pinned: v.optional(v.boolean()),
+    archived: v.optional(v.boolean()),
+    tags: v.optional(v.array(v.string())),
+    status: v.optional(v.union(v.string(), v.null())),
+    parentId: v.optional(v.union(v.id("notes"), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    let updated = 0;
+    for (const id of args.ids) {
+      const note = await ctx.db.get(id);
+      if (!note || note.trashed) continue;
+      const patch: Record<string, unknown> = { updatedAt: now };
+      if (args.pinned !== undefined) patch.pinned = args.pinned;
+      if (args.archived !== undefined) patch.archived = args.archived;
+      if (args.tags !== undefined) patch.tags = args.tags;
+      if (args.status !== undefined) patch.status = args.status ?? undefined;
+      if (args.parentId !== undefined) patch.parentId = args.parentId ?? undefined;
+      await ctx.db.patch(id, patch);
+      updated += 1;
+    }
+    return updated;
+  },
+});
+
+export const bulkTrash = mutation({
+  args: { ids: v.array(v.id("notes")) },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    let count = 0;
+    for (const id of args.ids) {
+      const note = await ctx.db.get(id);
+      if (!note || note.trashed) continue;
+      await ctx.db.patch(id, { trashed: true, trashedAt: now, updatedAt: now });
+      count += 1;
+    }
+    return count;
   },
 });
 

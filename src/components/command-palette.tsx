@@ -7,6 +7,8 @@ import {
   FolderOpen,
   Hash,
   Home,
+  Keyboard,
+  Network,
   Plus,
   Search,
   Settings2,
@@ -237,4 +239,6 @@ export const CommandIcons = {
   export: <Download className="size-3.5" />,
   import: <Upload className="size-3.5" />,
   hash: <Hash className="size-3.5" />,
+  keyboard: <Keyboard className="size-3.5" />,
+  network: <Network className="size-3.5" />,
 };

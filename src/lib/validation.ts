@@ -42,6 +42,12 @@ export const BlockSchema = v.object({
   bgColor: v.optional(v.string()),
   width: v.optional(v.number()),
   align: v.optional(v.picklist(["left", "center", "right"])),
+  indent: v.optional(v.number()),
+  dueAt: v.optional(v.number()),
+  pinned: v.optional(v.boolean()),
+  layoutGroupId: v.optional(v.string()),
+  columnIndex: v.optional(v.number()),
+  columnCount: v.optional(v.number()),
 });
 
 export const BlocksSchema = v.pipe(v.array(BlockSchema), v.minLength(1));

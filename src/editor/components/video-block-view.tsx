@@ -3,11 +3,14 @@
 import { Expand, Film, Link2, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { MediaUploadButton } from "@/components/media-upload-button";
 import { VideoViewer, VideoViewerOverlay } from "@/components/video-viewer";
+import { useToast } from "@/components/toast";
 import { resolveVideoSource, VIDEO_PROVIDER_CATALOG } from "@/lib/video";
 import type { BlockRenderProps } from "../types";
 
 export function VideoBlockView(props: BlockRenderProps) {
+  const toast = useToast();
   const [fullscreen, setFullscreen] = useState(false);
   const [editingUrl, setEditingUrl] = useState(false);
   const [urlDraft, setUrlDraft] = useState(props.block.url ?? "");
@@ -68,7 +71,7 @@ export function VideoBlockView(props: BlockRenderProps) {
           </span>
           <div className="nv-video-empty-copy">
             <p className="nv-video-empty-title">Embed a video</p>
-            <p className="nv-video-empty-hint">Paste a link from any supported provider</p>
+            <p className="nv-video-empty-hint">Upload a file or paste a link from any provider</p>
           </div>
         </div>
         <div className="nv-video-providers" aria-label="Supported providers">
@@ -79,25 +82,38 @@ export function VideoBlockView(props: BlockRenderProps) {
           ))}
         </div>
         {!props.readOnly && (
-          <div className="nv-video-url-bar">
-            <Link2 className="size-3.5 shrink-0 opacity-50" />
-            <input
-              className="nv-video-url-inline"
-              placeholder="https://… YouTube, Vimeo, Twitch, TikTok, .mp4…"
-              value={urlDraft}
-              onChange={(e) => setUrlDraft(e.target.value)}
-              onFocus={props.onFocus}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  applyUrl(urlDraft);
-                }
-              }}
-              onBlur={() => {
-                if (urlDraft.trim()) applyUrl(urlDraft);
-              }}
-            />
-          </div>
+          <>
+            <div className="nv-media-upload-row">
+              <MediaUploadButton
+                accept="video/*,.mp4,.webm,.mov,.m4v"
+                label="Upload video"
+                onUploaded={(next) => {
+                  props.commands.updateBlock(props.block.id, { url: next });
+                  props.onFocus();
+                }}
+                onError={(msg) => toast.error(msg)}
+              />
+            </div>
+            <div className="nv-video-url-bar">
+              <Link2 className="size-3.5 shrink-0 opacity-50" />
+              <input
+                className="nv-video-url-inline"
+                placeholder="https://… YouTube, Vimeo, Twitch, TikTok, .mp4…"
+                value={urlDraft}
+                onChange={(e) => setUrlDraft(e.target.value)}
+                onFocus={props.onFocus}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    applyUrl(urlDraft);
+                  }
+                }}
+                onBlur={() => {
+                  if (urlDraft.trim()) applyUrl(urlDraft);
+                }}
+              />
+            </div>
+          </>
         )}
       </div>
     );

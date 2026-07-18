@@ -16,12 +16,16 @@ export default defineSchema({
     kind: v.optional(v.union(v.literal("page"), v.literal("folder"))),
     color: v.optional(v.string()),
     description: v.optional(v.string()),
-    viewMode: v.optional(v.union(v.literal("grid"), v.literal("list"))),
+    viewMode: v.optional(
+      v.union(v.literal("grid"), v.literal("list"), v.literal("table")),
+    ),
     sortMode: v.optional(
       v.union(v.literal("updated"), v.literal("name"), v.literal("kind")),
     ),
     defaultTemplateId: v.optional(v.string()),
     isLocked: v.optional(v.boolean()),
+    /** Optional status for database-style views */
+    status: v.optional(v.string()),
     pinned: v.boolean(),
     archived: v.boolean(),
     trashed: v.optional(v.boolean()),

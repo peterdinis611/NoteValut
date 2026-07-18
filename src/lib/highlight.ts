@@ -1,7 +1,7 @@
 import hljs from "highlight.js";
 
 /** Popular languages first, then the full highlight.js catalog. */
-const PRIORITY = [
+export const PRIORITY = [
   "javascript",
   "typescript",
   "tsx",
@@ -30,7 +30,25 @@ const PRIORITY = [
   "dockerfile",
   "graphql",
   "plaintext",
-];
+] as const;
+
+export const POPULAR_LANGUAGE_IDS = new Set<string>(["auto", ...PRIORITY]);
+
+/** Compact popular set shown as chips in the language picker. */
+export const POPULAR_PICKER_IDS = [
+  "auto",
+  "typescript",
+  "javascript",
+  "python",
+  "tsx",
+  "go",
+  "rust",
+  "sql",
+  "bash",
+  "json",
+  "css",
+  "plaintext",
+] as const;
 
 export type LanguageOption = {
   id: string;
@@ -45,7 +63,7 @@ export const CODE_LANGUAGES: LanguageOption[] = [
   })),
   ...hljs
     .listLanguages()
-    .filter((id) => !PRIORITY.includes(id))
+    .filter((id) => !(PRIORITY as readonly string[]).includes(id))
     .sort()
     .map((id) => ({ id, label: languageLabel(id) })),
 ];

@@ -43,4 +43,16 @@ export const blockValidator = v.object({
   align: v.optional(
     v.union(v.literal("left"), v.literal("center"), v.literal("right")),
   ),
+  /** Nesting level for lists / todos (0–5) */
+  indent: v.optional(v.number()),
+  /** Todo due date (ms epoch) */
+  dueAt: v.optional(v.number()),
+  /** Bookmarked / pinned within the page */
+  pinned: v.optional(v.boolean()),
+  /** Shared id for blocks rendered as columns */
+  layoutGroupId: v.optional(v.string()),
+  /** Column index within layout group (0-based) */
+  columnIndex: v.optional(v.number()),
+  /** Total columns in the layout group (on each column block) */
+  columnCount: v.optional(v.number()),
 });

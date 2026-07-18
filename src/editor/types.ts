@@ -21,15 +21,41 @@ export type EditorCommands = {
     id: string,
     type: BlockType,
     extras?: Partial<
-      Pick<Block, "checked" | "calloutVariant" | "pageId" | "language" | "url" | "label" | "rows" | "color" | "bgColor" | "width" | "align">
+      Pick<
+        Block,
+        | "checked"
+        | "calloutVariant"
+        | "pageId"
+        | "language"
+        | "url"
+        | "label"
+        | "rows"
+        | "color"
+        | "bgColor"
+        | "width"
+        | "align"
+        | "indent"
+        | "dueAt"
+        | "pinned"
+        | "layoutGroupId"
+        | "columnIndex"
+        | "columnCount"
+      >
     >,
   ) => void;
-  insertBlockAfter: (id: string, type?: BlockType, text?: string) => string;
+  insertBlockAfter: (
+    id: string,
+    type?: BlockType,
+    text?: string,
+    extras?: Partial<Block>,
+  ) => string;
   insertBlockBefore: (id: string, type?: BlockType) => string;
   deleteBlock: (id: string) => void;
   moveBlock: (id: string, direction: "up" | "down") => void;
+  reorderBlocks: (activeId: string, overId: string) => void;
   focusBlock: (id: string, caret?: "start" | "end") => void;
   applySlashCommand: (blockId: string, command: SlashCommandDef) => void;
+  applyMention: (blockId: string, pageId: string, title: string) => void;
   clearSlash: (blockId: string) => void;
 };
 

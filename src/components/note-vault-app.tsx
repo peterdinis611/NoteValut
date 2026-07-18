@@ -14,6 +14,8 @@ import { downloadVaultBackup } from "@/lib/vault-backup";
 import { useOwnerId } from "@/hooks/use-owner-id";
 import { useVaultSettings } from "@/hooks/use-vault-settings";
 import { CommandIcons, CommandPalette, type CommandAction } from "./command-palette";
+import { KeyboardCheatSheet } from "./keyboard-cheat-sheet";
+import { GraphView } from "./graph-view";
 import { LottieStatus } from "./lottie-status";
 import { NoteEditor } from "./note-editor";
 import { QuickCapture, QuickCaptureFab } from "./quick-capture";
@@ -57,6 +59,8 @@ export function NoteVaultApp() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTags, setShowTags] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [graphOpen, setGraphOpen] = useState(false);
 
   useEffect(() => {
     setSidebarOpen(!isMobile);
@@ -79,7 +83,13 @@ export function NoteVaultApp() {
       const meta = e.metaKey || e.ctrlKey;
       if (meta && e.key.toLowerCase() === "k") {
         e.preventDefault();
+        setShortcutsOpen(false);
         setCmdOpen((v) => !v);
+      }
+      if (meta && e.key === "/") {
+        e.preventDefault();
+        setCmdOpen(false);
+        setShortcutsOpen((v) => !v);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -246,6 +256,22 @@ export function NoteVaultApp() {
         keywords: ["backup", "download"],
         run: handleExport,
       },
+      {
+        id: "shortcuts",
+        label: "Keyboard shortcuts",
+        hint: "⌘ /",
+        icon: CommandIcons.keyboard,
+        keywords: ["hotkeys", "cheatsheet", "help"],
+        run: () => setShortcutsOpen(true),
+      },
+      {
+        id: "graph",
+        label: "Page graph",
+        hint: "See linked pages",
+        icon: CommandIcons.network,
+        keywords: ["graph", "links", "backlinks", "network"],
+        run: () => setGraphOpen(true),
+      },
     ],
     [clearPanels, handleCreateEntry, handleCreateCollection, handleExport, openToday],
   );
@@ -392,6 +418,13 @@ export function NoteVaultApp() {
             onClose={() => setCmdOpen(false)}
             notes={notes?.filter((n) => !n.archived && !n.trashed)}
             actions={cmdActions}
+            onNavigate={selectNote}
+          />
+          <KeyboardCheatSheet open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+          <GraphView
+            open={graphOpen}
+            onClose={() => setGraphOpen(false)}
+            notes={notes}
             onNavigate={selectNote}
           />
         </main>

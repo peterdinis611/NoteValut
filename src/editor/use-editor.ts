@@ -7,6 +7,8 @@ import {
   emptyTable,
   markdownToBlocks,
   matchMarkdownShortcut,
+  clampIndent,
+  MAX_INDENT,
   type Block,
   type BlockType,
 } from "@/lib/blocks";
@@ -66,6 +68,8 @@ export function useEditor(options: EditorOptions) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [slashBlockId, setSlashBlockId] = useState<string | null>(null);
   const [slashIndex, setSlashIndex] = useState(0);
+  const [mentionBlockId, setMentionBlockId] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
 
   const focusTarget = useRef<{ id: string; caret: "start" | "end" } | null>(null);
   const blocksRef = useRef(blocks);
@@ -158,10 +162,10 @@ export function useEditor(options: EditorOptions) {
           ),
         );
       },
-      insertBlockAfter: (id, type = "paragraph", text = "") => {
+      insertBlockAfter: (id, type = "paragraph", text = "", extras) => {
         if (readOnly) return id;
         const index = blocksRef.current.findIndex((b) => b.id === id);
-        const newBlock = createBlock(type, text);
+        const newBlock = createBlock(type, text, extras);
         const next = [...blocksRef.current];
         next.splice(index + 1, 0, newBlock);
         focusTarget.current = { id: newBlock.id, caret: "start" };
@@ -199,14 +203,45 @@ export function useEditor(options: EditorOptions) {
         [list[index], list[target]] = [list[target], list[index]];
         commit(list);
       },
+      reorderBlocks: (activeId, overId) => {
+        if (readOnly || activeId === overId) return;
+        const list = [...blocksRef.current];
+        const from = list.findIndex((b) => b.id === activeId);
+        const to = list.findIndex((b) => b.id === overId);
+        if (from < 0 || to < 0) return;
+        const [item] = list.splice(from, 1);
+        list.splice(to, 0, item);
+        commit(list);
+      },
       focusBlock: (id, caret = "end") => {
         focusTarget.current = { id, caret };
         setFocusedId(id);
-        // trigger effect even if blocks unchanged
         setBlocks((b) => [...b]);
       },
       applySlashCommand: (blockId, command) => {
         if (readOnly) return;
+
+        if (command.id === "columns-2" || command.id === "columns-3") {
+          const count = command.id === "columns-2" ? 2 : 3;
+          const index = blocksRef.current.findIndex((b) => b.id === blockId);
+          if (index < 0) return;
+          const groupId = crypto.randomUUID();
+          const cols = Array.from({ length: count }, (_, i) =>
+            createBlock("paragraph", "", {
+              layoutGroupId: groupId,
+              columnIndex: i,
+              columnCount: count,
+            }),
+          );
+          const next = [...blocksRef.current];
+          next.splice(index, 1, ...cols);
+          focusTarget.current = { id: cols[0].id, caret: "start" };
+          commit(next);
+          setSlashBlockId(null);
+          setMentionBlockId(null);
+          return;
+        }
+
         const pages = linkablePages;
         const saved =
           command.id.startsWith("custom-")
@@ -241,18 +276,45 @@ export function useEditor(options: EditorOptions) {
                         ? "Link"
                         : undefined,
                   rows: command.type === "table" ? emptyTable() : undefined,
+                  layoutGroupId: undefined,
+                  columnIndex: undefined,
+                  columnCount: undefined,
                 },
           ),
         );
         setSlashBlockId(null);
+        setMentionBlockId(null);
         setSlashIndex(0);
         focusTarget.current = { id: blockId, caret: "start" };
+      },
+      applyMention: (blockId, pageId, title) => {
+        if (readOnly) return;
+        const list = [...blocksRef.current];
+        const index = list.findIndex((b) => b.id === blockId);
+        if (index < 0) return;
+        const current = list[index];
+        const cleaned = current.text.replace(/\[\[[^\]]*$/, "").replace(/\s+$/, "");
+        const link = createBlock("pagelink", title || "Untitled", { pageId });
+        if (!cleaned.trim() && current.type === "paragraph") {
+          list[index] = link;
+          focusTarget.current = { id: link.id, caret: "start" };
+        } else {
+          list[index] = { ...current, text: cleaned };
+          list.splice(index + 1, 0, link);
+          const after = createBlock("paragraph", "");
+          list.splice(index + 2, 0, after);
+          focusTarget.current = { id: after.id, caret: "start" };
+        }
+        commit(list);
+        setMentionBlockId(null);
+        setSlashBlockId(null);
       },
       clearSlash: (blockId) => {
         commit(
           blocksRef.current.map((b) => (b.id === blockId ? { ...b, text: "" } : b)),
         );
         setSlashBlockId(null);
+        setMentionBlockId(null);
       },
     };
     return api;
@@ -274,6 +336,21 @@ export function useEditor(options: EditorOptions) {
     return { isSlash: true as const, query: text.slice(1) };
   }
 
+  function parseMention(text: string) {
+    const match = text.match(/\[\[([^\]]*)$/);
+    if (!match) return { isMention: false as const, query: "" };
+    return { isMention: true as const, query: match[1] };
+  }
+
+  function filterMentions(query: string) {
+    const q = query.trim().toLowerCase();
+    const pages = linkablePages.filter((p) => p.kind !== "folder");
+    if (!q) return pages.slice(0, 20);
+    return pages
+      .filter((p) => (p.title || "").toLowerCase().includes(q))
+      .slice(0, 20);
+  }
+
   function handleTextChange(block: Block, text: string) {
     if (readOnly) return;
 
@@ -286,17 +363,25 @@ export function useEditor(options: EditorOptions) {
         });
         commands.updateBlock(block.id, { text: shortcut.rest });
         setSlashBlockId(null);
+        setMentionBlockId(null);
         return;
       }
     }
 
     commands.updateBlock(block.id, { text });
     const { isSlash } = parseSlash(text);
+    const { isMention } = parseMention(text);
     if (isSlash) {
       setSlashBlockId(block.id);
       setSlashIndex(0);
-    } else if (slashBlockId === block.id) {
+      setMentionBlockId(null);
+    } else if (isMention && (block.type === "paragraph" || block.type.startsWith("heading"))) {
+      setMentionBlockId(block.id);
+      setMentionIndex(0);
       setSlashBlockId(null);
+    } else {
+      if (slashBlockId === block.id) setSlashBlockId(null);
+      if (mentionBlockId === block.id) setMentionBlockId(null);
     }
   }
 
@@ -334,6 +419,35 @@ export function useEditor(options: EditorOptions) {
 
     const { isSlash, query } = parseSlash(block.text);
     const filtered = isSlash ? filterSlash(query) : [];
+    const { isMention, query: mentionQuery } = parseMention(block.text);
+    const mentionPages = isMention ? filterMentions(mentionQuery) : [];
+
+    if (mentionBlockId === block.id && isMention) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionIndex((i) => (i + 1) % Math.max(mentionPages.length, 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionIndex(
+          (i) =>
+            (i - 1 + Math.max(mentionPages.length, 1)) % Math.max(mentionPages.length, 1),
+        );
+        return;
+      }
+      if (e.key === "Enter" && mentionPages.length) {
+        e.preventDefault();
+        const page = mentionPages[mentionIndex % mentionPages.length];
+        commands.applyMention(block.id, page._id, page.title || "Untitled");
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setMentionBlockId(null);
+        return;
+      }
+    }
 
     if (slashBlockId === block.id && isSlash) {
       if (e.key === "ArrowDown") {
@@ -379,14 +493,45 @@ export function useEditor(options: EditorOptions) {
       }
     }
 
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const nestable =
+        block.type === "bullet" ||
+        block.type === "todo" ||
+        block.type === "numbered" ||
+        block.type === "paragraph";
+      if (!nestable) return;
+      const current = clampIndent(block.indent);
+      if (e.shiftKey) {
+        if (current > 0) {
+          commands.updateBlock(block.id, { indent: current - 1 || undefined });
+        } else if (block.type !== "paragraph" && !block.text) {
+          commands.setBlockType(block.id, "paragraph");
+        }
+        return;
+      }
+      if (current < MAX_INDENT) {
+        commands.updateBlock(block.id, { indent: current + 1 });
+      }
+      return;
+    }
+
     if (e.key === "Enter" && !e.shiftKey && block.type !== "code" && block.type !== "callout") {
+      if (mentionBlockId === block.id && isMention) return;
       e.preventDefault();
       setSlashBlockId(null);
+      setMentionBlockId(null);
       const nextType: BlockType =
         block.type === "bullet" || block.type === "todo" || block.type === "numbered"
           ? block.type
           : "paragraph";
-      commands.insertBlockAfter(block.id, nextType);
+      const indent = clampIndent(block.indent);
+      commands.insertBlockAfter(block.id, nextType, "", {
+        indent: indent || undefined,
+        layoutGroupId: block.layoutGroupId,
+        columnIndex: block.columnIndex,
+        columnCount: block.columnCount,
+      });
       return;
     }
 
@@ -403,6 +548,11 @@ export function useEditor(options: EditorOptions) {
     ) {
       e.preventDefault();
       setSlashBlockId(null);
+      const indent = clampIndent(block.indent);
+      if (indent > 0) {
+        commands.updateBlock(block.id, { indent: indent - 1 || undefined });
+        return;
+      }
       if (block.type !== "paragraph") {
         commands.setBlockType(block.id, "paragraph");
         return;
@@ -411,18 +561,18 @@ export function useEditor(options: EditorOptions) {
       return;
     }
 
-    if (e.key === "ArrowUp" && !isSlash && (e.metaKey || e.ctrlKey)) {
+    if (e.key === "ArrowUp" && !isSlash && !isMention && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       commands.moveBlock(block.id, "up");
       return;
     }
-    if (e.key === "ArrowDown" && !isSlash && (e.metaKey || e.ctrlKey)) {
+    if (e.key === "ArrowDown" && !isSlash && !isMention && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       commands.moveBlock(block.id, "down");
       return;
     }
 
-    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+    if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !isMention && !isSlash) {
       const el = e.currentTarget;
       if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return;
       const atStart = el.selectionStart === 0 && el.selectionEnd === 0;
@@ -448,6 +598,11 @@ export function useEditor(options: EditorOptions) {
     slashBlockId,
     slashIndex,
     setSlashIndex,
+    mentionBlockId,
+    mentionIndex,
+    setMentionIndex,
+    filterMentions,
+    parseMention,
     focusedId,
     setFocusedId,
     hoveredId,

@@ -4,11 +4,14 @@ import { Expand, FileText, Link2, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { MediaUploadButton } from "@/components/media-upload-button";
 import { PdfViewer } from "@/components/pdf-viewer";
+import { useToast } from "@/components/toast";
 import { easeOutSoft, overlayVariants } from "@/lib/motion";
 import type { BlockRenderProps } from "../types";
 
 export function PdfBlockView(props: BlockRenderProps) {
+  const toast = useToast();
   const [fullscreen, setFullscreen] = useState(false);
   const [editingUrl, setEditingUrl] = useState(false);
   const [urlDraft, setUrlDraft] = useState(props.block.url ?? "");
@@ -78,29 +81,42 @@ export function PdfBlockView(props: BlockRenderProps) {
           </span>
           <div className="nv-pdf-empty-copy">
             <p className="nv-pdf-empty-title">Embed a PDF</p>
-            <p className="nv-pdf-empty-hint">Paste a direct link to a .pdf file</p>
+            <p className="nv-pdf-empty-hint">Upload a PDF or paste a direct .pdf link</p>
           </div>
         </div>
         {!props.readOnly && (
-          <div className="nv-pdf-url-bar">
-            <Link2 className="size-3.5 shrink-0 opacity-50" />
-            <input
-              className="nv-pdf-url-inline"
-              placeholder="https://…/document.pdf"
-              value={urlDraft}
-              onChange={(e) => setUrlDraft(e.target.value)}
-              onFocus={props.onFocus}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  applyUrl(urlDraft);
-                }
-              }}
-              onBlur={() => {
-                if (urlDraft.trim()) applyUrl(urlDraft);
-              }}
-            />
-          </div>
+          <>
+            <div className="nv-media-upload-row">
+              <MediaUploadButton
+                accept="application/pdf,.pdf"
+                label="Upload PDF"
+                onUploaded={(next) => {
+                  props.commands.updateBlock(props.block.id, { url: next });
+                  props.onFocus();
+                }}
+                onError={(msg) => toast.error(msg)}
+              />
+            </div>
+            <div className="nv-pdf-url-bar">
+              <Link2 className="size-3.5 shrink-0 opacity-50" />
+              <input
+                className="nv-pdf-url-inline"
+                placeholder="https://…/document.pdf"
+                value={urlDraft}
+                onChange={(e) => setUrlDraft(e.target.value)}
+                onFocus={props.onFocus}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    applyUrl(urlDraft);
+                  }
+                }}
+                onBlur={() => {
+                  if (urlDraft.trim()) applyUrl(urlDraft);
+                }}
+              />
+            </div>
+          </>
         )}
       </div>
     );

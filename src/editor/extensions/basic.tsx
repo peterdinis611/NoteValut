@@ -52,6 +52,24 @@ export const Paragraph = Extension({
       keywords: ["text", "paragraph", "p"],
       group: "Basic",
     },
+    {
+      id: "columns-2",
+      type: "paragraph",
+      label: "2 columns",
+      description: "Side-by-side layout",
+      icon: "▥",
+      keywords: ["columns", "layout", "grid", "two"],
+      group: "Layout",
+    },
+    {
+      id: "columns-3",
+      type: "paragraph",
+      label: "3 columns",
+      description: "Three-column layout",
+      icon: "▦",
+      keywords: ["columns", "layout", "grid", "three"],
+      group: "Layout",
+    },
   ],
   placeholder: () => "Type '/' for commands",
   render: (props) => (
@@ -273,32 +291,60 @@ export const Todo = Extension({
     },
   ],
   placeholder: () => "Task",
-  render: (props) => (
-    <div
-      className={`nv-block-inner nv-todo-row ${props.block.checked ? "nv-todo-done" : ""}`}
-      style={blockToneStyle(props.block.color, props.block.bgColor)}
-    >
-      <input
-        type="checkbox"
-        className="nv-checkbox"
-        checked={!!props.block.checked}
-        disabled={props.readOnly}
-        onChange={(e) =>
-          props.commands.updateBlock(props.block.id, { checked: e.target.checked })
-        }
-      />
-      <BlockTextInput
-        block={props.block}
-        readOnly={props.readOnly}
-        className="nv-input nv-todo"
-        placeholder="Task"
-        onChange={props.onTextChange}
-        onKeyDown={props.onKeyDown}
-        onPaste={props.onPaste}
-        onFocus={props.onFocus}
-      />
-    </div>
-  ),
+  render: (props) => {
+    const due = props.block.dueAt;
+    const overdue = !!due && !props.block.checked && due < Date.now();
+    const dueValue = due ? new Date(due).toISOString().slice(0, 10) : "";
+    return (
+      <div
+        className={`nv-block-inner nv-todo-row ${props.block.checked ? "nv-todo-done" : ""} ${overdue ? "nv-todo-overdue" : ""}`}
+        style={blockToneStyle(props.block.color, props.block.bgColor)}
+      >
+        <input
+          type="checkbox"
+          className="nv-checkbox"
+          checked={!!props.block.checked}
+          disabled={props.readOnly}
+          onChange={(e) =>
+            props.commands.updateBlock(props.block.id, { checked: e.target.checked })
+          }
+        />
+        <BlockTextInput
+          block={props.block}
+          readOnly={props.readOnly}
+          className="nv-input nv-todo"
+          placeholder="Task"
+          onChange={props.onTextChange}
+          onKeyDown={props.onKeyDown}
+          onPaste={props.onPaste}
+          onFocus={props.onFocus}
+        />
+        {!props.readOnly && (
+          <input
+            type="date"
+            className="nv-todo-due"
+            value={dueValue}
+            title="Due date"
+            aria-label="Due date"
+            onChange={(e) => {
+              const v = e.target.value;
+              props.commands.updateBlock(props.block.id, {
+                dueAt: v ? new Date(`${v}T12:00:00`).getTime() : undefined,
+              });
+            }}
+          />
+        )}
+        {props.readOnly && due && (
+          <span className={`nv-todo-due-label ${overdue ? "is-overdue" : ""}`}>
+            {new Date(due).toLocaleDateString(undefined, {
+              month: "short",
+              day: "numeric",
+            })}
+          </span>
+        )}
+      </div>
+    );
+  },
 });
 
 export const Quote = Extension({

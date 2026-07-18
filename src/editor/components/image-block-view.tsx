@@ -20,6 +20,8 @@ import {
   type ReactNode,
 } from "react";
 import { ImageViewer } from "@/components/image-viewer";
+import { MediaUploadButton } from "@/components/media-upload-button";
+import { useToast } from "@/components/toast";
 import { easeOutSoft, dropdownVariants } from "@/lib/motion";
 import type { BlockRenderProps } from "../types";
 
@@ -27,6 +29,7 @@ const MIN_WIDTH = 25;
 const MAX_WIDTH = 100;
 
 export function ImageBlockView(props: BlockRenderProps) {
+  const toast = useToast();
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selected, setSelected] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -166,29 +169,42 @@ export function ImageBlockView(props: BlockRenderProps) {
           </span>
           <div className="nv-image-empty-copy">
             <p className="nv-image-empty-title">Add an image</p>
-            <p className="nv-image-empty-hint">Paste a link to embed</p>
+            <p className="nv-image-empty-hint">Upload a file or paste an image URL</p>
           </div>
         </div>
         {!props.readOnly && (
-          <div className="nv-image-url-bar">
-            <Link2 className="size-3.5 shrink-0 opacity-50" />
-            <input
-              className="nv-image-url-inline"
-              placeholder="https://… image URL"
-              value={urlDraft}
-              onChange={(e) => setUrlDraft(e.target.value)}
-              onFocus={props.onFocus}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  applyUrl(urlDraft);
-                }
-              }}
-              onBlur={() => {
-                if (urlDraft.trim()) applyUrl(urlDraft);
-              }}
-            />
-          </div>
+          <>
+            <div className="nv-media-upload-row">
+              <MediaUploadButton
+                accept="image/*"
+                label="Upload image"
+                onUploaded={(next) => {
+                  props.commands.updateBlock(props.block.id, { url: next });
+                  props.onFocus();
+                }}
+                onError={(msg) => toast.error(msg)}
+              />
+            </div>
+            <div className="nv-image-url-bar">
+              <Link2 className="size-3.5 shrink-0 opacity-50" />
+              <input
+                className="nv-image-url-inline"
+                placeholder="https://… image URL"
+                value={urlDraft}
+                onChange={(e) => setUrlDraft(e.target.value)}
+                onFocus={props.onFocus}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    applyUrl(urlDraft);
+                  }
+                }}
+                onBlur={() => {
+                  if (urlDraft.trim()) applyUrl(urlDraft);
+                }}
+              />
+            </div>
+          </>
         )}
       </div>
     );

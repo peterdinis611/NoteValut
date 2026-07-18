@@ -23,6 +23,9 @@ import {
 import { isFolder } from "@/lib/item-kinds";
 import { firstIssue, parseBlocks, parseTags, parseTemplateName } from "@/lib/validation";
 import { useVaultAccess } from "@/context/vault-access";
+import { TableOfContents } from "./table-of-contents";
+import { BacklinksPanel } from "./backlinks-panel";
+import { PagePins } from "./page-pins";
 import { VaultEditor } from "@/editor";
 import { saveCustomTemplate } from "@/db/templates-collection";
 import { CollectionDetail } from "./collection-detail";
@@ -468,15 +471,39 @@ export function NoteEditor({
               }}
             />
 
-            <div className="page-body">
-              <VaultEditor
+            <PagePins
+              blocks={blocks}
+              onJump={(blockId) => {
+                const el = document.querySelector<HTMLElement>(`[data-block-id="${blockId}"]`);
+                el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                el?.focus();
+              }}
+            />
+
+            <div className="page-body-layout">
+              <div className="page-body">
+                <VaultEditor
+                  blocks={blocks}
+                  readOnly={readOnly}
+                  linkablePages={linkablePages}
+                  onNavigate={onNavigate}
+                  onChange={(next) => {
+                    setBlocks(next);
+                    scheduleSave({ blocks: next });
+                  }}
+                />
+                <BacklinksPanel
+                  ownerId={ownerId}
+                  noteId={noteId}
+                  onNavigate={onNavigate}
+                />
+              </div>
+              <TableOfContents
                 blocks={blocks}
-                readOnly={readOnly}
-                linkablePages={linkablePages}
-                onNavigate={onNavigate}
-                onChange={(next) => {
-                  setBlocks(next);
-                  scheduleSave({ blocks: next });
+                onJump={(blockId) => {
+                  const el = document.querySelector<HTMLElement>(`[data-block-id="${blockId}"]`);
+                  el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  el?.focus();
                 }}
               />
             </div>
