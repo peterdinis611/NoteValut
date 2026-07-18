@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Database,
   FileUp,
   Palette,
   RotateCcw,
@@ -11,6 +12,8 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import {
   MAX_FONT_BYTES,
   THEME_PRESETS,
@@ -28,26 +31,32 @@ import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { useVaultSettings } from "@/hooks/use-vault-settings";
 import { easeOutSoft, fadeUpVariants } from "@/lib/motion";
 import { listDefaultTemplates } from "@/lib/templates";
+import { parseVaultBackupFile } from "@/lib/vault-backup";
 import { useToast } from "./toast";
 
 const MAX_CSS_BYTES = 100_000;
 const FONT_ACCEPT = ".woff2,.woff,.ttf,.otf,font/woff2,font/woff,font/ttf,font/otf";
 
 type Props = {
+  ownerId: string;
   onClose: () => void;
+  onExport?: () => void;
 };
 
-export function SettingsPage({ onClose }: Props) {
+export function SettingsPage({ ownerId, onClose, onExport }: Props) {
   const toast = useToast();
   const settings = useVaultSettings();
   const templates = useCustomTemplates();
+  const importVault = useMutation(api.notes.importVault);
   const fileRef = useRef<HTMLInputElement>(null);
   const fontFileRef = useRef<HTMLInputElement>(null);
+  const backupFileRef = useRef<HTMLInputElement>(null);
   const [cssDraft, setCssDraft] = useState(settings.customCss);
   const [dragging, setDragging] = useState(false);
   const [fontFamilyDraft, setFontFamilyDraft] = useState(settings.fontFamily ?? "");
   const [fontUrlDraft, setFontUrlDraft] = useState(settings.fontUrl ?? "");
   const [fontDragging, setFontDragging] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     setCssDraft(settings.customCss);
@@ -130,6 +139,29 @@ export function SettingsPage({ onClose }: Props) {
   }
 
   const fontActive = (settings.fontMode ?? "default") !== "default";
+
+  async function handleImportBackup(file: File) {
+    if (!file.name.toLowerCase().endsWith(".json")) {
+      toast.error("Upload a .json vault backup");
+      return;
+    }
+    setImporting(true);
+    try {
+      const backup = await parseVaultBackupFile(file);
+      const result = await importVault({
+        ownerId,
+        notes: backup.notes.map((n) => ({
+          ...n,
+          parentId: n.parentId,
+        })),
+      });
+      toast.success(`Imported ${result.imported} items`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn’t import backup");
+    } finally {
+      setImporting(false);
+    }
+  }
 
   return (
     <motion.div
@@ -395,6 +427,50 @@ export function SettingsPage({ onClose }: Props) {
             exact family name.
           </p>
         </div>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-section-head">
+          <Database className="size-4 text-accent" />
+          <div>
+            <h2>Backup</h2>
+            <p>Export or import your vault as JSON</p>
+          </div>
+        </div>
+        <div className="settings-css-toolbar">
+          <button
+            type="button"
+            className="settings-btn"
+            onClick={() => onExport?.()}
+            disabled={!onExport}
+          >
+            Export JSON
+          </button>
+          <button
+            type="button"
+            className="settings-btn"
+            disabled={importing}
+            onClick={() => backupFileRef.current?.click()}
+          >
+            <FileUp className="size-3.5" />
+            {importing ? "Importing…" : "Import JSON"}
+          </button>
+          <input
+            ref={backupFileRef}
+            type="file"
+            accept="application/json,.json"
+            className="sr-only"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) void handleImportBackup(file);
+            }}
+          />
+        </div>
+        <p className="settings-hint">
+          Export includes pages and collections (not trash). Import merges as new items and
+          remaps parent links.
+        </p>
       </section>
 
       <section className="settings-section">

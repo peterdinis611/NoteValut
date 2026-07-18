@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { useDebouncedValue } from "@tanstack/react-pacer";
 import {
+  Archive,
   ChevronDown,
   ChevronRight,
   Clock3,
@@ -16,6 +17,7 @@ import {
   Share2,
   Sparkles,
   StickyNote,
+  Tag,
   Trash2,
   Zap,
 } from "lucide-react";
@@ -34,15 +36,23 @@ import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
 import { VirtualList } from "./virtual-list";
 
-type BrowseMode = "vault" | "favorites" | "recent" | "collections" | "pages";
+type BrowseMode =
+  | "vault"
+  | "favorites"
+  | "recent"
+  | "collections"
+  | "pages"
+  | "archive";
 
 type Props = {
   ownerId: string;
   activeId: Id<"notes"> | null;
   settingsActive?: boolean;
+  tagsActive?: boolean;
   onSelect: (id: Id<"notes"> | null) => void;
   onGoHome: () => void;
   onOpenSettings?: () => void;
+  onOpenTags?: () => void;
   onCollapse: () => void;
   onCreateEntry: (parentId?: Id<"notes">, templateId?: string) => void;
   onCreateCollection: (parentId?: Id<"notes">) => void;
@@ -53,9 +63,11 @@ export function Sidebar({
   ownerId,
   activeId,
   settingsActive = false,
+  tagsActive = false,
   onSelect,
   onGoHome,
   onOpenSettings,
+  onOpenTags,
   onCollapse,
   onCreateEntry,
   onCreateCollection,
@@ -75,6 +87,7 @@ export function Sidebar({
 
   const notes = useQuery(api.notes.list, { ownerId });
   const trashed = useQuery(api.notes.listTrashed, { ownerId });
+  const archived = useQuery(api.notes.listArchived, { ownerId });
 
   const updateNote = useMutation(api.notes.update);
   const trashNote = useMutation(api.notes.trash);
@@ -118,6 +131,15 @@ export function Sidebar({
     }
   }
 
+  async function handleUnarchive(id: Id<"notes">) {
+    try {
+      await updateNote({ id, archived: false });
+      toast.success("Restored from archive");
+    } catch {
+      toast.error("Couldn’t unarchive");
+    }
+  }
+
   const isSearching = !!search.trim();
   const searchPending = isSearching && searchDebouncer.state.isPending;
   const activeItems = useMemo(() => notes ?? [], [notes]);
@@ -142,6 +164,7 @@ export function Sidebar({
         .slice(0, 12),
     [activeItems],
   );
+  const archivedItems = useMemo(() => archived ?? [], [archived]);
 
   const childrenByParent = useMemo(() => {
     const map = new Map<string, Doc<"notes">[]>();
@@ -164,6 +187,7 @@ export function Sidebar({
   const homeActive =
     activeId === null &&
     !settingsActive &&
+    !tagsActive &&
     !isSearching &&
     browse === "vault" &&
     !showBin;
@@ -249,10 +273,11 @@ export function Sidebar({
             { id: "recent", label: "Recent", icon: Clock3, count: recent.length },
             { id: "collections", label: "Collections", icon: FolderOpen, count: collections.length },
             { id: "pages", label: "Pages", icon: StickyNote, count: pages.length },
+            { id: "archive", label: "Archive", icon: Archive, count: archivedItems.length },
           ] as const
         ).map((item) => {
           const Icon = item.icon;
-          const active = !isSearching && !showBin && browse === item.id;
+          const active = !isSearching && !showBin && !tagsActive && browse === item.id;
           return (
             <button
               key={item.id}
@@ -394,6 +419,36 @@ export function Sidebar({
               />
             )}
           </SidebarSection>
+        ) : browse === "archive" ? (
+          <SidebarSection title="Archive">
+            {archived === undefined ? (
+              <p className="sidebar-empty">Loading…</p>
+            ) : archivedItems.length === 0 ? (
+              <EmptyHint text="Archived pages show up here." />
+            ) : (
+              <ul className="sidebar-section-items">
+                {archivedItems.map((item) => (
+                  <li key={item._id} className="sidebar-bin-item">
+                    <button
+                      type="button"
+                      className="sidebar-bin-label min-w-0 flex-1 text-left"
+                      onClick={() => onSelect(item._id)}
+                    >
+                      <span>{item.icon}</span>
+                      <span className="truncate">{item.title || "Untitled"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="sidebar-bin-restore"
+                      onClick={() => void handleUnarchive(item._id)}
+                    >
+                      Restore
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SidebarSection>
         ) : (
           <SidebarSection
             title="Vault"
@@ -477,6 +532,19 @@ export function Sidebar({
           >
             <Settings2 className="size-3.5" />
             <span className="flex-1 text-left">Settings</span>
+          </button>
+        )}
+        {onOpenTags && (
+          <button
+            type="button"
+            className={`sidebar-footer-btn ${tagsActive ? "sidebar-footer-btn-open" : ""}`}
+            onClick={() => {
+              setShowBin(false);
+              onOpenTags();
+            }}
+          >
+            <Tag className="size-3.5" />
+            <span className="flex-1 text-left">Tags</span>
           </button>
         )}
         <button

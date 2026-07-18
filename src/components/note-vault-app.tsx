@@ -3,21 +3,26 @@
 import { useMutation, useQuery } from "convex/react";
 import { AnimatePresence, motion } from "motion/react";
 import { PanelLeft } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { VaultAccessProvider } from "@/context/vault-access";
 import { easeOutSoft, easeQuick, pageVariants } from "@/lib/motion";
 import { getTemplate } from "@/lib/templates";
+import { downloadVaultBackup } from "@/lib/vault-backup";
 import { useOwnerId } from "@/hooks/use-owner-id";
 import { useVaultSettings } from "@/hooks/use-vault-settings";
+import { CommandIcons, CommandPalette, type CommandAction } from "./command-palette";
 import { LottieStatus } from "./lottie-status";
 import { NoteEditor } from "./note-editor";
 import { QuickCapture, QuickCaptureFab } from "./quick-capture";
 import { SettingsPage } from "./settings-page";
 import { Sidebar } from "./sidebar";
+import { TagsHub } from "./tags-hub";
 import { useToast } from "./toast";
 import { VaultHome } from "./vault-home";
+
+type MainPanel = "home" | "note" | "settings" | "tags";
 
 export function NoteVaultApp() {
   const ownerId = useOwnerId();
@@ -25,12 +30,18 @@ export function NoteVaultApp() {
   useVaultSettings();
   const seedDemo = useMutation(api.notes.seedDemo);
   const createNote = useMutation(api.notes.create);
-  const notes = useQuery(api.notes.list, ownerId ? { ownerId } : "skip");
+  const notes = useQuery(
+    api.notes.list,
+    ownerId ? { ownerId, includeArchived: true } : "skip",
+  );
+  const exportData = useQuery(api.notes.exportVault, ownerId ? { ownerId } : "skip");
   const [activeId, setActiveId] = useState<Id<"notes"> | null>(null);
   const [seeded, setSeeded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showTags, setShowTags] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
 
   useEffect(() => {
     if (!ownerId || seeded) return;
@@ -39,10 +50,27 @@ export function NoteVaultApp() {
 
   useEffect(() => {
     if (!activeId || !notes) return;
-    if (!notes.some((n) => n._id === activeId)) {
+    if (!notes.some((n) => n._id === activeId && !n.trashed)) {
       setActiveId(null);
     }
   }, [notes, activeId]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const meta = e.metaKey || e.ctrlKey;
+      if (meta && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCmdOpen((v) => !v);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const clearPanels = useCallback(() => {
+    setShowSettings(false);
+    setShowTags(false);
+  }, []);
 
   const handleCreateEntry = useCallback(
     async (parentId?: Id<"notes">, templateId = "blank") => {
@@ -62,6 +90,7 @@ export function NoteVaultApp() {
             rows: b.rows?.map((row) => [...row]),
           })),
         });
+        clearPanels();
         setActiveId(id);
         toast.success(
           template.id === "blank" ? "Entry created" : `Created from ${template.name}`,
@@ -70,7 +99,7 @@ export function NoteVaultApp() {
         toast.error("Couldn’t create entry");
       }
     },
-    [ownerId, createNote, toast],
+    [ownerId, createNote, toast, clearPanels],
   );
 
   const handleCreateCollection = useCallback(
@@ -85,13 +114,92 @@ export function NoteVaultApp() {
           icon: "🗂️",
           color: "teal",
         });
+        clearPanels();
         setActiveId(id);
         toast.success("Collection created");
       } catch {
         toast.error("Couldn’t create collection");
       }
     },
-    [ownerId, createNote, toast],
+    [ownerId, createNote, toast, clearPanels],
+  );
+
+  const handleExport = useCallback(() => {
+    if (!exportData) {
+      toast.error("Export isn’t ready yet");
+      return;
+    }
+    downloadVaultBackup(exportData);
+    toast.success(`Exported ${exportData.notes.length} items`);
+  }, [exportData, toast]);
+
+  const cmdActions: CommandAction[] = useMemo(
+    () => [
+      {
+        id: "home",
+        label: "Go home",
+        hint: "Vault overview",
+        icon: CommandIcons.home,
+        keywords: ["vault", "home"],
+        run: () => {
+          clearPanels();
+          setActiveId(null);
+        },
+      },
+      {
+        id: "new-page",
+        label: "New page",
+        hint: "Blank entry",
+        icon: CommandIcons.page,
+        keywords: ["create", "entry"],
+        run: () => void handleCreateEntry(undefined, "blank"),
+      },
+      {
+        id: "new-collection",
+        label: "New collection",
+        icon: CommandIcons.collection,
+        keywords: ["folder"],
+        run: () => void handleCreateCollection(),
+      },
+      {
+        id: "quick-capture",
+        label: "Quick capture",
+        icon: CommandIcons.capture,
+        keywords: ["inbox"],
+        run: () => setQuickCaptureOpen(true),
+      },
+      {
+        id: "tags",
+        label: "Browse tags",
+        icon: CommandIcons.tags,
+        keywords: ["tag", "filter"],
+        run: () => {
+          setActiveId(null);
+          setShowSettings(false);
+          setShowTags(true);
+        },
+      },
+      {
+        id: "settings",
+        label: "Open settings",
+        icon: CommandIcons.settings,
+        keywords: ["theme", "font"],
+        run: () => {
+          setActiveId(null);
+          setShowTags(false);
+          setShowSettings(true);
+        },
+      },
+      {
+        id: "export",
+        label: "Export vault JSON",
+        hint: "Download backup",
+        icon: CommandIcons.export,
+        keywords: ["backup", "download"],
+        run: handleExport,
+      },
+    ],
+    [clearPanels, handleCreateEntry, handleCreateCollection, handleExport],
   );
 
   if (!ownerId) {
@@ -105,6 +213,14 @@ export function NoteVaultApp() {
     );
   }
 
+  const panel: MainPanel = showSettings
+    ? "settings"
+    : showTags
+      ? "tags"
+      : activeId
+        ? "note"
+        : "home";
+
   return (
     <VaultAccessProvider value={{ readOnly: false, isOwner: true }}>
       <div className="app-shell">
@@ -114,17 +230,24 @@ export function NoteVaultApp() {
               ownerId={ownerId}
               activeId={activeId}
               settingsActive={showSettings}
+              tagsActive={showTags}
               onSelect={(id) => {
-                setShowSettings(false);
+                clearPanels();
                 setActiveId(id);
               }}
               onGoHome={() => {
-                setShowSettings(false);
+                clearPanels();
                 setActiveId(null);
               }}
               onOpenSettings={() => {
                 setActiveId(null);
+                setShowTags(false);
                 setShowSettings(true);
+              }}
+              onOpenTags={() => {
+                setActiveId(null);
+                setShowSettings(false);
+                setShowTags(true);
               }}
               onCollapse={() => setSidebarOpen(false)}
               onCreateEntry={handleCreateEntry}
@@ -155,7 +278,7 @@ export function NoteVaultApp() {
 
           <AnimatePresence mode="wait">
             <motion.div
-              key={showSettings ? "settings" : (activeId ?? "home")}
+              key={panel === "note" ? activeId : panel}
               className="app-main-view"
               variants={pageVariants}
               initial="hidden"
@@ -163,14 +286,27 @@ export function NoteVaultApp() {
               exit="exit"
               transition={easeQuick}
             >
-              {showSettings ? (
-                <SettingsPage onClose={() => setShowSettings(false)} />
-              ) : activeId ? (
+              {panel === "settings" ? (
+                <SettingsPage
+                  ownerId={ownerId}
+                  onClose={() => setShowSettings(false)}
+                  onExport={handleExport}
+                />
+              ) : panel === "tags" ? (
+                <TagsHub
+                  ownerId={ownerId}
+                  onClose={() => setShowTags(false)}
+                  onNavigate={(id) => {
+                    clearPanels();
+                    setActiveId(id);
+                  }}
+                />
+              ) : panel === "note" && activeId ? (
                 <NoteEditor
                   noteId={activeId}
                   ownerId={ownerId}
                   onNavigate={(id) => {
-                    setShowSettings(false);
+                    clearPanels();
                     setActiveId(id);
                   }}
                   onToggleSidebar={() => setSidebarOpen(true)}
@@ -182,7 +318,7 @@ export function NoteVaultApp() {
                 <VaultHome
                   ownerId={ownerId}
                   onNavigate={(id) => {
-                    setShowSettings(false);
+                    clearPanels();
                     setActiveId(id);
                   }}
                   onCreateEntry={(templateId) => handleCreateEntry(undefined, templateId)}
@@ -198,7 +334,20 @@ export function NoteVaultApp() {
             ownerId={ownerId}
             open={quickCaptureOpen}
             onClose={() => setQuickCaptureOpen(false)}
-            onCreated={setActiveId}
+            onCreated={(id) => {
+              clearPanels();
+              setActiveId(id);
+            }}
+          />
+          <CommandPalette
+            open={cmdOpen}
+            onClose={() => setCmdOpen(false)}
+            notes={notes?.filter((n) => !n.archived && !n.trashed)}
+            actions={cmdActions}
+            onNavigate={(id) => {
+              clearPanels();
+              setActiveId(id);
+            }}
           />
         </main>
       </div>

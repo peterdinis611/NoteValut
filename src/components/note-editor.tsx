@@ -28,6 +28,7 @@ import { saveCustomTemplate } from "@/db/templates-collection";
 import { CollectionDetail } from "./collection-detail";
 import { IconPicker } from "./icon-picker";
 import { MoreActionIcons, MoreActionsMenu, type MoreActionItem } from "./more-actions-menu";
+import { MoveDialog } from "./move-dialog";
 import { PageBreadcrumbs } from "./page-breadcrumbs";
 import { PageHeaderActions } from "./page-header-actions";
 import { PageProperties } from "./page-properties";
@@ -68,6 +69,7 @@ export function NoteEditor({
   const [tags, setTags] = useState<string[]>([]);
   const [showIcon, setShowIcon] = useState(true);
   const [shareOpen, setShareOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
 
@@ -270,6 +272,12 @@ export function NoteEditor({
       });
     }
     moreItems.push(
+      {
+        id: "move",
+        label: "Move to…",
+        icon: MoreActionIcons.move,
+        onClick: () => setMoveOpen(true),
+      },
       {
         id: "nested-entry",
         label: "New nested entry",
@@ -492,6 +500,16 @@ export function NoteEditor({
         noteId={noteId}
         title={note.title}
       />
+      {!readOnly && (
+        <MoveDialog
+          open={moveOpen}
+          onClose={() => setMoveOpen(false)}
+          ownerId={ownerId}
+          noteId={noteId}
+          noteTitle={note.title}
+          currentParentId={note.parentId ?? null}
+        />
+      )}
     </div>
   );
 }

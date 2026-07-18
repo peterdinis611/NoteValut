@@ -101,6 +101,83 @@ export const listTrashed = query({
   },
 });
 
+export const listArchived = query({
+  args: { ownerId: v.string() },
+  handler: async (ctx, args) => {
+    const notes = await ctx.db
+      .query("notes")
+      .withIndex("by_owner_updated", (q) => q.eq("ownerId", args.ownerId))
+      .order("desc")
+      .collect();
+
+    return notes
+      .filter((n) => n.archived && !n.trashed)
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  },
+});
+
+export const listTags = query({
+  args: { ownerId: v.string() },
+  handler: async (ctx, args) => {
+    const notes = await ctx.db
+      .query("notes")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+
+    const counts = new Map<string, number>();
+    for (const note of notes) {
+      if (note.trashed || note.archived) continue;
+      for (const tag of note.tags) {
+        const key = tag.trim();
+        if (!key) continue;
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+    }
+
+    return [...counts.entries()]
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+  },
+});
+
+export const exportVault = query({
+  args: { ownerId: v.string() },
+  handler: async (ctx, args) => {
+    const notes = await ctx.db
+      .query("notes")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+
+    const active = notes.filter((n) => !n.trashed);
+    return {
+      version: 1 as const,
+      exportedAt: Date.now(),
+      notes: active.map((n) => ({
+        id: n._id,
+        title: n.title,
+        content: n.content,
+        blocks: n.blocks,
+        folderBlocks: n.folderBlocks,
+        icon: n.icon,
+        coverColor: n.coverColor,
+        coverImage: n.coverImage,
+        parentId: n.parentId ?? null,
+        kind: n.kind ?? "page",
+        color: n.color,
+        description: n.description,
+        viewMode: n.viewMode,
+        sortMode: n.sortMode,
+        defaultTemplateId: n.defaultTemplateId,
+        isLocked: n.isLocked,
+        pinned: n.pinned,
+        archived: n.archived,
+        tags: n.tags,
+        updatedAt: n.updatedAt,
+      })),
+    };
+  },
+});
+
 export const getBreadcrumbs = query({
   args: { id: v.id("notes") },
   handler: async (ctx, args) => {
@@ -277,6 +354,15 @@ export const move = mutation({
       if (!parent || parent.kind !== "folder") {
         throw new Error("Parent must be a collection");
       }
+      // Prevent moving a collection into one of its descendants
+      let cursor: Id<"notes"> | undefined = args.parentId;
+      while (cursor) {
+        if (cursor === args.id) {
+          throw new Error("Cannot move a collection into its descendant");
+        }
+        const ancestor = await ctx.db.get(cursor);
+        cursor = ancestor?.parentId as Id<"notes"> | undefined;
+      }
     }
 
     await ctx.db.patch(args.id, {
@@ -284,6 +370,88 @@ export const move = mutation({
       updatedAt: Date.now(),
     });
     return args.id;
+  },
+});
+
+const importNoteValidator = v.object({
+  id: v.string(),
+  title: v.string(),
+  content: v.string(),
+  blocks: v.optional(v.array(block)),
+  folderBlocks: v.optional(v.array(block)),
+  icon: v.string(),
+  coverColor: v.optional(v.string()),
+  coverImage: v.optional(v.string()),
+  parentId: v.union(v.string(), v.null()),
+  kind: v.optional(v.union(v.literal("page"), v.literal("folder"))),
+  color: v.optional(v.string()),
+  description: v.optional(v.string()),
+  viewMode: v.optional(v.union(v.literal("grid"), v.literal("list"))),
+  sortMode: v.optional(
+    v.union(v.literal("updated"), v.literal("name"), v.literal("kind")),
+  ),
+  defaultTemplateId: v.optional(v.string()),
+  isLocked: v.optional(v.boolean()),
+  pinned: v.boolean(),
+  archived: v.boolean(),
+  tags: v.array(v.string()),
+  updatedAt: v.number(),
+});
+
+export const importVault = mutation({
+  args: {
+    ownerId: v.string(),
+    notes: v.array(importNoteValidator),
+  },
+  handler: async (ctx, args) => {
+    if (args.notes.length > 500) {
+      throw new Error("Import is limited to 500 notes at a time");
+    }
+
+    const idMap = new Map<string, Id<"notes">>();
+    const now = Date.now();
+
+    // Insert folders first so parents exist, then pages — two passes for parents
+    const folders = args.notes.filter((n) => n.kind === "folder");
+    const pages = args.notes.filter((n) => n.kind !== "folder");
+    const ordered = [...folders, ...pages];
+
+    for (const note of ordered) {
+      const newId = await ctx.db.insert("notes", {
+        ownerId: args.ownerId,
+        title: note.title || "Untitled",
+        content: note.content || "",
+        blocks: note.blocks,
+        folderBlocks: note.folderBlocks,
+        icon: note.icon || "📝",
+        coverColor: note.coverColor,
+        coverImage: note.coverImage,
+        parentId: undefined,
+        kind: note.kind === "folder" ? "folder" : "page",
+        color: note.color,
+        description: note.description,
+        viewMode: note.viewMode,
+        sortMode: note.sortMode,
+        defaultTemplateId: note.defaultTemplateId,
+        isLocked: note.isLocked,
+        pinned: !!note.pinned,
+        archived: !!note.archived,
+        trashed: false,
+        tags: note.tags ?? [],
+        updatedAt: note.updatedAt || now,
+      });
+      idMap.set(note.id, newId);
+    }
+
+    for (const note of ordered) {
+      if (!note.parentId) continue;
+      const newId = idMap.get(note.id);
+      const newParent = idMap.get(note.parentId);
+      if (!newId || !newParent) continue;
+      await ctx.db.patch(newId, { parentId: newParent });
+    }
+
+    return { imported: ordered.length };
   },
 });
 
