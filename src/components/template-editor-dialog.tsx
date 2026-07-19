@@ -4,12 +4,10 @@ import { Plus, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { IconPicker } from "@/components/icon-picker";
-import { saveCustomTemplate } from "@/db/templates-collection";
 import { VaultEditor } from "@/editor";
-import { createBlock, defaultBlocks, type Block } from "@/lib/blocks";
+import { createBlock, type Block } from "@/lib/blocks";
+import { createCustomTemplate } from "@/lib/create-custom-template";
 import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
-import { normalizeTags } from "@/lib/tags";
-import { firstIssue, parseBlocks, parseTemplateName } from "@/lib/validation";
 
 type Props = {
   open: boolean;
@@ -48,38 +46,18 @@ export function TemplateEditorDialog({ open, onClose, onSaved }: Props) {
   }, [open, onClose]);
 
   function handleSave() {
-    const nameResult = parseTemplateName(name.trim() || "Untitled template");
-    if (!nameResult.success) {
-      setError(firstIssue(nameResult));
-      return;
-    }
-    const blocksResult = parseBlocks(blocks.length ? blocks : defaultBlocks());
-    if (!blocksResult.success) {
-      setError(firstIssue(blocksResult));
-      return;
-    }
-    const tagsResult = normalizeTags(
-      tagsDraft
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
-    );
-    const tags = tagsResult.success ? tagsResult.tags : [];
-
-    saveCustomTemplate({
-      id: `custom-${crypto.randomUUID()}`,
-      name: nameResult.output,
-      icon: icon.trim() || "✦",
-      description: description.trim() || "Custom template",
-      tags,
-      blocks: blocksResult.output.map((b) => ({
-        ...b,
-        id: crypto.randomUUID(),
-        rows: b.rows?.map((row) => [...row]),
-      })),
+    const result = createCustomTemplate({
+      name,
+      icon,
+      description,
+      tagsDraft,
+      blocks,
     });
-
-    onSaved?.(nameResult.output);
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+    onSaved?.(result.name);
     onClose();
   }
 
