@@ -7,7 +7,7 @@ import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { VaultAccessProvider } from "@/context/vault-access";
 import { isFolder } from "@/lib/item-kinds";
-import { permissionLabel } from "@/lib/share";
+import { roleLabel } from "@/lib/ability";
 import { LottieStatus } from "./lottie-status";
 import { NoteEditor } from "./note-editor";
 
@@ -50,17 +50,15 @@ export function SharedVaultApp({ token }: Props) {
   }
 
   const ownerId = bundle.ownerId;
-  const readOnly = bundle.readOnly;
+  const role = bundle.role === "editor" ? "editor" : "viewer";
 
   return (
     <VaultAccessProvider
-      value={{
-        readOnly,
-        shareToken: token,
-        shareScope: bundle.share.scope,
-        sharePermission: bundle.share.permission,
-        isOwner: false,
-      }}
+      role={role}
+      shareToken={token}
+      shareScope={bundle.share.scope}
+      sharePermission={bundle.share.permission}
+      isOwner={false}
     >
       <div className="app-shell">
         <aside className="sidebar shared-sidebar">
@@ -74,7 +72,7 @@ export function SharedVaultApp({ token }: Props) {
           </div>
           <div className="shared-badge">
             <Eye className="size-3.5" />
-            {permissionLabel(bundle.share.permission)}
+            {roleLabel(role)}
           </div>
           <nav className="sidebar-nav note-scroll">
             {bundle.share.scope === "vault" && (
@@ -120,9 +118,9 @@ export function SharedVaultApp({ token }: Props) {
                 </p>
                 <h1 className="vault-home-title">{bundle.share.label}</h1>
                 <p className="vault-home-subtitle">
-                  {readOnly
-                    ? "You have read-only access. Browse entries and collections below."
-                    : "You can view and edit shared content."}
+                  {role === "viewer"
+                    ? "You have viewer access. Browse entries and collections below."
+                    : "You have editor access — you can view and edit shared content."}
                 </p>
               </div>
               <div className="vault-recent-grid">

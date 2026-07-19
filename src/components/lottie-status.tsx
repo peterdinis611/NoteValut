@@ -44,7 +44,7 @@ export function LottieStatus({
   children,
   compact = false,
 }: Props) {
-  const loop = variant === "loading";
+  const loop = variant === "loading" || variant === "not-found" || variant === "not-authorized";
 
   return (
     <div className={`status-page ${compact ? "status-page-compact" : ""}`}>

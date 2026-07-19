@@ -64,7 +64,9 @@ export function NoteEditor({
   onOpenTag,
 }: Props) {
   const toast = useToast();
-  const { readOnly: globalReadOnly } = useVaultAccess();
+  const { readOnly: globalReadOnly, role, ability } = useVaultAccess();
+  const canShare = ability.can("share", "Note");
+  const canUpdate = ability.can("update", "Note");
   const note = useQuery(api.notes.get, { id: noteId });
   const children = useQuery(api.notes.listChildren, { parentId: noteId });
   const allNotes = useQuery(api.notes.list, { ownerId });
@@ -82,7 +84,7 @@ export function NoteEditor({
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
 
-  const readOnly = globalReadOnly;
+  const readOnly = globalReadOnly || !canUpdate;
 
   useEffect(() => {
     if (!note || isFolder(note)) return;
@@ -363,7 +365,9 @@ export function NoteEditor({
       {readOnly && !isFolder(note) && (
         <div className="readonly-banner">
           <Eye className="size-4 shrink-0" />
-          Read-only access — viewing shared content
+          {role === "viewer"
+            ? "Viewer role — you can browse but not edit"
+            : "Read-only access — viewing shared content"}
         </div>
       )}
 
@@ -382,7 +386,7 @@ export function NoteEditor({
           {!isFolder(note) && !readOnly && (
             <span className="topbar-status">{saveState === "saving" ? "Saving…" : "Saved"}</span>
           )}
-          {!readOnly && (
+          {canShare && (
             <UiTooltip label="Share">
               <button type="button" className="topbar-btn" aria-label="Share" onClick={() => setShareOpen(true)}>
                 <Share2 className="size-4" />

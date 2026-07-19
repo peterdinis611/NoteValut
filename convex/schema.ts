@@ -13,6 +13,8 @@ export default defineSchema({
     coverColor: v.optional(v.string()),
     coverImage: v.optional(v.string()),
     parentId: v.optional(v.id("notes")),
+    /** Manual sidebar order among siblings (lower = higher in list) */
+    sortOrder: v.optional(v.number()),
     kind: v.optional(v.union(v.literal("page"), v.literal("folder"))),
     color: v.optional(v.string()),
     description: v.optional(v.string()),

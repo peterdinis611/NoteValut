@@ -138,17 +138,20 @@ export const getSharedVault = query({
       notes = [root, ...(await collectDescendants(ctx, root._id))];
     }
 
-    const canWrite = share.permission === "write";
+    const role = share.permission === "write" ? "editor" : "viewer";
+    const canWrite = role === "editor";
 
     return {
       share: {
         token: share.token,
         scope: share.scope,
         permission: share.permission,
+        role,
         label: share.label,
         noteId: share.noteId,
       },
       ownerId: share.ownerId,
+      role,
       readOnly: !canWrite,
       settings: settings ?? { sharingEnabled: true, publicReadonly: true },
       notes,

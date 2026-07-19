@@ -83,6 +83,11 @@ export const listChildren = query({
     const sortMode = parent?.sortMode ?? "updated";
 
     return active.sort((a, b) => {
+      const ao = a.sortOrder;
+      const bo = b.sortOrder;
+      if (ao != null || bo != null) {
+        return (ao ?? Number.MAX_SAFE_INTEGER) - (bo ?? Number.MAX_SAFE_INTEGER);
+      }
       if (sortMode === "name") {
         return (a.title || "").localeCompare(b.title || "");
       }
@@ -287,6 +292,7 @@ export const create = mutation({
       archived: false,
       trashed: false,
       tags: assertTags(args.tags ?? []),
+      sortOrder: now,
       updatedAt: now,
     });
   },
@@ -382,6 +388,8 @@ export const move = mutation({
   args: {
     id: v.id("notes"),
     parentId: v.union(v.id("notes"), v.null()),
+    /** Place after this sibling. `null` = first among siblings. Omit = last. */
+    afterId: v.optional(v.union(v.id("notes"), v.null())),
   },
   handler: async (ctx, args) => {
     const item = await ctx.db.get(args.id);
@@ -393,7 +401,6 @@ export const move = mutation({
       if (!parent || parent.kind !== "folder") {
         throw new Error("Parent must be a collection");
       }
-      // Prevent moving a collection into one of its descendants
       let cursor: Id<"notes"> | undefined = args.parentId;
       while (cursor) {
         if (cursor === args.id) {
@@ -404,13 +411,72 @@ export const move = mutation({
       }
     }
 
-    await ctx.db.patch(args.id, {
-      parentId: args.parentId ?? undefined,
-      updatedAt: Date.now(),
-    });
+    const ownerNotes = await ctx.db
+      .query("notes")
+      .withIndex("by_owner", (q) => q.eq("ownerId", item.ownerId))
+      .collect();
+
+    const parentKey = args.parentId ?? null;
+    const siblings = ownerNotes
+      .filter(
+        (n) =>
+          n._id !== args.id &&
+          !n.trashed &&
+          (n.parentId ?? null) === parentKey,
+      )
+      .sort(compareSidebarOrder);
+
+    const orderedIds: Id<"notes">[] = [];
+    if (args.afterId === null) {
+      orderedIds.push(args.id);
+      for (const s of siblings) orderedIds.push(s._id);
+    } else if (args.afterId === undefined) {
+      for (const s of siblings) orderedIds.push(s._id);
+      orderedIds.push(args.id);
+    } else {
+      let placed = false;
+      for (const s of siblings) {
+        orderedIds.push(s._id);
+        if (s._id === args.afterId) {
+          orderedIds.push(args.id);
+          placed = true;
+        }
+      }
+      if (!placed) orderedIds.push(args.id);
+    }
+
+    const now = Date.now();
+    for (let i = 0; i < orderedIds.length; i++) {
+      const id = orderedIds[i]!;
+      if (id === args.id) {
+        await ctx.db.patch(id, {
+          parentId: args.parentId ?? undefined,
+          sortOrder: (i + 1) * 1000,
+          updatedAt: now,
+        });
+      } else {
+        await ctx.db.patch(id, { sortOrder: (i + 1) * 1000 });
+      }
+    }
+
     return args.id;
   },
 });
+
+function compareSidebarOrder(
+  a: { sortOrder?: number; updatedAt: number; kind?: string },
+  b: { sortOrder?: number; updatedAt: number; kind?: string },
+) {
+  const ao = a.sortOrder;
+  const bo = b.sortOrder;
+  if (ao != null || bo != null) {
+    return (ao ?? Number.MAX_SAFE_INTEGER) - (bo ?? Number.MAX_SAFE_INTEGER);
+  }
+  const ak = a.kind === "folder" ? 0 : 1;
+  const bk = b.kind === "folder" ? 0 : 1;
+  if (ak !== bk) return ak - bk;
+  return b.updatedAt - a.updatedAt;
+}
 
 /** Pages that link to this note via pagelink blocks. */
 export const listBacklinks = query({

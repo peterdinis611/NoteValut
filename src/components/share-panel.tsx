@@ -7,6 +7,7 @@ import { useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
+import { roleDescription } from "@/lib/ability";
 import { permissionLabel, shareUrl, type ShareScope } from "@/lib/share";
 import { useToast } from "./toast";
 
@@ -47,7 +48,7 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
         label: title ? `Share: ${title}` : undefined,
       });
       toast.success(
-        permission === "read" ? "Read-only link created" : "Editable link created",
+        permission === "read" ? "Viewer link created" : "Editor link created",
       );
     } catch {
       toast.error("Couldn’t create share link");
@@ -69,9 +70,9 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
     try {
       const next = share.permission === "read" ? "write" : "read";
       await updateShare({ id: share._id, ownerId, permission: next });
-      toast.success(next === "read" ? "Set to read-only" : "Set to can edit");
+      toast.success(next === "read" ? "Role set to Viewer" : "Role set to Editor");
     } catch {
-      toast.error("Couldn’t update permission");
+      toast.error("Couldn’t update role");
     }
   }
 
@@ -143,15 +144,15 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                         await updateSettings({ ownerId, publicReadonly: e.target.checked });
                         toast.info(
                           e.target.checked
-                            ? "New links default to read-only"
-                            : "New links can be editable",
+                            ? "New links default to Viewer"
+                            : "New links can be Editor",
                         );
                       } catch {
                         toast.error("Couldn’t update sharing settings");
                       }
                     }}
                   />
-                  <span>Default new links to read-only</span>
+                  <span>Default new links to Viewer</span>
                 </label>
               </div>
             )}
@@ -162,8 +163,8 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                 value={permission}
                 onChange={(e) => setPermission(e.target.value as "read" | "write")}
               >
-                <option value="read">Read only — viewers cannot edit</option>
-                <option value="write">Can edit — collaborators can modify</option>
+                <option value="read">Viewer — {roleDescription("viewer")}</option>
+                <option value="write">Editor — {roleDescription("editor")}</option>
               </select>
               <button type="button" className="vault-btn-primary" onClick={handleCreate}>
                 Create link
@@ -203,13 +204,17 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                     <button
                       type="button"
                       className="topbar-btn"
-                      title="Toggle permission"
+                      title={
+                        share.permission === "read"
+                          ? "Switch to Editor"
+                          : "Switch to Viewer"
+                      }
                       onClick={() => handleTogglePermission(share)}
                     >
                       {share.permission === "read" ? (
-                        <Lock className="size-4" />
-                      ) : (
                         <Pencil className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
                       )}
                     </button>
                     <button
@@ -225,8 +230,9 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
             </div>
 
             <p className="share-hint">
-              Anyone with the link can view{permission === "write" ? " and edit" : ""} this{" "}
-              {scopeLabel(scope).toLowerCase()}.
+              <Lock className="mr-1 inline size-3" />
+              Link recipients get a CASL role: Viewer (read) or Editor (edit). Only you can
+              create or revoke links.
             </p>
           </motion.div>
         </motion.div>

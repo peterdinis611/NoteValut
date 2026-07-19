@@ -54,7 +54,9 @@ export function CollectionDetail({
   onCreateCollection,
 }: Props) {
   const toast = useToast();
-  const { readOnly: globalReadOnly } = useVaultAccess();
+  const { readOnly: globalReadOnly, ability } = useVaultAccess();
+  const canShare = ability.can("share", "Note");
+  const canUpdate = ability.can("update", "Note");
   const children = useQuery(api.notes.listChildren, { parentId: folder._id });
   const updateNote = useMutation(api.notes.update);
   const trashNote = useMutation(api.notes.trash);
@@ -70,7 +72,7 @@ export function CollectionDetail({
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
 
-  const readOnly = globalReadOnly || !!folder.isLocked;
+  const readOnly = globalReadOnly || !canUpdate || !!folder.isLocked;
   const label = getLabelColor(folder.color);
   const viewMode = folder.viewMode ?? "grid";
 
@@ -173,7 +175,7 @@ export function CollectionDetail({
               )}
             </p>
           </div>
-          {!readOnly && (
+          {canShare && (
             <button type="button" className="vault-btn-secondary" onClick={() => setShareOpen(true)}>
               <Share2 className="size-4" />
               Share
@@ -419,16 +421,18 @@ export function CollectionDetail({
               </label>
             </SettingRow>
 
-            <SettingRow label="Sharing">
-              <button
-                type="button"
-                className="vault-btn-secondary"
-                onClick={() => setShareOpen(true)}
-              >
-                <Share2 className="size-4" />
-                Manage collection share links
-              </button>
-            </SettingRow>
+            {canShare && (
+              <SettingRow label="Sharing">
+                <button
+                  type="button"
+                  className="vault-btn-secondary"
+                  onClick={() => setShareOpen(true)}
+                >
+                  <Share2 className="size-4" />
+                  Manage collection share links
+                </button>
+              </SettingRow>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

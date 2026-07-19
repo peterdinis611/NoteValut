@@ -308,7 +308,7 @@ export function NoteVaultApp() {
         : "home";
 
   return (
-    <VaultAccessProvider value={{ readOnly: false, isOwner: true }}>
+    <VaultAccessProvider isOwner role="owner">
       <div className={`app-shell ${isMobile ? "app-shell-mobile" : ""} ${sidebarOpen ? "app-shell-sidebar-open" : ""}`}>
         <AnimatePresence initial={false}>
           {isMobile && sidebarOpen && (

@@ -8,5 +8,5 @@ export function shareUrl(token: string) {
 }
 
 export function permissionLabel(p: SharePermission) {
-  return p === "read" ? "Read only" : "Can edit";
+  return p === "read" ? "Viewer" : "Editor";
 }

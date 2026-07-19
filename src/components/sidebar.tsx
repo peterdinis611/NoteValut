@@ -1,5 +1,18 @@
 "use client";
 
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCenter,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragMoveEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import { useMutation, useQuery } from "convex/react";
 import { useDebouncedValue } from "@tanstack/react-pacer";
 import {
@@ -9,6 +22,7 @@ import {
   ChevronRight,
   Clock3,
   FolderOpen,
+  GripVertical,
   Home,
   PanelLeftClose,
   Pin,
@@ -37,6 +51,28 @@ import { useToast } from "./toast";
 import { VirtualList } from "./virtual-list";
 
 type BrowseMode = "all" | "favorites" | "recent" | "collections" | "archive";
+type DropPosition = "before" | "after" | "inside";
+type DropIntent = { overId: Id<"notes">; position: DropPosition } | null;
+
+function compareSidebarOrder(a: Doc<"notes">, b: Doc<"notes">) {
+  const ao = a.sortOrder;
+  const bo = b.sortOrder;
+  if (ao != null || bo != null) {
+    return (ao ?? Number.MAX_SAFE_INTEGER) - (bo ?? Number.MAX_SAFE_INTEGER);
+  }
+  if (isFolder(a) !== isFolder(b)) return isFolder(a) ? -1 : 1;
+  return b.updatedAt - a.updatedAt;
+}
+
+function dropTargetId(id: string) {
+  return `drop:${id}`;
+}
+
+function parseDropTargetId(id: string | number): Id<"notes"> | null {
+  const raw = String(id);
+  if (!raw.startsWith("drop:")) return null;
+  return raw.slice(5) as Id<"notes">;
+}
 
 type Props = {
   ownerId: string;
@@ -80,12 +116,15 @@ export function Sidebar({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkTag, setBulkTag] = useState("");
   const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
+  const [dragId, setDragId] = useState<Id<"notes"> | null>(null);
+  const [dropIntent, setDropIntent] = useState<DropIntent>(null);
 
   const notes = useQuery(api.notes.list, { ownerId });
   const trashed = useQuery(api.notes.listTrashed, { ownerId });
   const archived = useQuery(api.notes.listArchived, { ownerId });
 
   const updateNote = useMutation(api.notes.update);
+  const moveNote = useMutation(api.notes.move);
   const bulkUpdate = useMutation(api.notes.bulkUpdate);
   const bulkTrash = useMutation(api.notes.bulkTrash);
   const bulkAddTag = useMutation(api.notes.bulkAddTag);
@@ -225,11 +264,14 @@ export function Sidebar({
       map.get(key)!.push(note);
     }
     for (const [, list] of map) {
-      list.sort((a, b) => {
-        if (isFolder(a) !== isFolder(b)) return isFolder(a) ? -1 : 1;
-        return b.updatedAt - a.updatedAt;
-      });
+      list.sort(compareSidebarOrder);
     }
+    return map;
+  }, [activeItems]);
+
+  const notesById = useMemo(() => {
+    const map = new Map<string, Doc<"notes">>();
+    for (const note of activeItems) map.set(note._id, note);
     return map;
   }, [activeItems]);
 
@@ -242,9 +284,124 @@ export function Sidebar({
     !isSearching &&
     !showBin;
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
+
+  const dragItem = dragId ? notesById.get(dragId) : null;
+
   function setBrowseMode(mode: BrowseMode) {
     setShowBin(false);
     setBrowse(mode);
+  }
+
+  function wouldCreateCycle(active: Id<"notes">, newParent: Id<"notes"> | null) {
+    if (!newParent) return false;
+    let cursor: Id<"notes"> | undefined = newParent;
+    while (cursor) {
+      if (cursor === active) return true;
+      cursor = notesById.get(cursor)?.parentId as Id<"notes"> | undefined;
+    }
+    return false;
+  }
+
+  function resolveDrop(
+    active: Id<"notes">,
+    overId: Id<"notes">,
+    position: DropPosition,
+  ): { parentId: Id<"notes"> | null; afterId: Id<"notes"> | null | undefined } | null {
+    const over = notesById.get(overId);
+    if (!over || active === overId) return null;
+
+    if (position === "inside") {
+      if (!isFolder(over) || wouldCreateCycle(active, overId)) return null;
+      return { parentId: overId, afterId: undefined };
+    }
+
+    const parentId = (over.parentId ?? null) as Id<"notes"> | null;
+    if (wouldCreateCycle(active, parentId)) return null;
+
+    const siblings = childrenByParent.get(parentId ?? "root") ?? [];
+    const overIndex = siblings.findIndex((s) => s._id === overId);
+    if (overIndex < 0) return null;
+
+    if (position === "before") {
+      let prevIndex = overIndex - 1;
+      while (prevIndex >= 0 && siblings[prevIndex]?._id === active) prevIndex -= 1;
+      const prev = siblings[prevIndex];
+      return { parentId, afterId: prev ? prev._id : null };
+    }
+
+    if (overId === active) return null;
+    return { parentId, afterId: overId };
+  }
+
+  function getDropIntent(event: DragMoveEvent | DragEndEvent): DropIntent {
+    const { active, over } = event;
+    if (!over) return null;
+    const overId = parseDropTargetId(over.id);
+    if (!overId || overId === active.id) return null;
+
+    const overNote = notesById.get(overId);
+    if (!overNote) return null;
+
+    const rect = over.rect;
+    const translated = active.rect.current.translated;
+    const pointerY = translated
+      ? translated.top + translated.height / 2
+      : rect.top + rect.height / 2;
+    const ratio = (pointerY - rect.top) / Math.max(rect.height, 1);
+
+    let position: DropPosition = "after";
+    if (isFolder(overNote) && ratio > 0.28 && ratio < 0.72) {
+      position = "inside";
+    } else if (ratio < 0.5) {
+      position = "before";
+    }
+
+    if (position === "inside" && wouldCreateCycle(active.id as Id<"notes">, overId)) {
+      position = ratio < 0.5 ? "before" : "after";
+    }
+
+    return { overId, position };
+  }
+
+  async function handleTreeDragEnd(event: DragEndEvent) {
+    const active = event.active.id as Id<"notes">;
+    const intent = getDropIntent(event) ?? dropIntent;
+    setDragId(null);
+    setDropIntent(null);
+    if (!intent) return;
+
+    const target = resolveDrop(active, intent.overId, intent.position);
+    if (!target) return;
+
+    const current = notesById.get(active);
+    if (!current) return;
+    const sameParent = (current.parentId ?? null) === target.parentId;
+    if (sameParent && intent.position !== "inside") {
+      const siblings = childrenByParent.get(target.parentId ?? "root") ?? [];
+      const from = siblings.findIndex((s) => s._id === active);
+      let to =
+        intent.position === "before"
+          ? siblings.findIndex((s) => s._id === intent.overId)
+          : siblings.findIndex((s) => s._id === intent.overId) + 1;
+      if (from >= 0 && from < to) to -= 1;
+      if (from === to) return;
+    }
+
+    try {
+      await moveNote({
+        id: active,
+        parentId: target.parentId,
+        afterId: target.afterId,
+      });
+      if (intent.position === "inside") {
+        setExpanded((e) => ({ ...e, [intent.overId]: true }));
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn’t move item");
+    }
   }
 
   const browseItems = [
@@ -363,29 +520,31 @@ export function Sidebar({
       <nav className="sidebar-nav note-scroll">
         {selectedIds.size > 0 && (
           <div className="sidebar-bulk">
-            <span className="sidebar-bulk-count">{selectedIds.size} selected</span>
-            <div className="sidebar-bulk-actions">
-              <button type="button" onClick={() => void runBulk("pin")}>
-                Star
-              </button>
-              <button type="button" onClick={() => setBulkMoveOpen(true)}>
-                Move
-              </button>
-              <button type="button" onClick={() => void runBulk("archive")}>
-                Archive
-              </button>
-              <button type="button" onClick={() => void runBulk("trash")}>
-                Bin
-              </button>
-              <button type="button" onClick={clearSelection}>
-                Clear
-              </button>
+            <div className="sidebar-bulk-top">
+              <span className="sidebar-bulk-count">{selectedIds.size} selected</span>
+              <div className="sidebar-bulk-actions">
+                <button type="button" onClick={() => void runBulk("pin")}>
+                  Star
+                </button>
+                <button type="button" onClick={() => setBulkMoveOpen(true)}>
+                  Move
+                </button>
+                <button type="button" onClick={() => void runBulk("archive")}>
+                  Archive
+                </button>
+                <button type="button" onClick={() => void runBulk("trash")}>
+                  Trash
+                </button>
+                <button type="button" className="sidebar-bulk-clear" onClick={clearSelection}>
+                  Clear
+                </button>
+              </div>
             </div>
             <div className="sidebar-bulk-tag">
               <input
                 value={bulkTag}
                 onChange={(e) => setBulkTag(e.target.value)}
-                placeholder="Tag name…"
+                placeholder="Add tag…"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void runBulk("tag");
                 }}
@@ -557,28 +716,52 @@ export function Sidebar({
                 </div>
               </div>
             ) : (
-              <ul className="sidebar-tree">
-                {rootItems.map((item) => (
-                  <TreeNode
-                    key={item._id}
-                    item={item}
-                    depth={0}
-                    activeId={activeId}
-                    selectedIds={selectedIds}
-                    childrenByParent={childrenByParent}
-                    expanded={expanded}
-                    onToggleExpanded={(id, next) =>
-                      setExpanded((e) => ({ ...e, [id]: next }))
-                    }
-                    onSelect={onSelect}
-                    onToggleSelect={toggleSelect}
-                    onCreateEntry={onCreateEntry}
-                    onCreateCollection={onCreateCollection}
-                    onTogglePin={handleTogglePin}
-                    onTrash={handleTrash}
-                  />
-                ))}
-              </ul>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={(event: DragStartEvent) => {
+                  setDragId(event.active.id as Id<"notes">);
+                }}
+                onDragMove={(event) => setDropIntent(getDropIntent(event))}
+                onDragCancel={() => {
+                  setDragId(null);
+                  setDropIntent(null);
+                }}
+                onDragEnd={(event) => void handleTreeDragEnd(event)}
+              >
+                <ul className="sidebar-tree">
+                  {rootItems.map((item) => (
+                    <TreeNode
+                      key={item._id}
+                      item={item}
+                      depth={0}
+                      activeId={activeId}
+                      selectedIds={selectedIds}
+                      childrenByParent={childrenByParent}
+                      expanded={expanded}
+                      dropIntent={dropIntent}
+                      draggingId={dragId}
+                      onToggleExpanded={(id, next) =>
+                        setExpanded((e) => ({ ...e, [id]: next }))
+                      }
+                      onSelect={onSelect}
+                      onToggleSelect={toggleSelect}
+                      onCreateEntry={onCreateEntry}
+                      onCreateCollection={onCreateCollection}
+                      onTogglePin={handleTogglePin}
+                      onTrash={handleTrash}
+                    />
+                  ))}
+                </ul>
+                <DragOverlay dropAnimation={null}>
+                  {dragItem ? (
+                    <div className="sidebar-drag-overlay">
+                      <span>{dragItem.icon}</span>
+                      <span className="truncate">{dragItem.title || "Untitled"}</span>
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             )}
           </SidebarSection>
         )}
@@ -824,6 +1007,8 @@ function TreeNode({
   selectedIds,
   childrenByParent,
   expanded,
+  dropIntent,
+  draggingId,
   onToggleExpanded,
   onSelect,
   onToggleSelect,
@@ -838,6 +1023,8 @@ function TreeNode({
   selectedIds: Set<string>;
   childrenByParent: Map<string, Doc<"notes">[]>;
   expanded: Record<string, boolean>;
+  dropIntent: DropIntent;
+  draggingId: Id<"notes"> | null;
   onToggleExpanded: (id: Id<"notes">, next: boolean) => void;
   onSelect: (id: Id<"notes">) => void;
   onToggleSelect: (id: Id<"notes">) => void;
@@ -850,10 +1037,52 @@ function TreeNode({
   const hasChildren = children.length > 0;
   const folder = isFolder(item);
   const isExpanded = expanded[item._id] ?? (folder && hasChildren);
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+    isDragging,
+  } = useDraggable({ id: item._id, data: { depth, folder } });
+  const { setNodeRef: setDropRef } = useDroppable({
+    id: dropTargetId(item._id),
+    data: { depth, folder },
+  });
+
+  function setRowRef(node: HTMLElement | null) {
+    setDragRef(node);
+    setDropRef(node);
+  }
+
+  const dropPos =
+    dropIntent?.overId === item._id && draggingId !== item._id
+      ? dropIntent.position
+      : null;
 
   return (
     <li>
-      <div className="sidebar-tree-row group" style={{ paddingLeft: `${0.15 + depth * 0.85}rem` }}>
+      <div
+        ref={setRowRef}
+        className={[
+          "sidebar-tree-row group",
+          isDragging ? "sidebar-tree-row-dragging" : "",
+          dropPos === "before" ? "sidebar-drop-before" : "",
+          dropPos === "after" ? "sidebar-drop-after" : "",
+          dropPos === "inside" ? "sidebar-drop-inside" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        style={{ paddingLeft: `${0.15 + depth * 0.85}rem` }}
+      >
+        <button
+          type="button"
+          className="sidebar-tree-grip"
+          aria-label="Drag to reorder"
+          title="Drag to reorder"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="size-3.5" />
+        </button>
         <button
           type="button"
           className={`sidebar-tree-toggle ${hasChildren || folder ? "" : "invisible"}`}
@@ -895,6 +1124,8 @@ function TreeNode({
               selectedIds={selectedIds}
               childrenByParent={childrenByParent}
               expanded={expanded}
+              dropIntent={dropIntent}
+              draggingId={draggingId}
               onToggleExpanded={onToggleExpanded}
               onSelect={onSelect}
               onToggleSelect={onToggleSelect}
