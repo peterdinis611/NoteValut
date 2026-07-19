@@ -6,10 +6,15 @@
     "dev": "next dev --turbopack",
     "dev:all": "concurrently -n convex,next -c cyan,magenta \"npx convex dev\" \"next dev --turbopack\"",
     "build": "next build --webpack",
+    "build:vercel": "convex deploy --cmd 'npm run build' --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "deploy:convex": "convex deploy"
+  },
+  "engines": {
+    "node": ">=20.9.0"
   },
   "dependencies": {
     "@casl/ability": "^7.0.1",
@@ -61,6 +66,7 @@
     "vitest": "^4.1.10"
   },
   "optionalDependencies": {
-    "@tailwindcss/oxide-darwin-arm64": "^4.3.3"
+    "@tailwindcss/oxide-darwin-arm64": "^4.3.3",
+    "@tailwindcss/oxide-linux-x64-gnu": "^4.3.3"
   }
 }

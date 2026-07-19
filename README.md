@@ -1,109 +1,124 @@
-# NoteVault 📓
+# NoteVault
 
-A modern note-taking app built with **Next.js**, **TypeScript**, **Convex**, **Fluent UI**, and **Tailwind CSS**.
-
-## Features
+Personal knowledge vault built with **Next.js 16**, **Clerk**, **Convex**, and **Tailwind CSS v4**.
 
 ## Features
 
-- **Vault home** — dashboard with stats, templates, open tasks, and recent entries
-- **Collections** — folders to organize entries (with labels, descriptions, grid view)
-- **Entries** — rich block editor with `/` commands (callouts, vault links, tasks…)
-- **Templates** — meeting notes, journal, project brief, checklist
-- **Quick capture** — floating button saves to Inbox instantly
-- **Bin** — soft-delete with restore and empty bin
-- **Favorites, search, color labels**, duplicate entry, real-time Convex sync
+- Vault home with stats, templates, open tasks, and recent entries
+- Collections and rich block editor (`/` commands)
+- Custom + built-in templates
+- Share links (viewer / editor roles)
+- Bin, favorites, tags, daily notes, PWA shell
 
 ## Stack
 
 | Layer | Tech |
 |-------|------|
 | Framework | Next.js 16 (App Router) |
-| Language | TypeScript |
+| Auth | Clerk |
 | Backend / DB | Convex |
-| UI | Fluent UI v9 |
 | Styling | Tailwind CSS v4 |
 | Icons | Lucide React |
 
 ## Quick start
 
-### 1. Install dependencies
+### 1. Install
 
 ```bash
-cd notevault
 npm install
+cp env.example .env.local
 ```
 
-### 2. Set up Convex
+### 2. Convex
 
 ```bash
 npx convex dev
 ```
 
-This will:
-- Create/link a Convex project
-- Write `NEXT_PUBLIC_CONVEX_URL` to `.env.local`
-- Push your schema and functions
-- Regenerate `convex/_generated/`
+Writes `NEXT_PUBLIC_CONVEX_URL` into `.env.local` and syncs functions.
 
-### 3. Run the app
+### 3. Clerk
 
-In a second terminal:
+1. Create a Clerk application and copy keys into `.env.local` (see `env.example`).
+2. In Clerk → **Integrations**, enable **Convex** (JWT template named `convex`).
+3. Copy the **Frontend API URL** (e.g. `https://verb-noun-00.clerk.accounts.dev`).
+4. In the [Convex dashboard](https://dashboard.convex.dev) → your **dev** deployment → Settings → Environment Variables, set:
+
+```
+CLERK_JWT_ISSUER_DOMAIN=https://your-frontend-api.clerk.accounts.dev
+```
+
+5. Re-run `npx convex dev` so `auth.config.ts` picks it up.
+
+### 4. Run
 
 ```bash
 npm run dev
+# or both: npm run dev:all
 ```
 
-Or run both together:
+Open http://localhost:3000
+
+## Deploy to Vercel
+
+### A. Convex production
 
 ```bash
-npm run dev:all
+npx convex deploy
 ```
 
-Open **http://localhost:3000**
+In the Convex dashboard → **Production** deployment:
 
-## Project structure
+1. Set `CLERK_JWT_ISSUER_DOMAIN` to your **production** Clerk Frontend API URL (or keep the same Clerk app for staging).
+2. Create a **Deploy key** (Settings → Deploy keys).
 
-```
-notevault/
-├── convex/
-│   ├── schema.ts       # Notes table schema
-│   └── notes.ts        # Queries & mutations
-├── src/
-│   ├── app/            # Next.js App Router
-│   ├── components/     # Sidebar, editor, providers
-│   ├── hooks/          # useOwnerId
-│   └── lib/            # Helpers
-└── .env.local          # Convex URL (auto-created)
-```
+### B. Clerk production
 
-## Convex functions
+1. Switch to Clerk **production** instance (or use live keys).
+2. Allowed origins / redirect URLs: `https://your-app.vercel.app`, `/sign-in`, `/sign-up`, `/`.
+3. Ensure the Convex JWT template remains enabled.
 
-| Function | Type | Description |
-|----------|------|-------------|
-| `notes.list` | query | List notes with search |
-| `notes.get` | query | Get single note |
-| `notes.create` | mutation | Create note |
-| `notes.update` | mutation | Update note fields |
-| `notes.remove` | mutation | Delete note + children |
-| `notes.seedDemo` | mutation | Seed welcome notes |
+### C. Vercel project
 
-## Environment
+1. Import the Git repo in Vercel (Framework: Next.js).
+2. Set environment variables (Production + Preview as needed):
 
-Copy `.env.local.example`:
+| Variable | Notes |
+|----------|--------|
+| `NEXT_PUBLIC_CONVEX_URL` | Production Convex URL (also set automatically by `build:vercel` when using a deploy key) |
+| `CONVEX_DEPLOY_KEY` | Convex production deploy key (required for `npm run build:vercel`) |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `pk_live_…` for production |
+| `CLERK_SECRET_KEY` | `sk_live_…` |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | `/sign-in` |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | `/sign-up` |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | `/` |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | `/` |
 
-```
-NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
+3. Build command is already in `vercel.json`: `npm run build:vercel` (deploys Convex, then builds Next).
+4. Deploy.
+
+Local production build without deploying Convex:
+
+```bash
+npm run build
 ```
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Next.js dev server |
-| `npm run dev:all` | Convex + Next.js together |
-| `npm run build` | Production build |
-| `npx convex dev` | Convex dev + schema push |
+| `npm run dev` | Next.js (Turbopack) |
+| `npm run dev:all` | Convex + Next |
+| `npm run build` | Next production build |
+| `npm run build:vercel` | `convex deploy` + Next build (Vercel) |
+| `npm run deploy:convex` | Deploy Convex only |
+| `npm test` | Vitest |
+
+## Environment
+
+See [`env.example`](./env.example). Do not commit `.env.local`.
+
+**Note:** Vault data is keyed by Clerk `userId`. Local anonymous UUIDs are no longer used — after signing in, each Clerk user has their own vault.
 
 ## License
 

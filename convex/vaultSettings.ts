@@ -1,9 +1,11 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { requireOwner } from "./lib/auth";
 
 export const get = query({
   args: { ownerId: v.string() },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const existing = await ctx.db
       .query("vaultSettings")
       .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
@@ -29,6 +31,7 @@ export const update = mutation({
     backgroundImage: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const existing = await ctx.db
       .query("vaultSettings")
       .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))

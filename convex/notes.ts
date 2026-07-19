@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { assertCanAccessNote, requireOwner } from "./lib/auth";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { blockValidator } from "./block";
@@ -31,6 +32,7 @@ export const list = query({
     includeTrashed: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     let notes = await ctx.db
       .query("notes")
       .withIndex("by_owner_updated", (q) => q.eq("ownerId", args.ownerId))
@@ -66,14 +68,14 @@ export const list = query({
 export const get = query({
   args: { id: v.id("notes") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    return await assertCanAccessNote(ctx, args.id).catch(() => null);
   },
 });
 
 export const listChildren = query({
   args: { parentId: v.id("notes") },
   handler: async (ctx, args) => {
-    const parent = await ctx.db.get(args.parentId);
+    const parent = await assertCanAccessNote(ctx, args.parentId);
     const children = await ctx.db
       .query("notes")
       .withIndex("by_parent", (q) => q.eq("parentId", args.parentId))
@@ -104,6 +106,7 @@ export const listChildren = query({
 export const listTrashed = query({
   args: { ownerId: v.string() },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const notes = await ctx.db
       .query("notes")
       .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
@@ -118,6 +121,7 @@ export const listTrashed = query({
 export const listArchived = query({
   args: { ownerId: v.string() },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const notes = await ctx.db
       .query("notes")
       .withIndex("by_owner_updated", (q) => q.eq("ownerId", args.ownerId))
@@ -133,6 +137,7 @@ export const listArchived = query({
 export const listTags = query({
   args: { ownerId: v.string() },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const notes = await ctx.db
       .query("notes")
       .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
@@ -161,6 +166,7 @@ export const listTags = query({
 export const exportVault = query({
   args: { ownerId: v.string() },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const notes = await ctx.db
       .query("notes")
       .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
@@ -200,6 +206,7 @@ export const exportVault = query({
 export const getBreadcrumbs = query({
   args: { id: v.id("notes") },
   handler: async (ctx, args) => {
+    await assertCanAccessNote(ctx, args.id);
     const crumbs: {
       id: Id<"notes">;
       title: string;
@@ -226,6 +233,7 @@ export const getBreadcrumbs = query({
 export const getVaultStats = query({
   args: { ownerId: v.string() },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const notes = await ctx.db
       .query("notes")
       .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
@@ -265,6 +273,7 @@ export const create = mutation({
     blocks: v.optional(v.array(block)),
   },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const now = Date.now();
     const kind = args.kind ?? "page";
     const isFolder = kind === "folder";
@@ -326,8 +335,7 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     const { id, ...patch } = args;
-    const existing = await ctx.db.get(id);
-    if (!existing) throw new Error("Item not found");
+    const existing = await assertCanAccessNote(ctx, id);
     if (existing.isLocked && patch.isLocked !== false) {
       const allowed = ["isLocked", "pinned"];
       const keys = Object.keys(patch).filter((k) => patch[k as keyof typeof patch] !== undefined);
@@ -392,8 +400,7 @@ export const move = mutation({
     afterId: v.optional(v.union(v.id("notes"), v.null())),
   },
   handler: async (ctx, args) => {
-    const item = await ctx.db.get(args.id);
-    if (!item) throw new Error("Item not found");
+    const item = await assertCanAccessNote(ctx, args.id);
     if (args.parentId === args.id) throw new Error("Cannot move into itself");
 
     if (args.parentId) {
@@ -485,6 +492,7 @@ export const listBacklinks = query({
     noteId: v.id("notes"),
   },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const notes = await ctx.db
       .query("notes")
       .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
@@ -526,7 +534,7 @@ export const bulkUpdate = mutation({
     const tags = args.tags !== undefined ? assertTags(args.tags) : undefined;
     let updated = 0;
     for (const id of args.ids) {
-      const note = await ctx.db.get(id);
+      const note = await assertCanAccessNote(ctx, id).catch(() => null);
       if (!note || note.trashed) continue;
       const patch: Record<string, unknown> = { updatedAt: now };
       if (args.pinned !== undefined) patch.pinned = args.pinned;
@@ -549,6 +557,7 @@ export const bulkAddTag = mutation({
     tag: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const tag = normalizeTag(args.tag);
     if (!tag) throw new Error("Enter a tag first");
     // Validate single tag via assertTags
@@ -577,6 +586,7 @@ export const bulkRemoveTag = mutation({
     tag: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const key = tagKey(normalizeTag(args.tag));
     if (!key) throw new Error("Enter a tag first");
 
@@ -603,6 +613,7 @@ export const renameTag = mutation({
     to: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const fromKey = tagKey(normalizeTag(args.from));
     const toTag = normalizeTag(args.to);
     if (!fromKey) throw new Error("Source tag is empty");
@@ -635,6 +646,7 @@ export const deleteTag = mutation({
     tag: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const key = tagKey(normalizeTag(args.tag));
     if (!key) throw new Error("Tag is empty");
 
@@ -663,7 +675,7 @@ export const bulkTrash = mutation({
     const now = Date.now();
     let count = 0;
     for (const id of args.ids) {
-      const note = await ctx.db.get(id);
+      const note = await assertCanAccessNote(ctx, id).catch(() => null);
       if (!note || note.trashed) continue;
       await ctx.db.patch(id, { trashed: true, trashedAt: now, updatedAt: now });
       count += 1;
@@ -706,6 +718,7 @@ export const importVault = mutation({
     notes: v.array(importNoteValidator),
   },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     if (args.notes.length > 500) {
       throw new Error("Import is limited to 500 notes at a time");
     }
@@ -761,6 +774,7 @@ export const importVault = mutation({
 export const trash = mutation({
   args: { id: v.id("notes") },
   handler: async (ctx, args) => {
+    await assertCanAccessNote(ctx, args.id);
     const now = Date.now();
     await ctx.db.patch(args.id, { trashed: true, trashedAt: now, updatedAt: now });
     return args.id;
@@ -770,6 +784,7 @@ export const trash = mutation({
 export const restoreFromTrash = mutation({
   args: { id: v.id("notes") },
   handler: async (ctx, args) => {
+    await assertCanAccessNote(ctx, args.id);
     await ctx.db.patch(args.id, {
       trashed: false,
       trashedAt: undefined,
@@ -782,6 +797,7 @@ export const restoreFromTrash = mutation({
 export const emptyTrash = mutation({
   args: { ownerId: v.string() },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const trashed = await ctx.db
       .query("notes")
       .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
@@ -798,8 +814,8 @@ export const emptyTrash = mutation({
 export const duplicate = mutation({
   args: { id: v.id("notes") },
   handler: async (ctx, args) => {
-    const source = await ctx.db.get(args.id);
-    if (!source || source.kind === "folder") throw new Error("Cannot duplicate");
+    const source = await assertCanAccessNote(ctx, args.id);
+    if (source.kind === "folder") throw new Error("Cannot duplicate");
 
     const now = Date.now();
     return await ctx.db.insert("notes", {
@@ -824,6 +840,7 @@ export const duplicate = mutation({
 export const remove = mutation({
   args: { id: v.id("notes") },
   handler: async (ctx, args) => {
+    await assertCanAccessNote(ctx, args.id);
     await permanentlyDelete(ctx, args.id);
   },
 });
@@ -844,6 +861,7 @@ async function permanentlyDelete(ctx: MutationCtx, id: Id<"notes">) {
 export const seedDemo = mutation({
   args: { ownerId: v.string() },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const existing = await ctx.db
       .query("notes")
       .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
@@ -991,6 +1009,7 @@ export const getByDailyKey = query({
     dailyKey: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     return await ctx.db
       .query("notes")
       .withIndex("by_owner_daily", (q) =>
@@ -1006,6 +1025,7 @@ export const listDailyKeys = query({
     keys: v.array(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const found: Record<string, Id<"notes">> = {};
     for (const key of args.keys) {
       const note = await ctx.db
@@ -1026,6 +1046,7 @@ export const getOrCreateDaily = mutation({
     dailyKey: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(args.dailyKey)) {
       throw new Error("Invalid daily key");
     }

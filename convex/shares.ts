@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { requireOwner } from "./lib/auth";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 
@@ -38,6 +39,7 @@ async function collectDescendants(
 export const list = query({
   args: { ownerId: v.string() },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     return await ctx.db
       .query("shares")
       .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
@@ -55,6 +57,7 @@ export const create = mutation({
     label: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     if (args.scope !== "vault" && !args.noteId) {
       throw new Error("noteId required for collection/entry shares");
     }
@@ -87,6 +90,7 @@ export const update = mutation({
     label: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const share = await ctx.db.get(args.id);
     if (!share || share.ownerId !== args.ownerId) throw new Error("Share not found");
 
@@ -103,6 +107,7 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id("shares"), ownerId: v.string() },
   handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
     const share = await ctx.db.get(args.id);
     if (!share || share.ownerId !== args.ownerId) throw new Error("Share not found");
     await ctx.db.delete(args.id);

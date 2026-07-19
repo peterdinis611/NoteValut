@@ -1,7 +1,9 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { PacerProvider } from "@tanstack/react-pacer";
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexReactClient } from "convex/react";
+import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ReactNode, useMemo } from "react";
 import { ToastProvider } from "./toast";
 
@@ -34,10 +36,10 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ConvexProvider client={client}>
+    <ConvexProviderWithClerk client={client} useAuth={useAuth}>
       <PacerProvider defaultOptions={{ debouncer: { wait: 200 } }}>
         <ToastProvider>{children}</ToastProvider>
       </PacerProvider>
-    </ConvexProvider>
+    </ConvexProviderWithClerk>
   );
 }
