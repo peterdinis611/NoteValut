@@ -19,6 +19,7 @@ import { GraphView } from "./graph-view";
 import { LottieStatus } from "./lottie-status";
 import { NoteEditor } from "./note-editor";
 import { QuickCapture, QuickCaptureFab } from "./quick-capture";
+import { ScrollToTop } from "./scroll-to-top";
 import { SettingsPage } from "./settings-page";
 import { Sidebar } from "./sidebar";
 import { TagsHub } from "./tags-hub";
@@ -420,6 +421,7 @@ export function NoteVaultApp() {
             </motion.div>
           </AnimatePresence>
 
+          <ScrollToTop resetKey={panel === "note" ? activeId : panel} />
           <QuickCaptureFab onClick={() => setQuickCaptureOpen(true)} />
           <QuickCapture
             ownerId={ownerId}

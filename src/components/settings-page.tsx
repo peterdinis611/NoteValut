@@ -2,9 +2,11 @@
 
 import {
   Database,
+  Eye,
   FileUp,
   FileText,
   Palette,
+  Plus,
   RotateCcw,
   Settings2,
   Trash2,
@@ -34,6 +36,11 @@ import { importMarkdownFiles } from "@/lib/import-notes";
 import { easeOutSoft, fadeUpVariants } from "@/lib/motion";
 import { listDefaultTemplates } from "@/lib/templates";
 import { parseVaultBackupFile } from "@/lib/vault-backup";
+import {
+  TemplatePreviewDialog,
+  type PreviewableTemplate,
+} from "./template-preview-dialog";
+import { TemplateEditorDialog } from "./template-editor-dialog";
 import { useToast } from "./toast";
 
 const MAX_CSS_BYTES = 100_000;
@@ -63,6 +70,8 @@ export function SettingsPage({ ownerId, onClose, onExport }: Props) {
   const [importSource, setImportSource] = useState<"markdown" | "obsidian" | "notion">(
     "markdown",
   );
+  const [preview, setPreview] = useState<PreviewableTemplate | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     setCssDraft(settings.customCss);
@@ -580,6 +589,25 @@ export function SettingsPage({ ownerId, onClose, onExport }: Props) {
                 <span className="block truncate text-sm font-medium">{t.name}</span>
                 <span className="block truncate text-xs text-muted">{t.description}</span>
               </span>
+              <button
+                type="button"
+                className="settings-icon-btn settings-icon-btn-preview"
+                aria-label={`Preview ${t.name}`}
+                title="Preview"
+                onClick={() =>
+                  setPreview({
+                    id: t.id,
+                    name: t.name,
+                    icon: t.icon,
+                    description: t.description,
+                    tags: t.tags,
+                    blocks: t.blocks,
+                    builtIn: true,
+                  })
+                }
+              >
+                <Eye className="size-3.5" />
+              </button>
               <span className="settings-template-badge">Built-in</span>
             </li>
           ))}
@@ -587,15 +615,27 @@ export function SettingsPage({ ownerId, onClose, onExport }: Props) {
       </section>
 
       <section className="settings-section">
-        <div className="settings-section-head">
-          <Settings2 className="size-4 text-accent" />
-          <div>
-            <h2>Your templates</h2>
-            <p>Saved page templates stored in TanStack DB</p>
+        <div className="settings-section-head settings-section-head-row">
+          <div className="settings-section-head-main">
+            <Settings2 className="size-4 text-accent" />
+            <div>
+              <h2>Your templates</h2>
+              <p>Saved page templates stored in TanStack DB</p>
+            </div>
           </div>
+          <button
+            type="button"
+            className="settings-btn"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="size-3.5" />
+            New template
+          </button>
         </div>
         {templates.length === 0 ? (
-          <p className="settings-empty">No custom templates yet — save one from More actions.</p>
+          <p className="settings-empty">
+            No custom templates yet — create one here or save a page from More actions.
+          </p>
         ) : (
           <ul className="settings-template-list">
             {templates.map((t) => (
@@ -605,6 +645,25 @@ export function SettingsPage({ ownerId, onClose, onExport }: Props) {
                   <span className="block truncate text-sm font-medium">{t.name}</span>
                   <span className="block truncate text-xs text-muted">{t.description}</span>
                 </span>
+                <button
+                  type="button"
+                  className="settings-icon-btn settings-icon-btn-preview"
+                  aria-label={`Preview ${t.name}`}
+                  title="Preview"
+                  onClick={() =>
+                    setPreview({
+                      id: t.id,
+                      name: t.name,
+                      icon: t.icon,
+                      description: t.description || "Custom template",
+                      tags: t.tags,
+                      blocks: t.blocks,
+                      builtIn: false,
+                    })
+                  }
+                >
+                  <Eye className="size-3.5" />
+                </button>
                 <button
                   type="button"
                   className="settings-icon-btn"
@@ -621,6 +680,13 @@ export function SettingsPage({ ownerId, onClose, onExport }: Props) {
           </ul>
         )}
       </section>
+
+      <TemplatePreviewDialog template={preview} onClose={() => setPreview(null)} />
+      <TemplateEditorDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSaved={(name) => toast.success(`Template “${name}” created`)}
+      />
     </motion.div>
   );
 }

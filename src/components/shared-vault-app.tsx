@@ -10,6 +10,7 @@ import { isFolder } from "@/lib/item-kinds";
 import { roleLabel } from "@/lib/ability";
 import { LottieStatus } from "./lottie-status";
 import { NoteEditor } from "./note-editor";
+import { ScrollToTop } from "./scroll-to-top";
 
 type Props = {
   token: string;
@@ -141,6 +142,7 @@ export function SharedVaultApp({ token }: Props) {
               </div>
             </div>
           )}
+          <ScrollToTop resetKey={activeId} />
         </main>
       </div>
     </VaultAccessProvider>
