@@ -8,17 +8,19 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { VaultAccessProvider } from "@/context/vault-access";
 import { toDailyKey } from "@/lib/daily";
-import { easeOutSoft, easeQuick, pageVariants } from "@/lib/motion";
+import { easeQuick, pageVariants, sidebarSpring } from "@/lib/motion";
 import { getTemplate } from "@/lib/templates";
 import { downloadVaultBackup } from "@/lib/vault-backup";
 import { useOwnerId } from "@/hooks/use-owner-id";
 import { useVaultSettings } from "@/hooks/use-vault-settings";
+import { CalendarPage } from "./calendar-page";
 import { CommandIcons, CommandPalette, type CommandAction } from "./command-palette";
 import { KeyboardCheatSheet } from "./keyboard-cheat-sheet";
 import { GraphView } from "./graph-view";
 import { LottieStatus } from "./lottie-status";
 import { NoteEditor } from "./note-editor";
 import { QuickCapture, QuickCaptureFab } from "./quick-capture";
+import { ReminderListener } from "./reminder-listener";
 import { ScrollToTop } from "./scroll-to-top";
 import { SettingsPage } from "./settings-page";
 import { Sidebar } from "./sidebar";
@@ -26,7 +28,7 @@ import { TagsHub } from "./tags-hub";
 import { useToast } from "./toast";
 import { VaultHome } from "./vault-home";
 
-type MainPanel = "home" | "note" | "settings" | "tags";
+type MainPanel = "home" | "note" | "settings" | "tags" | "calendar";
 
 function useIsMobile(breakpoint = 768) {
   const [mobile, setMobile] = useState(false);
@@ -59,6 +61,7 @@ export function NoteVaultApp() {
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showTags, setShowTags] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [focusTag, setFocusTag] = useState<string | null>(null);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -101,6 +104,7 @@ export function NoteVaultApp() {
   const clearPanels = useCallback(() => {
     setShowSettings(false);
     setShowTags(false);
+    setShowCalendar(false);
     setFocusTag(null);
   }, []);
 
@@ -108,12 +112,22 @@ export function NoteVaultApp() {
     (tag?: string | null) => {
       setActiveId(null);
       setShowSettings(false);
+      setShowCalendar(false);
       setFocusTag(tag ?? null);
       setShowTags(true);
       if (isMobile) setSidebarOpen(false);
     },
     [isMobile],
   );
+
+  const openCalendar = useCallback(() => {
+    setActiveId(null);
+    setShowSettings(false);
+    setShowTags(false);
+    setFocusTag(null);
+    setShowCalendar(true);
+    if (isMobile) setSidebarOpen(false);
+  }, [isMobile]);
 
   const selectNote = useCallback(
     (id: Id<"notes"> | null) => {
@@ -234,6 +248,14 @@ export function NoteVaultApp() {
         run: () => void openToday(),
       },
       {
+        id: "calendar",
+        label: "Open calendar",
+        hint: "Month view & daily notes",
+        icon: CommandIcons.calendar,
+        keywords: ["daily", "month", "agenda"],
+        run: () => openCalendar(),
+      },
+      {
         id: "quick-capture",
         label: "Quick capture",
         icon: CommandIcons.capture,
@@ -257,6 +279,7 @@ export function NoteVaultApp() {
         run: () => {
           setActiveId(null);
           setShowTags(false);
+          setShowCalendar(false);
           setFocusTag(null);
           setShowSettings(true);
         },
@@ -286,7 +309,7 @@ export function NoteVaultApp() {
         run: () => setGraphOpen(true),
       },
     ],
-    [clearPanels, handleCreateEntry, handleCreateCollection, handleExport, openToday, openTags],
+    [clearPanels, handleCreateEntry, handleCreateCollection, handleExport, openToday, openTags, openCalendar],
   );
 
   if (!ownerId) {
@@ -304,12 +327,18 @@ export function NoteVaultApp() {
     ? "settings"
     : showTags
       ? "tags"
-      : activeId
-        ? "note"
-        : "home";
+      : showCalendar
+        ? "calendar"
+        : activeId
+          ? "note"
+          : "home";
 
   return (
     <VaultAccessProvider isOwner role="owner">
+      <ReminderListener
+        ownerId={ownerId}
+        onOpenNote={(id) => selectNote(id as Id<"notes">)}
+      />
       <div className={`app-shell ${isMobile ? "app-shell-mobile" : ""} ${sidebarOpen ? "app-shell-sidebar-open" : ""}`}>
         <AnimatePresence initial={false}>
           {isMobile && sidebarOpen && (
@@ -320,7 +349,7 @@ export function NoteVaultApp() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={easeQuick}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               onClick={() => setSidebarOpen(false)}
             />
           )}
@@ -330,6 +359,8 @@ export function NoteVaultApp() {
               activeId={activeId}
               settingsActive={showSettings}
               tagsActive={showTags}
+              calendarActive={showCalendar}
+              mobile={isMobile}
               onSelect={selectNote}
               onGoHome={() => {
                 clearPanels();
@@ -339,11 +370,13 @@ export function NoteVaultApp() {
               onOpenSettings={() => {
                 setActiveId(null);
                 setShowTags(false);
+                setShowCalendar(false);
                 setFocusTag(null);
                 setShowSettings(true);
                 if (isMobile) setSidebarOpen(false);
               }}
               onOpenTags={() => openTags()}
+              onOpenCalendar={openCalendar}
               onCollapse={() => setSidebarOpen(false)}
               onCreateEntry={handleCreateEntry}
               onCreateCollection={handleCreateCollection}
@@ -359,12 +392,12 @@ export function NoteVaultApp() {
                 className="sidebar-reopen-btn"
                 onClick={() => setSidebarOpen(true)}
                 aria-label="Open sidebar"
-                initial={{ opacity: 0, scale: 0.85 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.85 }}
-                transition={easeOutSoft}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                initial={{ opacity: 0, x: -10, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -8, scale: 0.92 }}
+                transition={sidebarSpring}
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
               >
                 <PanelLeft className="size-4" />
               </motion.button>
@@ -397,6 +430,12 @@ export function NoteVaultApp() {
                   }}
                   onNavigate={selectNote}
                 />
+              ) : panel === "calendar" ? (
+                <CalendarPage
+                  ownerId={ownerId}
+                  onClose={() => setShowCalendar(false)}
+                  onNavigate={selectNote}
+                />
               ) : panel === "note" && activeId ? (
                 <NoteEditor
                   noteId={activeId}
@@ -416,6 +455,7 @@ export function NoteVaultApp() {
                   onCreateCollection={() => handleCreateCollection()}
                   onQuickCapture={() => setQuickCaptureOpen(true)}
                   onOpenGraph={() => setGraphOpen(true)}
+                  onOpenCalendar={openCalendar}
                 />
               )}
             </motion.div>

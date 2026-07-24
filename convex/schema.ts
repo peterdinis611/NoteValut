@@ -75,4 +75,25 @@ export default defineSchema({
   })
     .index("by_token", ["token"])
     .index("by_owner", ["ownerId"]),
+
+  /** Calendar / daily reminders — fired while the app is open via client listener. */
+  reminders: defineTable({
+    ownerId: v.string(),
+    dailyKey: v.string(),
+    noteId: v.optional(v.id("notes")),
+    title: v.string(),
+    remindAt: v.number(),
+    status: v.union(
+      v.literal("scheduled"),
+      v.literal("fired"),
+      v.literal("dismissed"),
+      v.literal("cancelled"),
+    ),
+    jobId: v.optional(v.id("_scheduled_functions")),
+    createdAt: v.number(),
+    firedAt: v.optional(v.number()),
+  })
+    .index("by_owner_status", ["ownerId", "status"])
+    .index("by_owner_daily", ["ownerId", "dailyKey"])
+    .index("by_owner_remindAt", ["ownerId", "remindAt"]),
 });

@@ -31,6 +31,7 @@ import {
   Settings2,
   Share2,
   StickyNote,
+  Sun,
   Tag,
   Trash2,
   Zap,
@@ -41,7 +42,13 @@ import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { toDailyKey } from "@/lib/daily";
 import { isFolder } from "@/lib/item-kinds";
-import { easeOutSoft, sidebarVariants } from "@/lib/motion";
+import {
+  SIDEBAR_WIDTH,
+  sidebarDrawerVariants,
+  sidebarPanelVariants,
+  sidebarSlotVariants,
+  sidebarSpring,
+} from "@/lib/motion";
 import { searchNotes } from "@/lib/search";
 import { CreateMenu } from "./create-menu";
 import { MoveDialog } from "./move-dialog";
@@ -79,10 +86,14 @@ type Props = {
   activeId: Id<"notes"> | null;
   settingsActive?: boolean;
   tagsActive?: boolean;
+  calendarActive?: boolean;
+  /** Off-canvas drawer animation (phones). */
+  mobile?: boolean;
   onSelect: (id: Id<"notes"> | null) => void;
   onGoHome: () => void;
   onOpenSettings?: () => void;
   onOpenTags?: () => void;
+  onOpenCalendar?: () => void;
   onCollapse: () => void;
   onCreateEntry: (parentId?: Id<"notes">, templateId?: string) => void;
   onCreateCollection: (parentId?: Id<"notes">) => void;
@@ -94,10 +105,13 @@ export function Sidebar({
   activeId,
   settingsActive = false,
   tagsActive = false,
+  calendarActive = false,
+  mobile = false,
   onSelect,
   onGoHome,
   onOpenSettings,
   onOpenTags,
+  onOpenCalendar,
   onCollapse,
   onCreateEntry,
   onCreateCollection,
@@ -281,6 +295,7 @@ export function Sidebar({
     activeId === null &&
     !settingsActive &&
     !tagsActive &&
+    !calendarActive &&
     !isSearching &&
     !showBin;
 
@@ -413,14 +428,23 @@ export function Sidebar({
   ];
 
   return (
-    <motion.aside
-      className="sidebar"
-      variants={sidebarVariants}
+    <motion.div
+      className={mobile ? "sidebar-slot sidebar-slot-mobile" : "sidebar-slot"}
+      variants={mobile ? sidebarDrawerVariants : sidebarSlotVariants}
       initial="hidden"
       animate="visible"
       exit="exit"
-      transition={easeOutSoft}
+      transition={sidebarSpring}
     >
+      <motion.aside
+        className="sidebar"
+        variants={mobile ? undefined : sidebarPanelVariants}
+        initial={mobile ? false : "hidden"}
+        animate={mobile ? undefined : "visible"}
+        exit={mobile ? undefined : "exit"}
+        transition={sidebarSpring}
+        style={mobile ? undefined : { width: SIDEBAR_WIDTH }}
+      >
       <div className="sidebar-header">
         <button type="button" className="sidebar-workspace" onClick={onGoHome}>
           <span className="sidebar-mark" aria-hidden>
@@ -476,9 +500,22 @@ export function Sidebar({
             }
           }}
         >
-          <CalendarDays className="size-4" />
+          <Sun className="size-4" />
           <span>Today</span>
         </button>
+        {onOpenCalendar && (
+          <button
+            type="button"
+            className={`sidebar-link ${calendarActive ? "sidebar-link-active" : ""}`}
+            onClick={() => {
+              setShowBin(false);
+              onOpenCalendar();
+            }}
+          >
+            <CalendarDays className="size-4" />
+            <span>Calendar</span>
+          </button>
+        )}
 
         <div className="sidebar-menu-divider" />
 
@@ -486,7 +523,7 @@ export function Sidebar({
           <button
             type="button"
             data-create-trigger
-            className="sidebar-link"
+            className="sidebar-link sidebar-link-create"
             onClick={() => setShowCreate((v) => !v)}
           >
             <Plus className="size-4" />
@@ -502,7 +539,8 @@ export function Sidebar({
 
         {browseItems.map((item) => {
           const Icon = item.icon;
-          const active = !isSearching && !showBin && !tagsActive && browse === item.id;
+          const active =
+            !isSearching && !showBin && !tagsActive && !calendarActive && browse === item.id;
           return (
             <button
               key={item.id}
@@ -875,7 +913,8 @@ export function Sidebar({
         ownerId={ownerId}
         noteIds={[...selectedIds] as Id<"notes">[]}
       />
-    </motion.aside>
+      </motion.aside>
+    </motion.div>
   );
 }
 

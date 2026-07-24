@@ -41,6 +41,7 @@ type Props = {
   onCreateCollection: () => void;
   onQuickCapture: () => void;
   onOpenGraph?: () => void;
+  onOpenCalendar?: () => void;
 };
 
 type DueTaskHit = {
@@ -88,6 +89,7 @@ export function VaultHome({
   onCreateCollection,
   onQuickCapture,
   onOpenGraph,
+  onOpenCalendar,
 }: Props) {
   const toast = useToast();
   const [shareOpen, setShareOpen] = useState(false);
@@ -260,7 +262,20 @@ export function VaultHome({
       </motion.header>
 
       <motion.div variants={fadeUpVariants} transition={easeOutSoft}>
-        <DailyCalendar ownerId={ownerId} onOpenNote={onNavigate} />
+        <div className="vault-calendar-block">
+          <DailyCalendar ownerId={ownerId} onOpenNote={onNavigate} />
+          {onOpenCalendar && (
+            <button
+              type="button"
+              className="vault-calendar-open"
+              onClick={onOpenCalendar}
+            >
+              <CalendarClock className="size-3.5" />
+              Open calendar
+              <ArrowRight className="size-3.5" />
+            </button>
+          )}
+        </div>
       </motion.div>
 
       <div className="vault-home-body">

@@ -3,6 +3,7 @@
 import { useDebouncedValue } from "@tanstack/react-pacer";
 import {
   Archive,
+  CalendarDays,
   Download,
   FolderOpen,
   Hash,
@@ -236,6 +237,7 @@ export const CommandIcons = {
   archive: <Archive className="size-3.5" />,
   capture: <Zap className="size-3.5" />,
   today: <Sun className="size-3.5" />,
+  calendar: <CalendarDays className="size-3.5" />,
   export: <Download className="size-3.5" />,
   import: <Upload className="size-3.5" />,
   hash: <Hash className="size-3.5" />,

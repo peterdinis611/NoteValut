@@ -12,11 +12,38 @@ export const easeQuick: Transition = {
   ease: [0.22, 1, 0.36, 1],
 };
 
-export const sidebarVariants: Variants = {
-  hidden: { x: -24, opacity: 0 },
-  visible: { x: 0, opacity: 1 },
-  exit: { x: -16, opacity: 0 },
+/** Desktop sidebar rail width (px) — keep in sync with `.sidebar` CSS. */
+export const SIDEBAR_WIDTH = 260;
+
+export const sidebarSpring: Transition = {
+  type: "spring",
+  stiffness: 420,
+  damping: 36,
+  mass: 0.85,
 };
+
+export const sidebarSlotVariants: Variants = {
+  hidden: { width: 0 },
+  visible: { width: SIDEBAR_WIDTH },
+  exit: { width: 0 },
+};
+
+/** Panel content fade/slide inside the rail (desktop). */
+export const sidebarPanelVariants: Variants = {
+  hidden: { x: -14, opacity: 0.55 },
+  visible: { x: 0, opacity: 1 },
+  exit: { x: -10, opacity: 0.4 },
+};
+
+/** Mobile drawer — full off-canvas slide. */
+export const sidebarDrawerVariants: Variants = {
+  hidden: { x: "-105%" },
+  visible: { x: 0 },
+  exit: { x: "-105%" },
+};
+
+/** @deprecated Prefer sidebarPanelVariants / sidebarDrawerVariants */
+export const sidebarVariants: Variants = sidebarPanelVariants;
 
 export const overlayVariants: Variants = {
   hidden: { opacity: 0 },
