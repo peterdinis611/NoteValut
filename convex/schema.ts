@@ -35,12 +35,18 @@ export default defineSchema({
     tags: v.array(v.string()),
     /** YYYY-MM-DD when this note is a daily note */
     dailyKey: v.optional(v.string()),
+    /** Denormalized full-text field for Convex searchIndex */
+    searchText: v.optional(v.string()),
     updatedAt: v.number(),
   })
     .index("by_owner", ["ownerId"])
     .index("by_owner_updated", ["ownerId", "updatedAt"])
     .index("by_parent", ["parentId"])
-    .index("by_owner_daily", ["ownerId", "dailyKey"]),
+    .index("by_owner_daily", ["ownerId", "dailyKey"])
+    .searchIndex("search_body", {
+      searchField: "searchText",
+      filterFields: ["ownerId"],
+    }),
 
   noteVersions: defineTable({
     noteId: v.id("notes"),
@@ -96,4 +102,17 @@ export default defineSchema({
     .index("by_owner_status", ["ownerId", "status"])
     .index("by_owner_daily", ["ownerId", "dailyKey"])
     .index("by_owner_remindAt", ["ownerId", "remindAt"]),
+
+  /** Web Push subscriptions for calendar reminders when the app is closed. */
+  pushSubscriptions: defineTable({
+    ownerId: v.string(),
+    endpoint: v.string(),
+    p256dh: v.string(),
+    auth: v.string(),
+    userAgent: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_owner", ["ownerId"])
+    .index("by_endpoint", ["endpoint"]),
 });

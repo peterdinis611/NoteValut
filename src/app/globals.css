@@ -2145,7 +2145,27 @@ body {
 .vault-section { margin-bottom: 0; }
 
 .vault-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin-bottom: 0.625rem;
+}
+
+.vault-section-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: none;
+  background: transparent;
+  font-size: 0.75rem;
+  font-weight: 550;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+}
+.vault-section-link:hover {
+  color: var(--foreground);
 }
 
 .vault-section-title {
@@ -6106,6 +6126,12 @@ body {
   min-height: min(28rem, 70dvh);
   background: transparent;
 }
+.status-page-error {
+  background:
+    radial-gradient(ellipse 70% 42% at 50% 8%, color-mix(in srgb, #e07070 14%, transparent), transparent 58%),
+    radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%),
+    var(--background);
+}
 
 .status-glow {
   position: absolute;
@@ -6115,6 +6141,36 @@ body {
   filter: blur(40px);
   pointer-events: none;
   z-index: 0;
+}
+
+.status-shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(28rem, 100%);
+  padding: 1.35rem 1.2rem 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--panel) 92%, transparent),
+      color-mix(in srgb, var(--panel) 72%, transparent)
+    );
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #fff 4%, transparent) inset,
+    0 18px 48px color-mix(in srgb, #000 28%, transparent);
+  backdrop-filter: blur(10px);
+}
+.status-page-compact .status-shell {
+  width: min(24rem, 100%);
+  padding: 1rem 1rem 1.15rem;
+  box-shadow: none;
+  background: transparent;
+  border-color: transparent;
+  backdrop-filter: none;
 }
 
 .status-lottie {
@@ -6129,8 +6185,9 @@ body {
   height: min(9.5rem, 48vw);
 }
 .status-lottie-error {
-  width: min(10.5rem, 52vw);
-  height: min(10.5rem, 52vw);
+  width: min(9.25rem, 46vw);
+  height: min(9.25rem, 46vw);
+  margin-bottom: 0.35rem;
 }
 .status-lottie-not-found {
   width: min(13.5rem, 68vw);
@@ -6144,11 +6201,11 @@ body {
 .status-kicker {
   position: relative;
   z-index: 1;
-  margin: 0.35rem 0 0.4rem;
+  margin: 0.2rem 0 0.35rem;
   font-family: var(--font-display), "Iowan Old Style", serif;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 550;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
 }
@@ -6168,11 +6225,32 @@ body {
 .status-description {
   position: relative;
   z-index: 1;
-  margin: 0.65rem 0 0;
-  max-width: 26rem;
-  font-size: 0.9375rem;
+  margin: 0.55rem 0 0;
+  max-width: 24rem;
+  font-size: 0.9rem;
   line-height: 1.5;
   color: var(--muted);
+}
+
+.status-preview {
+  position: relative;
+  z-index: 1;
+  margin: 0.85rem 0 0;
+  max-width: 100%;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, #e07070 28%, var(--border));
+  background: color-mix(in srgb, #e07070 8%, transparent);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, #ffb4b4 70%, var(--foreground));
+  text-align: left;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .status-meta {
@@ -6189,16 +6267,24 @@ body {
 .status-detail {
   position: relative;
   z-index: 1;
-  margin-top: 0.85rem;
-  max-width: 26rem;
+  margin-top: 0.75rem;
+  max-width: 100%;
+  width: 100%;
   text-align: left;
 }
 .status-detail summary {
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  width: 100%;
   font-size: 0.75rem;
+  font-weight: 550;
   color: var(--muted);
   list-style: none;
   text-align: center;
+  user-select: none;
 }
 .status-detail summary::-webkit-details-marker {
   display: none;
@@ -6206,14 +6292,110 @@ body {
 .status-detail summary:hover {
   color: var(--foreground);
 }
+.status-detail-chevron {
+  transition: transform 0.16s ease;
+  opacity: 0.8;
+}
+.status-detail[open] .status-detail-chevron {
+  transform: rotate(180deg);
+}
 .status-detail[open] summary {
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+.status-detail-body {
+  padding: 0.7rem 0.75rem 0.8rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 55%, transparent);
+  text-align: left;
+}
+.status-detail-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+.status-detail-toolbar-label {
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.status-detail-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  font-size: 0.68rem;
+  font-weight: 550;
+  color: var(--muted);
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.status-detail-copy:hover {
+  color: var(--foreground);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+.status-detail-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.status-detail-row {
+  display: grid;
+  grid-template-columns: 4.25rem minmax(0, 1fr);
+  gap: 0.35rem 0.6rem;
+  align-items: start;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+.status-detail-row:last-of-type {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.status-detail-row dt {
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-top: 0.12rem;
+}
+.status-detail-row dd {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--foreground) 88%, transparent);
+  word-break: break-word;
+}
+.status-detail-mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+}
+.status-detail-stack {
+  margin: 0.65rem 0 0;
+  padding: 0.55rem 0.6rem;
+  max-height: 8.5rem;
+  overflow: auto;
+  border-radius: 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: color-mix(in srgb, #000 22%, transparent);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.6rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--muted) 90%, transparent);
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: left;
 }
 .status-detail .status-meta {
-  padding: 0.55rem 0.7rem;
-  border-radius: 0.45rem;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  margin: 0.55rem 0 0;
   text-align: left;
 }
 
@@ -6225,14 +6407,17 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.55rem;
-  margin-top: 1.35rem;
+  margin-top: 1.25rem;
+  width: 100%;
 }
 
 .status-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.35rem;
+  gap: 0.4rem;
+  min-height: 2.4rem;
+  min-width: 7.5rem;
   padding: 0.5rem 1rem;
   border-radius: 0.55rem;
   border: 1px solid var(--border);
@@ -6240,11 +6425,14 @@ body {
   font-size: 0.8125rem;
   font-weight: 550;
   color: var(--foreground);
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.12s;
 }
 .status-btn:hover {
   background: var(--hover-strong);
   border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+.status-btn:active {
+  transform: translateY(1px);
 }
 .status-btn-primary {
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
@@ -7898,4 +8086,131 @@ body {
   .cmd-overlay {
     padding-top: 8vh;
   }
+}
+
+/* Due inbox */
+.due-inbox {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 3rem;
+}
+.due-inbox-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 1rem 0 1.15rem;
+}
+.due-inbox-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  font-size: 0.75rem;
+  font-weight: 550;
+  color: var(--muted);
+}
+.due-inbox-tab:hover {
+  color: var(--foreground);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+.due-inbox-tab-active {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.due-inbox-tab-count {
+  font-size: 0.65rem;
+  opacity: 0.75;
+}
+.due-inbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.due-inbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  color: var(--foreground);
+  transition: border-color 0.12s, background 0.12s;
+}
+.due-inbox-item:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: var(--hover-strong);
+}
+.due-inbox-item-overdue {
+  border-color: color-mix(in srgb, #e07070 35%, var(--border));
+}
+.due-inbox-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.due-inbox-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+.due-inbox-text {
+  font-size: 0.9rem;
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.due-inbox-note {
+  font-size: 0.72rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.due-inbox-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.due-inbox-badge-overdue {
+  color: #f0a0a0;
+}
+.due-inbox-empty,
+.due-inbox-empty-card {
+  margin-top: 1.5rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.due-inbox-empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 2rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px dashed var(--border);
+}
+
+.settings-push-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
 }

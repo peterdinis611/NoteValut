@@ -17,8 +17,9 @@ import {
 import { motion } from "motion/react";
 import { useMemo, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
-import type { Doc, Id } from "../../convex/_generated/dataModel";
+import type { Id } from "../../convex/_generated/dataModel";
 import { countOpenTasks, countOverdueTasks } from "@/lib/blocks";
+import { collectDueTasks } from "@/lib/due-tasks";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { useVaultUpload } from "@/hooks/use-vault-upload";
 import { formatRelativeTime } from "@/lib/format";
@@ -42,41 +43,8 @@ type Props = {
   onQuickCapture: () => void;
   onOpenGraph?: () => void;
   onOpenCalendar?: () => void;
+  onOpenDueInbox?: () => void;
 };
-
-type DueTaskHit = {
-  noteId: Id<"notes">;
-  noteTitle: string;
-  noteIcon: string;
-  text: string;
-  dueAt: number;
-  overdue: boolean;
-};
-
-function collectDueTasks(
-  notes: Doc<"notes">[] | undefined,
-  now = Date.now(),
-): DueTaskHit[] {
-  if (!notes) return [];
-  const week = now + 7 * 24 * 60 * 60 * 1000;
-  const hits: DueTaskHit[] = [];
-  for (const note of notes) {
-    if (isFolder(note) || note.trashed || note.archived) continue;
-    for (const block of note.blocks ?? []) {
-      if (block.type !== "todo" || block.checked || block.dueAt === undefined) continue;
-      if (block.dueAt > week) continue;
-      hits.push({
-        noteId: note._id,
-        noteTitle: note.title || "Untitled",
-        noteIcon: note.icon || "📝",
-        text: block.text.trim() || "Untitled task",
-        dueAt: block.dueAt,
-        overdue: block.dueAt < now,
-      });
-    }
-  }
-  return hits.sort((a, b) => a.dueAt - b.dueAt).slice(0, 8);
-}
 
 function plural(n: number, one: string, many: string) {
   return `${n} ${n === 1 ? one : many}`;
@@ -90,6 +58,7 @@ export function VaultHome({
   onQuickCapture,
   onOpenGraph,
   onOpenCalendar,
+  onOpenDueInbox,
 }: Props) {
   const toast = useToast();
   const [shareOpen, setShareOpen] = useState(false);
@@ -146,7 +115,10 @@ export function VaultHome({
       ?.filter((n) => !isFolder(n) && countOpenTasks(n.blocks) > 0)
       .slice(0, 5) ?? [];
 
-  const dueTasks = useMemo(() => collectDueTasks(notes), [notes]);
+  const dueTasks = useMemo(
+    () => collectDueTasks(notes, Date.now(), { includeLater: false }).slice(0, 8),
+    [notes],
+  );
   const overdueCount = useMemo(
     () =>
       notes?.reduce((sum, n) => sum + (isFolder(n) ? 0 : countOverdueTasks(n.blocks)), 0) ?? 0,
@@ -322,6 +294,16 @@ export function VaultHome({
                 <CalendarClock className="inline size-4 mr-1.5 opacity-70" />
                 Due soon
               </h2>
+              {onOpenDueInbox && (
+                <button
+                  type="button"
+                  className="vault-section-link"
+                  onClick={onOpenDueInbox}
+                >
+                  Open inbox
+                  <ArrowRight className="size-3.5" />
+                </button>
+              )}
             </div>
             <ul className="vault-row-list">
               {dueTasks.map((task) => (

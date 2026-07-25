@@ -11,6 +11,8 @@
 import type * as block from "../block.js";
 import type * as files from "../files.js";
 import type * as notes from "../notes.js";
+import type * as push from "../push.js";
+import type * as pushActions from "../pushActions.js";
 import type * as reminders from "../reminders.js";
 import type * as shares from "../shares.js";
 import type * as tags from "../tags.js";
@@ -27,6 +29,8 @@ declare const fullApi: ApiFromModules<{
   block: typeof block;
   files: typeof files;
   notes: typeof notes;
+  push: typeof push;
+  pushActions: typeof pushActions;
   reminders: typeof reminders;
   shares: typeof shares;
   tags: typeof tags;

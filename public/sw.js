@@ -1,4 +1,4 @@
-/* NoteVault offline shell cache */
+/* NoteVault offline shell cache + Web Push */
 const CACHE = "notevault-shell-v2";
 const PRECACHE = ["/", "/manifest.webmanifest", "/icons/icon-192.svg", "/icons/icon-512.svg"];
 
@@ -66,4 +66,40 @@ self.addEventListener("fetch", (event) => {
       }),
     );
   }
+});
+
+self.addEventListener("push", (event) => {
+  let data = { title: "NoteVault", body: "You have a reminder", url: "/", tag: "reminder" };
+  try {
+    if (event.data) data = { ...data, ...event.data.json() };
+  } catch {
+    /* ignore malformed payload */
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || "NoteVault", {
+      body: data.body || "",
+      tag: data.tag || "reminder",
+      icon: "/icons/icon-192.svg",
+      badge: "/icons/icon-192.svg",
+      data: { url: data.url || "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = event.notification.data?.url || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ("focus" in client) {
+          if ("navigate" in client && typeof client.navigate === "function") {
+            client.navigate(target);
+          }
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(target);
+    }),
+  );
 });

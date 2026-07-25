@@ -340,8 +340,12 @@ export function blocksToMarkdown(blocks: Block[]): string {
           return `- ${block.text}`;
         case "numbered":
           return `1. ${block.text}`;
-        case "todo":
-          return `- [${block.checked ? "x" : " "}] ${block.text}`;
+        case "todo": {
+          const check = `- [${block.checked ? "x" : " "}] ${block.text}`;
+          if (!block.dueAt) return check;
+          const due = new Date(block.dueAt).toISOString().slice(0, 10);
+          return `${check} (due: ${due})`;
+        }
         case "quote":
           return `> ${block.text}`;
         case "callout":

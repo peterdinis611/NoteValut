@@ -24,6 +24,7 @@ import {
   FolderOpen,
   GripVertical,
   Home,
+  Inbox,
   PanelLeftClose,
   Pin,
   Plus,
@@ -87,6 +88,7 @@ type Props = {
   settingsActive?: boolean;
   tagsActive?: boolean;
   calendarActive?: boolean;
+  dueActive?: boolean;
   /** Off-canvas drawer animation (phones). */
   mobile?: boolean;
   onSelect: (id: Id<"notes"> | null) => void;
@@ -94,6 +96,7 @@ type Props = {
   onOpenSettings?: () => void;
   onOpenTags?: () => void;
   onOpenCalendar?: () => void;
+  onOpenDueInbox?: () => void;
   onCollapse: () => void;
   onCreateEntry: (parentId?: Id<"notes">, templateId?: string) => void;
   onCreateCollection: (parentId?: Id<"notes">) => void;
@@ -106,12 +109,14 @@ export function Sidebar({
   settingsActive = false,
   tagsActive = false,
   calendarActive = false,
+  dueActive = false,
   mobile = false,
   onSelect,
   onGoHome,
   onOpenSettings,
   onOpenTags,
   onOpenCalendar,
+  onOpenDueInbox,
   onCollapse,
   onCreateEntry,
   onCreateCollection,
@@ -296,6 +301,7 @@ export function Sidebar({
     !settingsActive &&
     !tagsActive &&
     !calendarActive &&
+    !dueActive &&
     !isSearching &&
     !showBin;
 
@@ -516,6 +522,19 @@ export function Sidebar({
             <span>Calendar</span>
           </button>
         )}
+        {onOpenDueInbox && (
+          <button
+            type="button"
+            className={`sidebar-link ${dueActive ? "sidebar-link-active" : ""}`}
+            onClick={() => {
+              setShowBin(false);
+              onOpenDueInbox();
+            }}
+          >
+            <Inbox className="size-4" />
+            <span>Due inbox</span>
+          </button>
+        )}
 
         <div className="sidebar-menu-divider" />
 
@@ -540,7 +559,7 @@ export function Sidebar({
         {browseItems.map((item) => {
           const Icon = item.icon;
           const active =
-            !isSearching && !showBin && !tagsActive && !calendarActive && browse === item.id;
+            !isSearching && !showBin && !tagsActive && !calendarActive && !dueActive && browse === item.id;
           return (
             <button
               key={item.id}

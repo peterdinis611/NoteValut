@@ -1,6 +1,10 @@
 "use client";
 
-import { LottieStatus } from "@/components/lottie-status";
+import { useEffect, useMemo, useState } from "react";
+import {
+  LottieStatus,
+  errorStatusDetails,
+} from "@/components/lottie-status";
 
 type Props = {
   error: Error & { digest?: string };
@@ -9,9 +13,23 @@ type Props = {
 
 /** Catches errors in the root layout. Must define its own html/body. */
 export default function GlobalError({ error, reset }: Props) {
-  const tech = [error.message?.trim(), error.digest ? `ID: ${error.digest}` : null]
-    .filter(Boolean)
-    .join(" · ");
+  const [extras, setExtras] = useState<{ path?: string; when?: string }>({});
+
+  useEffect(() => {
+    console.error(error);
+    setExtras({
+      path: window.location.pathname || "/",
+      when: new Date().toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "medium",
+      }),
+    });
+  }, [error]);
+
+  const details = useMemo(
+    () => errorStatusDetails(error, extras),
+    [error, extras],
+  );
 
   return (
     <html lang="en" className="h-full dark">
@@ -20,7 +38,9 @@ export default function GlobalError({ error, reset }: Props) {
           variant="error"
           title="NoteVault crashed"
           description="A critical error stopped the app from rendering. Reload to get back in."
-          detail={tech || undefined}
+          detailPreview={details.detailPreview}
+          detailRows={details.detailRows}
+          detailStack={details.detailStack}
           actions={[
             { label: "Reload", onClick: reset, primary: true },
             { label: "Go home", href: "/" },
