@@ -177,7 +177,7 @@ export function VaultHome({
             </button>
           )}
         </div>
-        <p className="vault-home-kicker">Your knowledge vault</p>
+        <p className="vault-home-kicker" data-tour="vault-home">Your knowledge vault</p>
         <h1 className="vault-home-title">NoteVault</h1>
         <p className="vault-home-subtitle">
           Capture ideas and organize them into collections — your workspace, your structure.
@@ -187,6 +187,7 @@ export function VaultHome({
           <motion.button
             type="button"
             className="vault-btn-primary"
+            data-tour="new-entry"
             onClick={() => onCreateEntry()}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -234,7 +235,7 @@ export function VaultHome({
       </motion.header>
 
       <motion.div variants={fadeUpVariants} transition={easeOutSoft}>
-        <div className="vault-calendar-block">
+        <div className="vault-calendar-block" data-tour="daily-notes">
           <DailyCalendar ownerId={ownerId} onOpenNote={onNavigate} />
           {onOpenCalendar && (
             <button

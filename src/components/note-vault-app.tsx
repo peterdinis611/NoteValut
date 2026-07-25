@@ -11,6 +11,7 @@ import { toDailyKey } from "@/lib/daily";
 import { easeQuick, pageVariants, sidebarSpring } from "@/lib/motion";
 import { getTemplate } from "@/lib/templates";
 import { downloadVaultMarkdown } from "@/lib/export-vault-md";
+import { startVaultTour } from "@/lib/onboarding";
 import { downloadVaultBackup } from "@/lib/vault-backup";
 import { useOwnerId } from "@/hooks/use-owner-id";
 import { useVaultSettings } from "@/hooks/use-vault-settings";
@@ -336,6 +337,19 @@ export function NoteVaultApp() {
         run: handleExportMarkdown,
       },
       {
+        id: "tour",
+        label: "Take a tour",
+        hint: "Intro to NoteVault",
+        icon: CommandIcons.home,
+        keywords: ["onboarding", "help", "guide", "intro", "driver"],
+        run: () => {
+          clearPanels();
+          setActiveId(null);
+          setSidebarOpen(true);
+          window.setTimeout(() => startVaultTour(), 350);
+        },
+      },
+      {
         id: "shortcuts",
         label: "Keyboard shortcuts",
         hint: "⌘ /",
@@ -470,6 +484,12 @@ export function NoteVaultApp() {
                   onClose={() => setShowSettings(false)}
                   onExport={handleExport}
                   onExportMarkdown={handleExportMarkdown}
+                  onStartTour={() => {
+                    clearPanels();
+                    setActiveId(null);
+                    setSidebarOpen(true);
+                    window.setTimeout(() => startVaultTour(), 400);
+                  }}
                 />
               ) : panel === "tags" ? (
                 <TagsHub

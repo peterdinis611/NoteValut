@@ -444,6 +444,7 @@ export function Sidebar({
     >
       <motion.aside
         className="sidebar"
+        data-tour="sidebar"
         variants={mobile ? undefined : sidebarPanelVariants}
         initial={mobile ? false : "hidden"}
         animate={mobile ? undefined : "visible"}
@@ -469,7 +470,7 @@ export function Sidebar({
         </button>
       </div>
 
-      <div className={`sidebar-search-wrap ${searchPending ? "sidebar-search-pending" : ""}`}>
+      <div className={`sidebar-search-wrap ${searchPending ? "sidebar-search-pending" : ""}`} data-tour="search">
         <Search className="sidebar-search-icon" />
         <input
           className="sidebar-search"
@@ -526,6 +527,7 @@ export function Sidebar({
           <button
             type="button"
             className={`sidebar-link ${dueActive ? "sidebar-link-active" : ""}`}
+            data-tour="due-inbox"
             onClick={() => {
               setShowBin(false);
               onOpenDueInbox();
@@ -863,6 +865,7 @@ export function Sidebar({
           <button
             type="button"
             className="sidebar-link"
+            data-tour="quick-capture"
             onClick={onQuickCapture}
           >
             <Zap className="size-4" />
@@ -893,6 +896,7 @@ export function Sidebar({
             <button
               type="button"
               className={`sidebar-link ${settingsActive ? "sidebar-link-active" : ""}`}
+              data-tour="settings"
               onClick={() => {
                 setShowBin(false);
                 onOpenSettings();

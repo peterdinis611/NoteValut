@@ -2,6 +2,7 @@
 
 import {
   Bell,
+  Compass,
   Database,
   Eye,
   FileUp,
@@ -34,6 +35,7 @@ import { removeCustomTemplate } from "@/db/templates-collection";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { useVaultSettings } from "@/hooks/use-vault-settings";
 import { importMarkdownFiles } from "@/lib/import-notes";
+import { startVaultTour } from "@/lib/onboarding";
 import { easeOutSoft, fadeUpVariants } from "@/lib/motion";
 import { listDefaultTemplates } from "@/lib/templates";
 import { parseVaultBackupFile } from "@/lib/vault-backup";
@@ -53,9 +55,16 @@ type Props = {
   onClose: () => void;
   onExport?: () => void;
   onExportMarkdown?: () => void;
+  onStartTour?: () => void;
 };
 
-export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown }: Props) {
+export function SettingsPage({
+  ownerId,
+  onClose,
+  onExport,
+  onExportMarkdown,
+  onStartTour,
+}: Props) {
   const toast = useToast();
   const settings = useVaultSettings();
   const templates = useCustomTemplates();
@@ -234,6 +243,33 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown }: P
           <X className="size-4" />
         </button>
       </header>
+
+      <section className="settings-section">
+        <div className="settings-section-head">
+          <Compass className="size-4 text-accent" />
+          <div>
+            <h2>Getting started</h2>
+            <p>A short walkthrough of the vault</p>
+          </div>
+        </div>
+        <div className="settings-css-toolbar">
+          <button
+            type="button"
+            className="settings-btn"
+            onClick={() => {
+              if (onStartTour) {
+                onStartTour();
+              } else {
+                onClose();
+                window.setTimeout(() => startVaultTour(), 350);
+              }
+            }}
+          >
+            <Compass className="size-3.5" />
+            Take a tour
+          </button>
+        </div>
+      </section>
 
       <section className="settings-section">
         <div className="settings-section-head">

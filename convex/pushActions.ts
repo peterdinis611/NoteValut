@@ -1,5 +1,6 @@
 "use node";
 
+import webpush from "web-push";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { action, internalAction } from "./_generated/server";
@@ -32,7 +33,6 @@ export const sendReminderPush = internalAction({
     });
     if (!subs.length) return { sent: 0 };
 
-    const webpush = await import("web-push");
     webpush.setVapidDetails(subject, publicKey, privateKey);
 
     const payload = JSON.stringify({
