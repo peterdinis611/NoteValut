@@ -11,7 +11,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "deploy:convex": "convex deploy"
+    "deploy:convex": "convex deploy",
+    "postinstall": "mkdir -p public/embedpdf && cp node_modules/@embedpdf/pdfium/dist/pdfium.wasm public/embedpdf/pdfium.wasm"
   },
   "engines": {
     "node": ">=20.9.0"
@@ -26,6 +27,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@embedpdf/core": "^2.14.4",
     "@embedpdf/engines": "^2.14.4",
+    "@embedpdf/pdfium": "^2.14.4",
     "@embedpdf/plugin-document-manager": "^2.14.4",
     "@embedpdf/plugin-render": "^2.14.4",
     "@embedpdf/plugin-scroll": "^2.14.4",

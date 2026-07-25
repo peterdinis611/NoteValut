@@ -7,15 +7,19 @@ import { createPortal } from "react-dom";
 import { MediaUploadButton } from "@/components/media-upload-button";
 import { PdfViewer } from "@/components/pdf-viewer";
 import { useToast } from "@/components/toast";
+import { useVaultUpload } from "@/hooks/use-vault-upload";
 import { easeOutSoft, overlayVariants } from "@/lib/motion";
 import type { BlockRenderProps } from "../types";
 
 export function PdfBlockView(props: BlockRenderProps) {
   const toast = useToast();
+  const { uploadFile } = useVaultUpload();
   const [fullscreen, setFullscreen] = useState(false);
   const [editingUrl, setEditingUrl] = useState(false);
   const [urlDraft, setUrlDraft] = useState(props.block.url ?? "");
   const [mounted, setMounted] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const urlRef = useRef<HTMLInputElement>(null);
 
@@ -72,16 +76,65 @@ export function PdfBlockView(props: BlockRenderProps) {
     setEditingUrl(false);
   }
 
+  async function attachPdfFile(file: File) {
+    if (!/\.pdf$/i.test(file.name) && file.type !== "application/pdf") {
+      toast.error("Choose a PDF file");
+      return;
+    }
+    setUploading(true);
+    try {
+      const uploaded = await uploadFile(file);
+      props.commands.updateBlock(props.block.id, {
+        url: uploaded.url,
+        text: props.block.text.trim() || file.name.replace(/\.pdf$/i, ""),
+      });
+      props.onFocus();
+      toast.success("PDF attached");
+    } catch {
+      toast.error("Couldn’t upload PDF");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   if (!url) {
     return (
-      <div className="nv-pdf nv-pdf-empty-wrap" onFocus={props.onFocus}>
+      <div
+        className={`nv-pdf nv-pdf-empty-wrap ${dragging ? "nv-pdf-empty-dragging" : ""}`}
+        onFocus={props.onFocus}
+        onDragEnter={(e) => {
+          if (props.readOnly) return;
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragOver={(e) => {
+          if (props.readOnly) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+        }}
+        onDragLeave={(e) => {
+          if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+          setDragging(false);
+        }}
+        onDrop={(e) => {
+          if (props.readOnly) return;
+          e.preventDefault();
+          setDragging(false);
+          const file = e.dataTransfer.files?.[0];
+          if (file) void attachPdfFile(file);
+        }}
+      >
         <div className="nv-pdf-empty">
           <span className="nv-pdf-empty-icon">
             <FileText className="size-5" />
           </span>
           <div className="nv-pdf-empty-copy">
             <p className="nv-pdf-empty-title">Embed a PDF</p>
-            <p className="nv-pdf-empty-hint">Upload a PDF or paste a direct .pdf link</p>
+            <p className="nv-pdf-empty-hint">
+              {uploading
+                ? "Uploading…"
+                : "Upload, drop a .pdf here, or paste a direct link"}
+            </p>
           </div>
         </div>
         {!props.readOnly && (
@@ -90,8 +143,12 @@ export function PdfBlockView(props: BlockRenderProps) {
               <MediaUploadButton
                 accept="application/pdf,.pdf"
                 label="Upload PDF"
-                onUploaded={(next) => {
-                  props.commands.updateBlock(props.block.id, { url: next });
+                disabled={uploading}
+                onUploaded={(next, file) => {
+                  props.commands.updateBlock(props.block.id, {
+                    url: next,
+                    text: props.block.text.trim() || file.name.replace(/\.pdf$/i, ""),
+                  });
                   props.onFocus();
                 }}
                 onError={(msg) => toast.error(msg)}
@@ -200,6 +257,18 @@ export function PdfBlockView(props: BlockRenderProps) {
             >
               Save
             </button>
+            <MediaUploadButton
+              accept="application/pdf,.pdf"
+              label="Replace"
+              onUploaded={(next, file) => {
+                props.commands.updateBlock(props.block.id, {
+                  url: next,
+                  text: props.block.text.trim() || file.name.replace(/\.pdf$/i, ""),
+                });
+                setEditingUrl(false);
+              }}
+              onError={(msg) => toast.error(msg)}
+            />
           </motion.div>
         )}
       </AnimatePresence>

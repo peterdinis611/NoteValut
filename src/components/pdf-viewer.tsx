@@ -25,7 +25,10 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+/** Self-hosted PDFium WASM (copied from @embedpdf/pdfium on postinstall). */
+const PDFIUM_WASM_URL = "/embedpdf/pdfium.wasm";
 
 type Props = {
   src: string;
@@ -37,6 +40,38 @@ type Props = {
   onToggleFullscreen?: () => void;
 };
 
+type DocSource =
+  | { kind: "buffer"; buffer: ArrayBuffer; name: string }
+  | { kind: "url"; url: string; name: string };
+
+function filenameFromSrc(src: string, fallback = "document.pdf") {
+  try {
+    const path = new URL(src, window.location.origin).pathname;
+    const base = path.split("/").pop();
+    if (base && /\.pdf$/i.test(base)) return decodeURIComponent(base);
+  } catch {
+    /* ignore */
+  }
+  return fallback;
+}
+
+/**
+ * Fetch PDF bytes so EmbedPDF can open via buffer (more reliable than
+ * cross-origin URL range requests against Convex / CDNs).
+ */
+async function resolveDocSource(src: string, title?: string): Promise<DocSource> {
+  const name = title?.trim() || filenameFromSrc(src);
+  try {
+    const res = await fetch(src, { mode: "cors", credentials: "omit" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buffer = await res.arrayBuffer();
+    if (buffer.byteLength < 5) throw new Error("Empty PDF");
+    return { kind: "buffer", buffer, name };
+  } catch {
+    return { kind: "url", url: src, name };
+  }
+}
+
 export function PdfViewer({
   src,
   title,
@@ -45,12 +80,40 @@ export function PdfViewer({
   fullscreen = false,
   onToggleFullscreen,
 }: Props) {
-  const { engine, isLoading, error } = usePdfiumEngine();
+  const { engine, isLoading, error } = usePdfiumEngine({
+    wasmUrl: PDFIUM_WASM_URL,
+    worker: true,
+  });
 
-  const plugins = useMemo(
-    () => [
+  const [source, setSource] = useState<DocSource | null>(null);
+  const [sourceError, setSourceError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSource(null);
+    setSourceError(null);
+    void resolveDocSource(src, title).then((doc) => {
+      if (cancelled) return;
+      setSource(doc);
+    }).catch((err: unknown) => {
+      if (cancelled) return;
+      setSourceError(err instanceof Error ? err.message : "Couldn’t load PDF");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [src, title]);
+
+  const plugins = useMemo(() => {
+    if (!source) return [];
+    const initial =
+      source.kind === "buffer"
+        ? [{ buffer: source.buffer.slice(0), name: source.name }]
+        : [{ url: source.url, name: source.name, mode: "full-fetch" as const }];
+
+    return [
       createPluginRegistration(DocumentManagerPluginPackage, {
-        initialDocuments: [{ url: src }],
+        initialDocuments: initial,
       }),
       createPluginRegistration(ViewportPluginPackage),
       createPluginRegistration(ScrollPluginPackage),
@@ -60,9 +123,8 @@ export function PdfViewer({
         minZoom: 0.4,
         maxZoom: 4,
       }),
-    ],
-    [src],
-  );
+    ];
+  }, [source]);
 
   if (error) {
     return (
@@ -74,21 +136,39 @@ export function PdfViewer({
     );
   }
 
-  if (isLoading || !engine) {
+  if (sourceError) {
     return (
-      <div className={`nv-pdf-status ${className}`} style={{ height }}>
-        <div className="nv-pdf-spinner" aria-hidden />
-        <p>Loading PDF engine…</p>
+      <div className={`nv-pdf-status nv-pdf-status-error ${className}`}>
+        <FileText className="size-5" />
+        <p>Couldn’t load this PDF</p>
+        <span>{sourceError}</span>
+        <a className="nv-pdf-status-link" href={src} target="_blank" rel="noopener noreferrer">
+          Open in new tab
+        </a>
       </div>
     );
   }
+
+  if (isLoading || !engine || !source) {
+    return (
+      <div className={`nv-pdf-status ${className}`} style={{ height }}>
+        <div className="nv-pdf-spinner" aria-hidden />
+        <p>{isLoading || !engine ? "Loading PDF engine…" : "Fetching document…"}</p>
+      </div>
+    );
+  }
+
+  const viewerKey =
+    source.kind === "buffer"
+      ? `buf:${source.name}:${source.buffer.byteLength}`
+      : `url:${source.url}`;
 
   return (
     <div
       className={`nv-pdf-viewer ${fullscreen ? "nv-pdf-viewer-fullscreen" : ""} ${className}`}
       style={fullscreen ? undefined : { height }}
     >
-      <EmbedPDF key={src} engine={engine} plugins={plugins}>
+      <EmbedPDF key={viewerKey} engine={engine} plugins={plugins}>
         {({ activeDocumentId }) =>
           activeDocumentId ? (
             <DocumentContent documentId={activeDocumentId}>
@@ -98,7 +178,15 @@ export function PdfViewer({
                     <div className="nv-pdf-status nv-pdf-status-error">
                       <FileText className="size-5" />
                       <p>Couldn’t open this PDF</p>
-                      <span>Check the URL is a direct .pdf link</span>
+                      <span>The file may be corrupted or password-protected</span>
+                      <a
+                        className="nv-pdf-status-link"
+                        href={src}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Open in new tab
+                      </a>
                     </div>
                   );
                 }
@@ -113,7 +201,7 @@ export function PdfViewer({
                 return (
                   <PdfShell
                     documentId={activeDocumentId}
-                    title={title}
+                    title={title || source.name}
                     src={src}
                     fullscreen={fullscreen}
                     onToggleFullscreen={onToggleFullscreen}
