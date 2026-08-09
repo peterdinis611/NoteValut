@@ -12,7 +12,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "deploy:convex": "convex deploy",
-    "postinstall": "mkdir -p public/embedpdf && cp node_modules/@embedpdf/pdfium/dist/pdfium.wasm public/embedpdf/pdfium.wasm"
+    "postinstall": "mkdir -p public/embedpdf && cp node_modules/@embedpdf/pdfium/dist/pdfium.wasm public/embedpdf/pdfium.wasm",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "engines": {
     "node": ">=20.9.0"
@@ -51,6 +53,9 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@storybook/addon-a11y": "^10.5.7",
+    "@storybook/addon-docs": "^10.5.7",
+    "@storybook/nextjs-vite": "^10.5.7",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -65,7 +70,10 @@
     "concurrently": "^10.0.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "eslint-plugin-storybook": "^10.5.7",
     "jsdom": "^29.1.1",
+    "playwright": "^1.55.0",
+    "storybook": "^10.5.7",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"

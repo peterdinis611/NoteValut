@@ -1,17 +1,17 @@
 import { dark } from "@clerk/themes";
 
-/** NoteVault-tuned Clerk appearance (dark + teal accent). */
+/** NoteVault-tuned Clerk appearance (dark + copper accent). */
 export const clerkAppearance = {
   theme: dark,
   baseTheme: dark,
   variables: {
-    colorPrimary: "#3ecfbe",
-    colorBackground: "#171b24",
-    colorInputBackground: "#12151c",
-    colorInputText: "rgba(255,255,255,0.9)",
-    colorText: "rgba(255,255,255,0.88)",
-    colorTextSecondary: "rgba(255,255,255,0.5)",
-    colorNeutral: "rgba(255,255,255,0.7)",
+    colorPrimary: "#e2a45a",
+    colorBackground: "#1a1713",
+    colorInputBackground: "#141210",
+    colorInputText: "rgba(250,245,235,0.92)",
+    colorText: "rgba(250,245,235,0.9)",
+    colorTextSecondary: "rgba(210,190,165,0.58)",
+    colorNeutral: "rgba(210,190,165,0.7)",
     borderRadius: "0.65rem",
     fontFamily: "var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif",
   },

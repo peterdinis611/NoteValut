@@ -33,7 +33,7 @@ export default function GlobalError({ error, reset }: Props) {
 
   return (
     <html lang="en" className="h-full dark">
-      <body className="min-h-full bg-[#12151c] font-sans text-white/90">
+      <body className="min-h-full bg-[#141210] font-sans text-[rgba(250,245,235,0.92)]">
         <LottieStatus
           variant="error"
           title="NoteVault crashed"

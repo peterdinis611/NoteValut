@@ -68,16 +68,15 @@ export type SlashCommand = {
 
 export const COVER_GRADIENTS = [
   { id: "", label: "None" },
-  { id: "from-teal-600/35 to-emerald-500/20", label: "Teal" },
-  { id: "from-violet-600/40 to-indigo-600/25", label: "Violet" },
-  { id: "from-blue-600/40 to-cyan-500/25", label: "Ocean" },
-  { id: "from-amber-500/35 to-orange-600/25", label: "Sunset" },
-  { id: "from-rose-600/35 to-pink-500/25", label: "Rose" },
-  { id: "from-slate-600/40 to-zinc-500/25", label: "Slate" },
-  { id: "from-lime-600/30 to-teal-700/25", label: "Moss" },
-  { id: "from-sky-500/35 to-indigo-700/30", label: "Dusk" },
-  { id: "from-fuchsia-600/30 to-rose-700/25", label: "Bloom" },
-  { id: "from-stone-500/40 to-neutral-700/30", label: "Stone" },
+  { id: "from-amber-500/40 to-orange-700/25", label: "Copper" },
+  { id: "from-sky-600/35 to-cyan-700/25", label: "Harbor" },
+  { id: "from-stone-500/40 to-amber-800/20", label: "Ink" },
+  { id: "from-lime-700/30 to-emerald-800/25", label: "Olive" },
+  { id: "from-rose-700/30 to-orange-800/25", label: "Clay" },
+  { id: "from-slate-600/40 to-zinc-500/25", label: "Stone" },
+  { id: "from-fuchsia-700/25 to-rose-800/25", label: "Plum" },
+  { id: "from-blue-700/35 to-indigo-800/30", label: "Dusk" },
+  { id: "from-teal-700/30 to-emerald-800/25", label: "Moss" },
 ];
 
 /** Curated cover photos (hotlink-friendly Unsplash source URLs). */

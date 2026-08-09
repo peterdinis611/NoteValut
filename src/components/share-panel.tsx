@@ -1,13 +1,23 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { Check, Copy, Eye, Link2, Lock, Pencil, Trash2, X } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Eye,
+  Link2,
+  Lock,
+  Pencil,
+  Trash2,
+  X,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
 import { roleDescription } from "@/lib/ability";
+import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
 import { permissionLabel, shareUrl, type ShareScope } from "@/lib/share";
 import { useToast } from "./toast";
 
@@ -31,6 +41,29 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
 
   const [permission, setPermission] = useState<"read" | "write">("read");
   const [copied, setCopied] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open || !settings) return;
+    if (settings.publicReadonly) setPermission("read");
+  }, [open, settings?.publicReadonly]);
 
   const relevant =
     shares?.filter((s) => {
@@ -39,6 +72,7 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
     }) ?? [];
 
   async function handleCreate() {
+    setBusy(true);
     try {
       await createShare({
         ownerId,
@@ -52,6 +86,8 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
       );
     } catch {
       toast.error("Couldn’t create share link");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -66,7 +102,10 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
     }
   }
 
-  async function handleTogglePermission(share: { _id: Id<"shares">; permission: "read" | "write" }) {
+  async function handleTogglePermission(share: {
+    _id: Id<"shares">;
+    permission: "read" | "write";
+  }) {
     try {
       const next = share.permission === "read" ? "write" : "read";
       await updateShare({ id: share._id, ownerId, permission: next });
@@ -85,7 +124,9 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
     }
   }
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -99,6 +140,9 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
         >
           <motion.div
             className="share-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="share-panel-title"
             onClick={(e) => e.stopPropagation()}
             variants={modalVariants}
             initial="hidden"
@@ -106,25 +150,51 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
             exit="exit"
             transition={easeOutSoft}
           >
-            <div className="share-panel-header">
-              <div className="flex items-center gap-2">
-                <Link2 className="size-4 text-accent" />
-                <span className="font-medium">Share {scopeLabel(scope)}</span>
+            <header className="share-panel-header">
+              <div className="share-panel-heading">
+                <span className="share-panel-icon" aria-hidden>
+                  <Link2 className="size-4" />
+                </span>
+                <div>
+                  <h2 id="share-panel-title" className="share-panel-title">
+                    Share {scopeLabel(scope)}
+                  </h2>
+                  <p className="share-panel-subtitle">
+                    {title
+                      ? `Invite people to “${title}” with a link`
+                      : "Invite people with a link — no account required"}
+                  </p>
+                </div>
               </div>
-              <button type="button" className="topbar-btn" onClick={onClose} aria-label="Close">
+              <button
+                type="button"
+                className="share-panel-close"
+                onClick={onClose}
+                aria-label="Close"
+              >
                 <X className="size-4" />
               </button>
-            </div>
+            </header>
 
             {scope === "vault" && settings && (
-              <div className="share-settings-block">
-                <label className="share-toggle-row">
+              <section className="share-settings-block" aria-label="Sharing preferences">
+                <label className="share-switch">
+                  <span className="share-switch-copy">
+                    <span className="share-switch-label">Enable vault sharing</span>
+                    <span className="share-switch-hint">
+                      Turn this off to pause all vault links
+                    </span>
+                  </span>
                   <input
                     type="checkbox"
+                    role="switch"
                     checked={settings.sharingEnabled}
                     onChange={async (e) => {
                       try {
-                        await updateSettings({ ownerId, sharingEnabled: e.target.checked });
+                        await updateSettings({
+                          ownerId,
+                          sharingEnabled: e.target.checked,
+                        });
                         toast.success(
                           e.target.checked ? "Sharing enabled" : "Sharing disabled",
                         );
@@ -133,111 +203,178 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                       }
                     }}
                   />
-                  <span>Enable vault sharing</span>
+                  <span className="share-switch-track" aria-hidden />
                 </label>
-                <label className="share-toggle-row">
+                <label className="share-switch">
+                  <span className="share-switch-copy">
+                    <span className="share-switch-label">Prefer Viewer links</span>
+                    <span className="share-switch-hint">
+                      New links default to view-only
+                    </span>
+                  </span>
                   <input
                     type="checkbox"
+                    role="switch"
                     checked={settings.publicReadonly}
                     onChange={async (e) => {
                       try {
-                        await updateSettings({ ownerId, publicReadonly: e.target.checked });
+                        await updateSettings({
+                          ownerId,
+                          publicReadonly: e.target.checked,
+                        });
+                        if (e.target.checked) setPermission("read");
                         toast.info(
                           e.target.checked
                             ? "New links default to Viewer"
-                            : "New links can be Editor",
+                            : "Editor links allowed",
                         );
                       } catch {
                         toast.error("Couldn’t update sharing settings");
                       }
                     }}
                   />
-                  <span>Default new links to Viewer</span>
+                  <span className="share-switch-track" aria-hidden />
                 </label>
-              </div>
+              </section>
             )}
 
-            <div className="share-create-row">
-              <select
-                className="share-select"
-                value={permission}
-                onChange={(e) => setPermission(e.target.value as "read" | "write")}
+            <section className="share-create" aria-label="Create share link">
+              <p className="share-section-label">Permission</p>
+              <div className="share-role-seg" role="group" aria-label="Link permission">
+                <button
+                  type="button"
+                  className={`share-role-opt ${permission === "read" ? "share-role-opt-active" : ""}`}
+                  onClick={() => setPermission("read")}
+                >
+                  <Eye className="size-3.5" />
+                  <span>
+                    <strong>Viewer</strong>
+                    <small>{roleDescription("viewer")}</small>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className={`share-role-opt ${permission === "write" ? "share-role-opt-active" : ""}`}
+                  disabled={scope === "vault" && settings?.publicReadonly}
+                  onClick={() => setPermission("write")}
+                >
+                  <Pencil className="size-3.5" />
+                  <span>
+                    <strong>Editor</strong>
+                    <small>{roleDescription("editor")}</small>
+                  </span>
+                </button>
+              </div>
+              <button
+                type="button"
+                className="share-create-btn"
+                disabled={busy || (scope === "vault" && settings?.sharingEnabled === false)}
+                onClick={() => void handleCreate()}
               >
-                <option value="read">Viewer — {roleDescription("viewer")}</option>
-                <option value="write">Editor — {roleDescription("editor")}</option>
-              </select>
-              <button type="button" className="vault-btn-primary" onClick={handleCreate}>
-                Create link
+                <Link2 className="size-3.5" />
+                {busy ? "Creating…" : "Create link"}
               </button>
-            </div>
+            </section>
 
-            <div className="share-list">
-              {relevant.length === 0 ? (
-                <p className="text-sm text-muted">No share links yet.</p>
-              ) : (
-                relevant.map((share) => (
-                  <div key={share._id} className="share-item">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{share.label}</p>
-                      <p className="flex items-center gap-1 text-xs text-muted">
-                        {share.permission === "read" ? (
-                          <Eye className="size-3" />
-                        ) : (
-                          <Pencil className="size-3" />
-                        )}
-                        {permissionLabel(share.permission)}
-                        {!share.enabled && " · Disabled"}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="topbar-btn"
-                      title="Copy link"
-                      onClick={() => copyLink(share.token)}
-                    >
-                      {copied === share.token ? (
-                        <Check className="size-4 text-accent" />
-                      ) : (
-                        <Copy className="size-4" />
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      className="topbar-btn"
-                      title={
-                        share.permission === "read"
-                          ? "Switch to Editor"
-                          : "Switch to Viewer"
-                      }
-                      onClick={() => handleTogglePermission(share)}
-                    >
-                      {share.permission === "read" ? (
-                        <Pencil className="size-4" />
-                      ) : (
-                        <Eye className="size-4" />
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      className="topbar-btn text-red-400"
-                      onClick={() => handleRemove(share._id)}
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+            <section className="share-list-section" aria-label="Active links">
+              <div className="share-list-head">
+                <p className="share-section-label">Active links</p>
+                {relevant.length > 0 && (
+                  <span className="share-list-count">{relevant.length}</span>
+                )}
+              </div>
+              <div className="share-list">
+                {shares === undefined ? (
+                  <p className="share-empty">Loading links…</p>
+                ) : relevant.length === 0 ? (
+                  <div className="share-empty-card">
+                    <Link2 className="size-5 opacity-45" />
+                    <p>No share links yet</p>
+                    <span>Create one above — anyone with the link can open it.</span>
                   </div>
-                ))
-              )}
-            </div>
+                ) : (
+                  relevant.map((share) => (
+                    <div
+                      key={share._id}
+                      className={`share-item ${!share.enabled ? "share-item-disabled" : ""}`}
+                    >
+                      <div className="share-item-main">
+                        <p className="share-item-title">{share.label}</p>
+                        <p className="share-item-meta">
+                          <span
+                            className={`share-item-badge ${
+                              share.permission === "read"
+                                ? "share-item-badge-view"
+                                : "share-item-badge-edit"
+                            }`}
+                          >
+                            {share.permission === "read" ? (
+                              <Eye className="size-3" />
+                            ) : (
+                              <Pencil className="size-3" />
+                            )}
+                            {permissionLabel(share.permission)}
+                          </span>
+                          {!share.enabled && <span>Disabled</span>}
+                        </p>
+                      </div>
+                      <div className="share-item-actions">
+                        <button
+                          type="button"
+                          className="share-icon-btn"
+                          title="Copy link"
+                          aria-label="Copy link"
+                          onClick={() => void copyLink(share.token)}
+                        >
+                          {copied === share.token ? (
+                            <Check className="size-3.5 text-accent" />
+                          ) : (
+                            <Copy className="size-3.5" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          className="share-icon-btn"
+                          title={
+                            share.permission === "read"
+                              ? "Switch to Editor"
+                              : "Switch to Viewer"
+                          }
+                          aria-label="Toggle permission"
+                          onClick={() => void handleTogglePermission(share)}
+                        >
+                          {share.permission === "read" ? (
+                            <Pencil className="size-3.5" />
+                          ) : (
+                            <Eye className="size-3.5" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          className="share-icon-btn share-icon-btn-danger"
+                          title="Remove link"
+                          aria-label="Remove link"
+                          onClick={() => void handleRemove(share._id)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
 
             <p className="share-hint">
-              <Lock className="mr-1 inline size-3" />
-              Link recipients get a CASL role: Viewer (read) or Editor (edit). Only you can
-              create or revoke links.
+              <Lock className="size-3.5 shrink-0" />
+              Recipients open the link as Viewer or Editor. Only you can create or revoke
+              links.
             </p>
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
 

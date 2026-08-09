@@ -1,19 +1,20 @@
 @import "tailwindcss";
 @import "highlight.js/styles/github-dark.css";
 
-/* NoteVault theme */
+/* NoteVault theme — Copper ink */
 :root {
-  --background: #12151c;
-  --foreground: rgba(255, 255, 255, 0.88);
-  --sidebar: #151922;
-  --panel: #1e2430;
-  --hover: rgba(255, 255, 255, 0.05);
-  --hover-strong: rgba(255, 255, 255, 0.09);
-  --border: rgba(255, 255, 255, 0.07);
-  --muted: rgba(255, 255, 255, 0.45);
-  --accent: #3ecfbe;
-  --accent-soft: rgba(62, 207, 190, 0.12);
-  --topbar: #12151c;
+  --background: #141210;
+  --foreground: rgba(250, 245, 235, 0.92);
+  --sidebar: #1a1713;
+  --panel: #24201a;
+  --hover: rgba(255, 236, 210, 0.05);
+  --hover-strong: rgba(255, 236, 210, 0.1);
+  --border: rgba(255, 230, 200, 0.09);
+  --muted: rgba(210, 190, 165, 0.58);
+  --accent: #e2a45a;
+  --accent-soft: rgba(226, 164, 90, 0.14);
+  --accent-bright: color-mix(in srgb, var(--accent) 68%, #fff);
+  --topbar: #141210;
 }
 
 @theme inline {
@@ -86,8 +87,8 @@ body {
   flex: 1;
   flex-direction: column;
   background:
-    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(62, 207, 190, 0.07), transparent 55%),
-    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(90, 120, 180, 0.06), transparent 50%),
+    radial-gradient(ellipse 80% 50% at 20% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 50%),
     var(--background);
 }
 
@@ -129,12 +130,12 @@ body {
   height: 100%;
   flex-shrink: 0;
   flex-direction: column;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-right: 1px solid var(--border);
   background:
-    radial-gradient(ellipse 120% 55% at 0% -5%, rgba(62, 207, 190, 0.09), transparent 55%),
-    radial-gradient(ellipse 80% 40% at 100% 100%, rgba(90, 120, 180, 0.07), transparent 50%),
-    linear-gradient(180deg, #1a1f2a 0%, #151922 100%);
-  color: rgba(255, 255, 255, 0.84);
+    radial-gradient(ellipse 120% 55% at 0% -5%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%),
+    radial-gradient(ellipse 80% 40% at 100% 100%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 50%),
+    linear-gradient(180deg, color-mix(in srgb, var(--sidebar) 88%, #fff) 0%, var(--sidebar) 100%);
+  color: var(--foreground);
   will-change: transform, opacity;
 }
 
@@ -167,9 +168,9 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 0.4rem;
-  background: linear-gradient(145deg, rgba(62, 207, 190, 0.32), rgba(62, 207, 190, 0.08));
-  border: 1px solid rgba(62, 207, 190, 0.28);
-  color: #7eefe2;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 32%, transparent), color-mix(in srgb, var(--accent) 8%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  color: var(--accent-bright);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -266,11 +267,11 @@ body {
 }
 .sidebar-search:focus {
   background: rgba(0, 0, 0, 0.32);
-  border-color: rgba(62, 207, 190, 0.35);
-  box-shadow: 0 0 0 3px rgba(62, 207, 190, 0.1);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 .sidebar-search-wrap:focus-within .sidebar-search-icon {
-  color: rgba(62, 207, 190, 0.85);
+  color: color-mix(in srgb, var(--accent) 85%, transparent);
 }
 .sidebar-search-pending .sidebar-search-icon {
   color: var(--accent);
@@ -353,28 +354,28 @@ body {
 .sidebar-link-active {
   background: linear-gradient(
     90deg,
-    rgba(62, 207, 190, 0.16),
-    rgba(62, 207, 190, 0.06) 70%
+    color-mix(in srgb, var(--accent) 16%, transparent),
+    color-mix(in srgb, var(--accent) 6%, transparent) 70%
   ) !important;
   color: rgba(255, 255, 255, 0.96);
-  box-shadow: inset 2px 0 0 #3ecfbe;
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 .sidebar-link-active svg {
-  color: #7eefe2;
+  color: var(--accent-bright);
 }
 
 .sidebar-link-create {
   color: rgba(255, 255, 255, 0.55);
 }
 .sidebar-link-create svg {
-  color: rgba(62, 207, 190, 0.75);
+  color: color-mix(in srgb, var(--accent) 75%, transparent);
 }
 .sidebar-link-create:hover {
-  background: rgba(62, 207, 190, 0.08);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   color: rgba(255, 255, 255, 0.92);
 }
 .sidebar-link-create:hover svg {
-  color: #3ecfbe;
+  color: var(--accent);
 }
 
 /* Legacy quick/filter classes kept for any residual refs */
@@ -460,8 +461,8 @@ body {
   opacity: 1;
 }
 .sidebar-section-action:hover {
-  background: rgba(62, 207, 190, 0.12);
-  color: #7eefe2;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent-bright);
 }
 
 .sidebar-section-items {
@@ -535,15 +536,15 @@ body {
   gap: 0.3rem;
   border-radius: 0.4rem;
   border: none;
-  background: rgba(62, 207, 190, 0.1);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
   padding: 0.28rem 0.55rem;
   font-size: 0.75rem;
-  color: #7eefe2;
+  color: var(--accent-bright);
   transition: background 0.14s ease, color 0.14s ease;
 }
 .sidebar-empty-cta:hover {
-  background: rgba(62, 207, 190, 0.18);
-  color: #b6f7ef;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent-bright);
 }
 
 .sidebar-item {
@@ -560,10 +561,10 @@ body {
 .sidebar-item-active {
   background: linear-gradient(
     90deg,
-    rgba(62, 207, 190, 0.14),
-    rgba(62, 207, 190, 0.04) 75%
+    color-mix(in srgb, var(--accent) 14%, transparent),
+    color-mix(in srgb, var(--accent) 4%, transparent) 75%
   ) !important;
-  box-shadow: inset 2px 0 0 #3ecfbe;
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .sidebar-item-btn {
@@ -651,10 +652,10 @@ body {
 .sidebar-tree-row:has(.sidebar-item-selected) {
   background: linear-gradient(
     90deg,
-    rgba(62, 207, 190, 0.14),
-    rgba(62, 207, 190, 0.04) 75%
+    color-mix(in srgb, var(--accent) 14%, transparent),
+    color-mix(in srgb, var(--accent) 4%, transparent) 75%
   );
-  box-shadow: inset 2px 0 0 #3ecfbe;
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .sidebar-tree-toggle {
@@ -681,8 +682,8 @@ body {
   opacity: 1;
 }
 .sidebar-tree-add:hover {
-  background: rgba(62, 207, 190, 0.12);
-  color: #7eefe2;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent-bright);
 }
 
 .sidebar-footer {
@@ -752,10 +753,10 @@ body {
   padding: 1.5rem;
   overflow: auto;
   background:
-    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(62, 207, 190, 0.16), transparent 55%),
-    radial-gradient(ellipse 50% 40% at 100% 100%, rgba(90, 120, 180, 0.1), transparent 50%),
-    radial-gradient(ellipse 40% 35% at 0% 80%, rgba(62, 207, 190, 0.06), transparent 45%),
-    #0c0f14;
+    radial-gradient(ellipse 90% 55% at 50% -15%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 100% 100%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 50%),
+    radial-gradient(ellipse 40% 35% at 0% 80%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 45%),
+    var(--background);
 }
 .clerk-auth-shell {
   display: flex;
@@ -796,9 +797,9 @@ body {
   height: 2.5rem;
   flex-shrink: 0;
   border-radius: 0.65rem;
-  background: linear-gradient(145deg, rgba(62, 207, 190, 0.28), rgba(62, 207, 190, 0.08));
-  border: 1px solid rgba(62, 207, 190, 0.28);
-  color: #3ecfbe;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 28%, transparent), color-mix(in srgb, var(--accent) 8%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  color: var(--accent);
   font-size: 1.05rem;
   font-weight: 700;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
@@ -813,15 +814,15 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 .clerk-primary-btn {
-  background: #3ecfbe !important;
-  color: #0c0f14 !important;
+  background: var(--accent) !important;
+  color: #141210 !important;
   font-weight: 600 !important;
 }
 .clerk-primary-btn:hover {
   background: #4dd9c8 !important;
 }
 .clerk-footer-link {
-  color: #3ecfbe !important;
+  color: var(--accent) !important;
 }
 .clerk-social-btn {
   border-color: rgba(255, 255, 255, 0.1) !important;
@@ -833,7 +834,7 @@ body {
   color: rgba(255, 255, 255, 0.45);
 }
 .clerk-auth-hint-link {
-  color: #3ecfbe;
+  color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -878,12 +879,12 @@ body {
   margin-left: auto;
   min-width: 1.15rem;
   border-radius: 999px;
-  background: rgba(62, 207, 190, 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   padding: 0.05rem 0.35rem;
   font-size: 0.6875rem;
   font-weight: 550;
   text-align: center;
-  color: #7eefe2;
+  color: var(--accent-bright);
 }
 
 .sidebar-archive-list {
@@ -2036,7 +2037,7 @@ body {
   width: 28rem;
   height: 14rem;
   transform: translateX(-50%);
-  background: radial-gradient(ellipse, rgba(62, 207, 190, 0.14), transparent 70%);
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%);
   filter: blur(2px);
 }
 
@@ -2984,54 +2985,390 @@ body {
 .share-overlay {
   position: fixed;
   inset: 0;
-  z-index: 70;
+  z-index: 120;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
-  padding: 1.5rem;
+  padding: 1.25rem;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 35%, rgba(20, 36, 42, 0.35), transparent 60%),
+    rgba(4, 6, 10, 0.72);
+  backdrop-filter: blur(6px);
 }
 
 .share-panel {
   width: 100%;
-  max-width: 26rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border);
-  background: var(--sidebar);
-  padding: 1.25rem;
-  box-shadow: 0 16px 48px rgb(0 0 0 / 0.5);
+  max-width: 26.5rem;
+  max-height: min(36rem, calc(100dvh - 2.5rem));
+  overflow: auto;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--accent) 8%, transparent),
+      transparent 38%
+    ),
+    color-mix(in srgb, var(--panel) 96%, #0a0d12);
+  padding: 1.15rem 1.2rem 1.1rem;
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #fff 5%, transparent) inset,
+    0 24px 64px rgb(0 0 0 / 0.55);
 }
 
 .share-panel-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 1rem;
+  gap: 0.75rem;
+  margin-bottom: 1.05rem;
+}
+.share-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  min-width: 0;
+}
+.share-panel-icon {
+  display: grid;
+  place-items: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  flex-shrink: 0;
+  border-radius: 0.55rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.share-panel-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+.share-panel-subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.share-panel-close {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: 0.45rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.share-panel-close:hover {
+  background: var(--hover);
+  border-color: var(--border);
+  color: var(--foreground);
 }
 
 .share-settings-block {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.45rem;
   margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border);
+  padding: 0.55rem;
+  border-radius: 0.7rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 45%, transparent);
 }
 
-.share-toggle-row {
+.share-switch {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.5rem;
   cursor: pointer;
 }
-.share-toggle-row input { accent-color: var(--accent); }
-
-.share-create-row {
+.share-switch:hover {
+  background: color-mix(in srgb, var(--hover) 70%, transparent);
+}
+.share-switch-copy {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.share-switch-label {
+  font-size: 0.8125rem;
+  font-weight: 550;
+  color: var(--foreground);
+}
+.share-switch-hint {
+  font-size: 0.7rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.share-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.share-switch-track {
+  position: relative;
+  width: 2.4rem;
+  height: 1.35rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border) 80%, #000);
+  border: 1px solid var(--border);
+  transition: background 0.15s, border-color 0.15s;
+}
+.share-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 999px;
+  background: #e8eef5;
+  transition: transform 0.15s;
+}
+.share-switch input:checked + .share-switch-track {
+  background: color-mix(in srgb, var(--accent) 55%, #0d3a36);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.share-switch input:checked + .share-switch-track::after {
+  transform: translateX(1rem);
+  background: #fff;
+}
+.share-switch input:focus-visible + .share-switch-track {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.share-create {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
   margin-bottom: 1rem;
+}
+.share-section-label {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.share-role-seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+.share-role-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  text-align: left;
+  padding: 0.65rem 0.6rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 40%, transparent);
+  color: var(--muted);
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+.share-role-opt strong {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: inherit;
+}
+.share-role-opt small {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.65rem;
+  line-height: 1.35;
+  opacity: 0.85;
+}
+.share-role-opt:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  color: var(--foreground);
+}
+.share-role-opt-active {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--accent-soft);
+  color: var(--foreground);
+}
+.share-role-opt-active strong {
+  color: var(--accent-bright);
+}
+.share-role-opt:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.share-create-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.45rem;
+  border-radius: 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent-bright);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.12s, color 0.12s, transform 0.12s;
+}
+.share-create-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: var(--foreground);
+  transform: translateY(-1px);
+}
+.share-create-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.share-list-section {
+  margin-bottom: 0.85rem;
+}
+.share-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.45rem;
+}
+.share-list-count {
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: var(--muted);
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+.share-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.share-empty,
+.share-empty-card {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+.share-empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  text-align: center;
+  padding: 1.25rem 0.85rem;
+  border-radius: 0.65rem;
+  border: 1px dashed var(--border);
+  background: color-mix(in srgb, var(--background) 35%, transparent);
+}
+.share-empty-card p {
+  margin: 0.25rem 0 0;
+  font-weight: 550;
+  color: var(--foreground);
+}
+.share-empty-card span {
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.share-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.7rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 40%, transparent);
+}
+.share-item-disabled {
+  opacity: 0.65;
+}
+.share-item-main {
+  min-width: 0;
+  flex: 1;
+}
+.share-item-title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.share-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+.share-item-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.share-item-badge-view {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: #9ee9df;
+}
+.share-item-badge-edit {
+  background: color-mix(in srgb, #7aa2ff 14%, transparent);
+  color: #b8ccff;
+}
+.share-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+.share-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 0.4rem;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  transition: background 0.12s, color 0.12s;
+}
+.share-icon-btn:hover {
+  background: var(--hover);
+  color: var(--foreground);
+}
+.share-icon-btn-danger:hover {
+  background: color-mix(in srgb, #e07070 16%, transparent);
+  color: #f0a0a0;
+}
+
+.share-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.4;
 }
 
 .share-select {
@@ -3044,29 +3381,22 @@ body {
   color: var(--foreground);
 }
 
-.share-list {
+.share-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.share-toggle-row input {
+  accent-color: var(--accent);
+}
+
+.share-create-row {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  max-height: 14rem;
-  overflow-y: auto;
-  margin-bottom: 0.75rem;
-}
-
-.share-item {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.625rem 0.75rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--border);
-  background: var(--panel);
-}
-
-.share-hint {
-  font-size: 0.75rem;
-  color: var(--muted);
-  line-height: 1.4;
+  margin-bottom: 1rem;
 }
 
 /* Shared vault sidebar */
@@ -3436,7 +3766,7 @@ body {
   flex-direction: column;
   border-radius: 0.85rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: color-mix(in srgb, #151922 92%, #000);
+  background: color-mix(in srgb, var(--sidebar) 92%, #000);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.4),
     0 22px 56px rgb(0 0 0 / 0.55);
@@ -6896,7 +7226,7 @@ body {
   transition: color 0.12s ease, opacity 0.12s ease;
 }
 .vault-calendar-open:hover {
-  color: #7eefe2;
+  color: var(--accent-bright);
 }
 
 /* Calendar page */
@@ -6921,7 +7251,7 @@ body {
   border-radius: 0.9rem;
   border: 1px solid var(--border);
   background:
-    radial-gradient(ellipse 80% 50% at 0% 0%, rgba(62, 207, 190, 0.08), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 0% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 55%),
     color-mix(in srgb, var(--panel) 60%, transparent);
 }
 .calendar-month-head {
@@ -6995,7 +7325,7 @@ body {
   outline-offset: 1px;
 }
 .calendar-cell-remind .calendar-cell-num {
-  color: #b6f7ef;
+  color: var(--accent-bright);
 }
 .calendar-cell-num {
   font-size: 0.9rem;
@@ -7003,7 +7333,7 @@ body {
   line-height: 1;
 }
 .calendar-cell-today .calendar-cell-num {
-  color: #7eefe2;
+  color: var(--accent-bright);
 }
 .calendar-cell-marks {
   display: flex;
@@ -7053,7 +7383,7 @@ body {
 .calendar-remind-scheduled {
   margin: 0.25rem 0 0;
   font-size: 0.75rem;
-  color: #7eefe2;
+  color: var(--accent-bright);
 }
 .calendar-remind-actions {
   display: flex;
@@ -7098,7 +7428,7 @@ body {
 }
 .calendar-agenda-remind-at {
   font-size: 0.7rem;
-  color: #7eefe2;
+  color: var(--accent-bright);
 }
 .calendar-agenda {
   padding: 1rem 1rem 1.1rem;
@@ -7162,7 +7492,7 @@ body {
   color: var(--muted);
 }
 .calendar-agenda-item-today .calendar-agenda-day {
-  color: #7eefe2;
+  color: var(--accent-bright);
 }
 .calendar-agenda-title {
   font-size: 0.8125rem;
@@ -8300,7 +8630,7 @@ body {
 .notevault-driver-popover .driver-popover-next-btn {
   border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
   background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: #b6f7ef;
+  color: var(--accent-bright);
 }
 .notevault-driver-popover .driver-popover-prev-btn:hover,
 .notevault-driver-popover .driver-popover-next-btn:hover {
