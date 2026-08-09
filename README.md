@@ -112,10 +112,16 @@ npm run build
 | `npm run build` | Next production build |
 | `npm run build:vercel` | `convex deploy` + Next build (Vercel) |
 | `npm run deploy:convex` | Deploy Convex only |
+| `npm run lint` | Biome check (lint + format) |
+| `npm run format` | Biome format (write) |
+| `npm run check` | Biome check with safe fixes |
+| `npm run lint:eslint` | ESLint (Next + Storybook) |
 | `npm test` / `npm run test:e2e` | Playwright e2e (chromium) |
+| `npm run test:e2e:all` | Chromium + Firefox + WebKit |
+| `npm run test:e2e:firefox` / `:webkit` / `:mobile` | Single browser / Pixel 5 |
 | `npm run test:e2e:ui` | Playwright UI mode |
 | `npm run test:e2e:storybook` | Storybook smoke (opt-in) |
-| `npm run playwright:install` | Install Chromium for Playwright |
+| `npm run playwright:install` | Install Chromium, Firefox, WebKit |
 
 ## Environment
 
