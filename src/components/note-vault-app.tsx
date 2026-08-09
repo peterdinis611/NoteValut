@@ -10,11 +10,14 @@ import { VaultAccessProvider } from "@/context/vault-access";
 import { toDailyKey } from "@/lib/daily";
 import { easeQuick, pageVariants, sidebarSpring } from "@/lib/motion";
 import { getTemplate } from "@/lib/templates";
+import { downloadVaultMarkdown } from "@/lib/export-vault-md";
+import { startVaultTour } from "@/lib/onboarding";
 import { downloadVaultBackup } from "@/lib/vault-backup";
 import { useOwnerId } from "@/hooks/use-owner-id";
 import { useVaultSettings } from "@/hooks/use-vault-settings";
 import { CalendarPage } from "./calendar-page";
 import { CommandIcons, CommandPalette, type CommandAction } from "./command-palette";
+import { DueInbox } from "./due-inbox";
 import { KeyboardCheatSheet } from "./keyboard-cheat-sheet";
 import { GraphView } from "./graph-view";
 import { LottieStatus } from "./lottie-status";
@@ -24,11 +27,12 @@ import { ReminderListener } from "./reminder-listener";
 import { ScrollToTop } from "./scroll-to-top";
 import { SettingsPage } from "./settings-page";
 import { Sidebar } from "./sidebar";
+import { SoftErrorBoundary } from "./soft-error-boundary";
 import { TagsHub } from "./tags-hub";
 import { useToast } from "./toast";
 import { VaultHome } from "./vault-home";
 
-type MainPanel = "home" | "note" | "settings" | "tags" | "calendar";
+type MainPanel = "home" | "note" | "settings" | "tags" | "calendar" | "due";
 
 function useIsMobile(breakpoint = 768) {
   const [mobile, setMobile] = useState(false);
@@ -62,6 +66,7 @@ export function NoteVaultApp() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTags, setShowTags] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showDueInbox, setShowDueInbox] = useState(false);
   const [focusTag, setFocusTag] = useState<string | null>(null);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -105,6 +110,7 @@ export function NoteVaultApp() {
     setShowSettings(false);
     setShowTags(false);
     setShowCalendar(false);
+    setShowDueInbox(false);
     setFocusTag(null);
   }, []);
 
@@ -113,6 +119,7 @@ export function NoteVaultApp() {
       setActiveId(null);
       setShowSettings(false);
       setShowCalendar(false);
+      setShowDueInbox(false);
       setFocusTag(tag ?? null);
       setShowTags(true);
       if (isMobile) setSidebarOpen(false);
@@ -124,8 +131,19 @@ export function NoteVaultApp() {
     setActiveId(null);
     setShowSettings(false);
     setShowTags(false);
+    setShowDueInbox(false);
     setFocusTag(null);
     setShowCalendar(true);
+    if (isMobile) setSidebarOpen(false);
+  }, [isMobile]);
+
+  const openDueInbox = useCallback(() => {
+    setActiveId(null);
+    setShowSettings(false);
+    setShowTags(false);
+    setShowCalendar(false);
+    setFocusTag(null);
+    setShowDueInbox(true);
     if (isMobile) setSidebarOpen(false);
   }, [isMobile]);
 
@@ -211,6 +229,15 @@ export function NoteVaultApp() {
     toast.success(`Exported ${exportData.notes.length} items`);
   }, [exportData, toast]);
 
+  const handleExportMarkdown = useCallback(() => {
+    if (!exportData) {
+      toast.error("Export isn’t ready yet");
+      return;
+    }
+    downloadVaultMarkdown(exportData);
+    toast.success("Downloaded vault Markdown");
+  }, [exportData, toast]);
+
   const cmdActions: CommandAction[] = useMemo(
     () => [
       {
@@ -256,6 +283,14 @@ export function NoteVaultApp() {
         run: () => openCalendar(),
       },
       {
+        id: "due-inbox",
+        label: "Due inbox",
+        hint: "Overdue, today, upcoming todos",
+        icon: CommandIcons.due,
+        keywords: ["tasks", "todo", "deadline", "overdue"],
+        run: () => openDueInbox(),
+      },
+      {
         id: "quick-capture",
         label: "Quick capture",
         icon: CommandIcons.capture,
@@ -280,6 +315,7 @@ export function NoteVaultApp() {
           setActiveId(null);
           setShowTags(false);
           setShowCalendar(false);
+          setShowDueInbox(false);
           setFocusTag(null);
           setShowSettings(true);
         },
@@ -291,6 +327,27 @@ export function NoteVaultApp() {
         icon: CommandIcons.export,
         keywords: ["backup", "download"],
         run: handleExport,
+      },
+      {
+        id: "export-md",
+        label: "Export vault Markdown",
+        hint: "All pages as one .md",
+        icon: CommandIcons.export,
+        keywords: ["backup", "markdown", "md"],
+        run: handleExportMarkdown,
+      },
+      {
+        id: "tour",
+        label: "Take a tour",
+        hint: "Intro to NoteVault",
+        icon: CommandIcons.home,
+        keywords: ["onboarding", "help", "guide", "intro", "driver"],
+        run: () => {
+          clearPanels();
+          setActiveId(null);
+          setSidebarOpen(true);
+          window.setTimeout(() => startVaultTour(), 350);
+        },
       },
       {
         id: "shortcuts",
@@ -309,7 +366,7 @@ export function NoteVaultApp() {
         run: () => setGraphOpen(true),
       },
     ],
-    [clearPanels, handleCreateEntry, handleCreateCollection, handleExport, openToday, openTags, openCalendar],
+    [clearPanels, handleCreateEntry, handleCreateCollection, handleExport, handleExportMarkdown, openToday, openTags, openCalendar, openDueInbox],
   );
 
   if (!ownerId) {
@@ -329,16 +386,20 @@ export function NoteVaultApp() {
       ? "tags"
       : showCalendar
         ? "calendar"
-        : activeId
-          ? "note"
-          : "home";
+        : showDueInbox
+          ? "due"
+          : activeId
+            ? "note"
+            : "home";
 
   return (
     <VaultAccessProvider isOwner role="owner">
-      <ReminderListener
-        ownerId={ownerId}
-        onOpenNote={(id) => selectNote(id as Id<"notes">)}
-      />
+      <SoftErrorBoundary>
+        <ReminderListener
+          ownerId={ownerId}
+          onOpenNote={(id) => selectNote(id as Id<"notes">)}
+        />
+      </SoftErrorBoundary>
       <div className={`app-shell ${isMobile ? "app-shell-mobile" : ""} ${sidebarOpen ? "app-shell-sidebar-open" : ""}`}>
         <AnimatePresence initial={false}>
           {isMobile && sidebarOpen && (
@@ -360,6 +421,7 @@ export function NoteVaultApp() {
               settingsActive={showSettings}
               tagsActive={showTags}
               calendarActive={showCalendar}
+              dueActive={showDueInbox}
               mobile={isMobile}
               onSelect={selectNote}
               onGoHome={() => {
@@ -371,12 +433,14 @@ export function NoteVaultApp() {
                 setActiveId(null);
                 setShowTags(false);
                 setShowCalendar(false);
+                setShowDueInbox(false);
                 setFocusTag(null);
                 setShowSettings(true);
                 if (isMobile) setSidebarOpen(false);
               }}
               onOpenTags={() => openTags()}
               onOpenCalendar={openCalendar}
+              onOpenDueInbox={openDueInbox}
               onCollapse={() => setSidebarOpen(false)}
               onCreateEntry={handleCreateEntry}
               onCreateCollection={handleCreateCollection}
@@ -419,6 +483,13 @@ export function NoteVaultApp() {
                   ownerId={ownerId}
                   onClose={() => setShowSettings(false)}
                   onExport={handleExport}
+                  onExportMarkdown={handleExportMarkdown}
+                  onStartTour={() => {
+                    clearPanels();
+                    setActiveId(null);
+                    setSidebarOpen(true);
+                    window.setTimeout(() => startVaultTour(), 400);
+                  }}
                 />
               ) : panel === "tags" ? (
                 <TagsHub
@@ -430,12 +501,36 @@ export function NoteVaultApp() {
                   }}
                   onNavigate={selectNote}
                 />
-              ) : panel === "calendar" ? (
-                <CalendarPage
+              ) : panel === "due" ? (
+                <DueInbox
                   ownerId={ownerId}
-                  onClose={() => setShowCalendar(false)}
+                  onClose={() => setShowDueInbox(false)}
                   onNavigate={selectNote}
                 />
+              ) : panel === "calendar" ? (
+                <SoftErrorBoundary
+                  fallback={
+                    <LottieStatus
+                      compact
+                      variant="error"
+                      title="Calendar unavailable"
+                      description="Reminders aren’t synced yet. Run convex deploy / npx convex dev, then try again."
+                      actions={[
+                        {
+                          label: "Back to vault",
+                          onClick: () => setShowCalendar(false),
+                          primary: true,
+                        },
+                      ]}
+                    />
+                  }
+                >
+                  <CalendarPage
+                    ownerId={ownerId}
+                    onClose={() => setShowCalendar(false)}
+                    onNavigate={selectNote}
+                  />
+                </SoftErrorBoundary>
               ) : panel === "note" && activeId ? (
                 <NoteEditor
                   noteId={activeId}
@@ -456,6 +551,7 @@ export function NoteVaultApp() {
                   onQuickCapture={() => setQuickCaptureOpen(true)}
                   onOpenGraph={() => setGraphOpen(true)}
                   onOpenCalendar={openCalendar}
+                  onOpenDueInbox={openDueInbox}
                 />
               )}
             </motion.div>
@@ -475,6 +571,7 @@ export function NoteVaultApp() {
             notes={notes?.filter((n) => !n.archived && !n.trashed)}
             actions={cmdActions}
             onNavigate={selectNote}
+            ownerId={ownerId}
           />
           <KeyboardCheatSheet open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
           <GraphView

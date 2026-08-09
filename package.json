@@ -11,7 +11,14 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "deploy:convex": "convex deploy"
+    "test:e2e": "playwright test --project=chromium",
+    "test:e2e:ui": "playwright test --project=chromium --ui",
+    "test:e2e:storybook": "playwright test --project=storybook",
+    "playwright:install": "playwright install chromium",
+    "deploy:convex": "convex deploy",
+    "postinstall": "mkdir -p public/embedpdf && cp node_modules/@embedpdf/pdfium/dist/pdfium.wasm public/embedpdf/pdfium.wasm",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "engines": {
     "node": ">=20.9.0"
@@ -26,6 +33,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@embedpdf/core": "^2.14.4",
     "@embedpdf/engines": "^2.14.4",
+    "@embedpdf/pdfium": "^2.14.4",
     "@embedpdf/plugin-document-manager": "^2.14.4",
     "@embedpdf/plugin-render": "^2.14.4",
     "@embedpdf/plugin-scroll": "^2.14.4",
@@ -36,6 +44,7 @@
     "@tanstack/react-pacer": "^0.22.1",
     "@tanstack/react-virtual": "^3.14.6",
     "convex": "^1.42.1",
+    "driver.js": "^1.8.0",
     "fuse.js": "^7.5.0",
     "highlight.js": "^11.11.1",
     "lottie-react": "^2.4.1",
@@ -44,9 +53,14 @@
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "valibot": "^1.4.2"
+    "valibot": "^1.4.2",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@storybook/addon-a11y": "^10.5.7",
+    "@storybook/addon-docs": "^10.5.7",
+    "@storybook/nextjs-vite": "^10.5.7",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -55,12 +69,16 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "@vitejs/plugin-react": "^6.0.3",
     "@vitest/coverage-v8": "^4.1.10",
     "concurrently": "^10.0.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "eslint-plugin-storybook": "^10.5.7",
     "jsdom": "^29.1.1",
+    "playwright": "^1.55.0",
+    "storybook": "^10.5.7",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"

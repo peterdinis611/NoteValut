@@ -1,8 +1,10 @@
 "use client";
 
 import { useDebouncedValue } from "@tanstack/react-pacer";
+import { useQuery } from "convex/react";
 import {
   Archive,
+  CalendarClock,
   CalendarDays,
   Download,
   FolderOpen,
@@ -21,6 +23,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { isFolder } from "@/lib/item-kinds";
 import { searchNotes } from "@/lib/search";
@@ -41,13 +44,27 @@ type Props = {
   notes: Doc<"notes">[] | undefined;
   actions: CommandAction[];
   onNavigate: (id: Id<"notes">) => void;
+  ownerId?: string;
 };
 
-export function CommandPalette({ open, onClose, notes, actions, onNavigate }: Props) {
+export function CommandPalette({
+  open,
+  onClose,
+  notes,
+  actions,
+  onNavigate,
+  ownerId,
+}: Props) {
   const [query, setQuery] = useState("");
   const [debouncedQuery] = useDebouncedValue(query, { wait: 80 });
   const [index, setIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const q = debouncedQuery.trim();
+  const serverHits = useQuery(
+    api.notes.search,
+    open && ownerId && q.length >= 2 ? { ownerId, query: q, limit: 12 } : "skip",
+  );
 
   useEffect(() => {
     if (!open) {
@@ -61,11 +78,14 @@ export function CommandPalette({ open, onClose, notes, actions, onNavigate }: Pr
 
   const noteHits = useMemo(() => {
     if (!notes) return [];
-    const q = debouncedQuery.trim();
     const pool = notes.filter((n) => !isFolder(n));
     if (!q) return pool.slice(0, 8);
+    // Prefer Convex FTS when indexed results are ready
+    if (q.length >= 2 && serverHits !== undefined) {
+      if (serverHits.length > 0) return serverHits;
+    }
     return searchNotes(pool, q).slice(0, 12);
-  }, [notes, debouncedQuery]);
+  }, [notes, q, serverHits]);
 
   const actionHits = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
@@ -238,6 +258,7 @@ export const CommandIcons = {
   capture: <Zap className="size-3.5" />,
   today: <Sun className="size-3.5" />,
   calendar: <CalendarDays className="size-3.5" />,
+  due: <CalendarClock className="size-3.5" />,
   export: <Download className="size-3.5" />,
   import: <Upload className="size-3.5" />,
   hash: <Hash className="size-3.5" />,

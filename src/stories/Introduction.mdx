@@ -1,0 +1,28 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="App/Introduction" />
+
+# NoteVault Storybook
+
+Component and app-shell stories for the NoteVault Next.js vault.
+
+## How to use
+
+- Use the **Theme** toolbar to switch Copper ink / Harbor / Olive / Stone presets (CSS variables on `:root`).
+- Convex queries are mocked per-story via `parameters.convex.queries` (keys like `notes:list`).
+- Clerk auth is stubbed (`@clerk/nextjs` → `.storybook/mocks/clerk-nextjs.tsx`).
+- Toasts are available globally through `ToastProvider` in the preview decorator.
+
+## Fixtures
+
+Shared sample data lives in `.storybook/fixtures.ts`:
+
+- `ownerId`, `noteId(n)`, `sampleNote`, `sampleNotes`, `sampleBlocks`
+- `breadcrumbCrumbs`, `vaultStats`, `sampleSlashCommands`
+
+## Layout tips
+
+| Surface | Suggested layout |
+| --- | --- |
+| Sidebars / editors / dialogs | `fullscreen` |
+| Small widgets (tooltips, pickers) | `padded` / `centered` |

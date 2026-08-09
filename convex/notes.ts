@@ -4,6 +4,7 @@ import { assertCanAccessNote, requireOwner } from "./lib/auth";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { blockValidator } from "./block";
+import { buildNoteSearchText } from "./lib/searchText";
 import { snapshotNote } from "./versions";
 import {
   assertTags,
@@ -62,6 +63,52 @@ export const list = query({
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return b.updatedAt - a.updatedAt;
     });
+  },
+});
+
+/** Full-text search via Convex searchIndex (falls back gracefully if empty). */
+export const search = query({
+  args: {
+    ownerId: v.string(),
+    query: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const q = args.query.trim();
+    if (!q) return [];
+    const limit = Math.min(args.limit ?? 24, 48);
+    const hits = await ctx.db
+      .query("notes")
+      .withSearchIndex("search_body", (s) =>
+        s.search("searchText", q).eq("ownerId", args.ownerId),
+      )
+      .take(limit * 2);
+
+    return hits
+      .filter((n) => !n.trashed && !n.archived)
+      .slice(0, limit);
+  },
+});
+
+/** Backfill searchText for existing notes (run once after deploy). */
+export const reindexSearch = mutation({
+  args: { ownerId: v.string() },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const notes = await ctx.db
+      .query("notes")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+    let updated = 0;
+    for (const note of notes) {
+      const searchText = buildNoteSearchText(note);
+      if (note.searchText !== searchText) {
+        await ctx.db.patch(note._id, { searchText });
+        updated += 1;
+      }
+    }
+    return { total: notes.length, updated };
   },
 });
 
@@ -279,15 +326,26 @@ export const create = mutation({
     const isFolder = kind === "folder";
     const blocks = isFolder ? undefined : (args.blocks ?? [{ id: newId(), type: "paragraph", text: "" }]);
     const content = blocks ? blocks.map((b) => b.text).join("\n") : "";
+    const title = args.title ?? (isFolder ? "New collection" : "Untitled");
+    const tags = assertTags(args.tags ?? []);
+    const folderBlocks = isFolder
+      ? ([{ id: newId(), type: "paragraph" as const, text: "" }] as const)
+      : undefined;
+    const searchText = buildNoteSearchText({
+      title,
+      content,
+      description: args.description,
+      tags,
+      blocks,
+      folderBlocks: folderBlocks ? [...folderBlocks] : undefined,
+    });
 
     return await ctx.db.insert("notes", {
       ownerId: args.ownerId,
-      title: args.title ?? (isFolder ? "New collection" : "Untitled"),
+      title,
       content,
       blocks,
-      folderBlocks: isFolder
-        ? [{ id: newId(), type: "paragraph", text: "" }]
-        : undefined,
+      folderBlocks: folderBlocks ? [...folderBlocks] : undefined,
       icon: args.icon ?? (isFolder ? "🗂️" : "📝"),
       parentId: args.parentId,
       kind,
@@ -300,8 +358,9 @@ export const create = mutation({
       pinned: false,
       archived: false,
       trashed: false,
-      tags: assertTags(args.tags ?? []),
+      tags,
       sortOrder: now,
+      searchText,
       updatedAt: now,
     });
   },
@@ -365,6 +424,34 @@ export const update = mutation({
     if (patch.pinned !== undefined) updates.pinned = patch.pinned;
     if (patch.archived !== undefined) updates.archived = patch.archived;
     if (patch.parentId !== undefined) updates.parentId = patch.parentId ?? undefined;
+
+    const nextTitle = (updates.title as string | undefined) ?? existing.title;
+    const nextContent = (updates.content as string | undefined) ?? existing.content;
+    const nextBlocks =
+      (updates.blocks as typeof existing.blocks | undefined) ?? existing.blocks;
+    const nextFolderBlocks =
+      (updates.folderBlocks as typeof existing.folderBlocks | undefined) ??
+      existing.folderBlocks;
+    const nextDescription =
+      updates.description !== undefined
+        ? (updates.description as string | undefined)
+        : existing.description;
+    const nextStatus =
+      updates.status !== undefined
+        ? (updates.status as string | undefined)
+        : existing.status;
+    const nextTags =
+      (updates.tags as string[] | undefined) ?? existing.tags;
+
+    updates.searchText = buildNoteSearchText({
+      title: nextTitle,
+      content: nextContent,
+      description: nextDescription,
+      status: nextStatus,
+      tags: nextTags,
+      blocks: nextBlocks,
+      folderBlocks: nextFolderBlocks,
+    });
 
     const contentChanging =
       patch.title !== undefined ||

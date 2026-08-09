@@ -171,5 +171,12 @@ export const fire = internalMutation({
       status: "fired",
       firedAt: Date.now(),
     });
+    await ctx.scheduler.runAfter(0, internal.pushActions.sendReminderPush, {
+      ownerId: row.ownerId,
+      title: "NoteVault reminder",
+      body: row.title,
+      noteId: row.noteId ? String(row.noteId) : undefined,
+      reminderId: String(args.reminderId),
+    });
   },
 });

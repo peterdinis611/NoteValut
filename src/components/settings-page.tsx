@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  Bell,
+  Compass,
   Database,
   Eye,
   FileUp,
@@ -33,6 +35,7 @@ import { removeCustomTemplate } from "@/db/templates-collection";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { useVaultSettings } from "@/hooks/use-vault-settings";
 import { importMarkdownFiles } from "@/lib/import-notes";
+import { startVaultTour } from "@/lib/onboarding";
 import { easeOutSoft, fadeUpVariants } from "@/lib/motion";
 import { listDefaultTemplates } from "@/lib/templates";
 import { parseVaultBackupFile } from "@/lib/vault-backup";
@@ -41,6 +44,7 @@ import {
   type PreviewableTemplate,
 } from "./template-preview-dialog";
 import { TemplateEditorDialog } from "./template-editor-dialog";
+import { PushNotificationSettings } from "./push-notification-settings";
 import { useToast } from "./toast";
 
 const MAX_CSS_BYTES = 100_000;
@@ -50,13 +54,22 @@ type Props = {
   ownerId: string;
   onClose: () => void;
   onExport?: () => void;
+  onExportMarkdown?: () => void;
+  onStartTour?: () => void;
 };
 
-export function SettingsPage({ ownerId, onClose, onExport }: Props) {
+export function SettingsPage({
+  ownerId,
+  onClose,
+  onExport,
+  onExportMarkdown,
+  onStartTour,
+}: Props) {
   const toast = useToast();
   const settings = useVaultSettings();
   const templates = useCustomTemplates();
   const importVault = useMutation(api.notes.importVault);
+  const reindexSearch = useMutation(api.notes.reindexSearch);
   const fileRef = useRef<HTMLInputElement>(null);
   const fontFileRef = useRef<HTMLInputElement>(null);
   const backupFileRef = useRef<HTMLInputElement>(null);
@@ -233,6 +246,33 @@ export function SettingsPage({ ownerId, onClose, onExport }: Props) {
 
       <section className="settings-section">
         <div className="settings-section-head">
+          <Compass className="size-4 text-accent" />
+          <div>
+            <h2>Getting started</h2>
+            <p>A short walkthrough of the vault</p>
+          </div>
+        </div>
+        <div className="settings-css-toolbar">
+          <button
+            type="button"
+            className="settings-btn"
+            onClick={() => {
+              if (onStartTour) {
+                onStartTour();
+              } else {
+                onClose();
+                window.setTimeout(() => startVaultTour(), 350);
+              }
+            }}
+          >
+            <Compass className="size-3.5" />
+            Take a tour
+          </button>
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-section-head">
           <Palette className="size-4 text-accent" />
           <div>
             <h2>Appearance</h2>
@@ -326,7 +366,7 @@ export function SettingsPage({ ownerId, onClose, onExport }: Props) {
               onClick={() => {
                 clearCustomTheme();
                 setCssDraft("");
-                toast.success("Reset to Teal night");
+                toast.success("Reset to Copper ink");
               }}
             >
               <RotateCcw className="size-3.5" />
@@ -347,7 +387,7 @@ export function SettingsPage({ ownerId, onClose, onExport }: Props) {
           <textarea
             className="settings-css-editor"
             spellCheck={false}
-            placeholder={`:root {\n  --accent: #3ecfbe;\n  --background: #12151c;\n}`}
+            placeholder={`:root {\n  --accent: #e2a45a;\n  --background: #141210;\n}`}
             value={cssDraft}
             onChange={(e) => setCssDraft(e.target.value)}
             rows={10}
@@ -493,6 +533,15 @@ export function SettingsPage({ ownerId, onClose, onExport }: Props) {
           <button
             type="button"
             className="settings-btn"
+            onClick={() => onExportMarkdown?.()}
+            disabled={!onExportMarkdown}
+          >
+            <FileText className="size-3.5" />
+            Export Markdown
+          </button>
+          <button
+            type="button"
+            className="settings-btn"
             disabled={importing}
             onClick={() => backupFileRef.current?.click()}
           >
@@ -512,9 +561,41 @@ export function SettingsPage({ ownerId, onClose, onExport }: Props) {
           />
         </div>
         <p className="settings-hint">
-          Export includes pages and collections (not trash). Import merges as new items and
-          remaps parent links.
+          Export includes pages and collections (not trash). Markdown dumps pages as
+          one file. Import merges as new items and remaps parent links.
         </p>
+        <div className="settings-css-toolbar" style={{ marginTop: "0.75rem" }}>
+          <button
+            type="button"
+            className="settings-btn settings-btn-ghost"
+            disabled={importing}
+            onClick={() => {
+              void (async () => {
+                try {
+                  const res = await reindexSearch({ ownerId });
+                  toast.success(
+                    `Search index updated (${res.updated}/${res.total} notes)`,
+                  );
+                } catch {
+                  toast.error("Couldn’t rebuild search index");
+                }
+              })();
+            }}
+          >
+            Rebuild search index
+          </button>
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-section-head">
+          <Bell className="size-4 text-accent" />
+          <div>
+            <h2>Notifications</h2>
+            <p>Web Push for calendar reminders when the app is closed</p>
+          </div>
+        </div>
+        <PushNotificationSettings ownerId={ownerId} />
       </section>
 
       <section className="settings-section">

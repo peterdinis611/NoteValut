@@ -24,6 +24,7 @@ import {
   FolderOpen,
   GripVertical,
   Home,
+  Inbox,
   PanelLeftClose,
   Pin,
   Plus,
@@ -87,6 +88,7 @@ type Props = {
   settingsActive?: boolean;
   tagsActive?: boolean;
   calendarActive?: boolean;
+  dueActive?: boolean;
   /** Off-canvas drawer animation (phones). */
   mobile?: boolean;
   onSelect: (id: Id<"notes"> | null) => void;
@@ -94,6 +96,7 @@ type Props = {
   onOpenSettings?: () => void;
   onOpenTags?: () => void;
   onOpenCalendar?: () => void;
+  onOpenDueInbox?: () => void;
   onCollapse: () => void;
   onCreateEntry: (parentId?: Id<"notes">, templateId?: string) => void;
   onCreateCollection: (parentId?: Id<"notes">) => void;
@@ -106,12 +109,14 @@ export function Sidebar({
   settingsActive = false,
   tagsActive = false,
   calendarActive = false,
+  dueActive = false,
   mobile = false,
   onSelect,
   onGoHome,
   onOpenSettings,
   onOpenTags,
   onOpenCalendar,
+  onOpenDueInbox,
   onCollapse,
   onCreateEntry,
   onCreateCollection,
@@ -296,6 +301,7 @@ export function Sidebar({
     !settingsActive &&
     !tagsActive &&
     !calendarActive &&
+    !dueActive &&
     !isSearching &&
     !showBin;
 
@@ -438,6 +444,7 @@ export function Sidebar({
     >
       <motion.aside
         className="sidebar"
+        data-tour="sidebar"
         variants={mobile ? undefined : sidebarPanelVariants}
         initial={mobile ? false : "hidden"}
         animate={mobile ? undefined : "visible"}
@@ -463,7 +470,7 @@ export function Sidebar({
         </button>
       </div>
 
-      <div className={`sidebar-search-wrap ${searchPending ? "sidebar-search-pending" : ""}`}>
+      <div className={`sidebar-search-wrap ${searchPending ? "sidebar-search-pending" : ""}`} data-tour="search">
         <Search className="sidebar-search-icon" />
         <input
           className="sidebar-search"
@@ -516,6 +523,20 @@ export function Sidebar({
             <span>Calendar</span>
           </button>
         )}
+        {onOpenDueInbox && (
+          <button
+            type="button"
+            className={`sidebar-link ${dueActive ? "sidebar-link-active" : ""}`}
+            data-tour="due-inbox"
+            onClick={() => {
+              setShowBin(false);
+              onOpenDueInbox();
+            }}
+          >
+            <Inbox className="size-4" />
+            <span>Due inbox</span>
+          </button>
+        )}
 
         <div className="sidebar-menu-divider" />
 
@@ -540,7 +561,7 @@ export function Sidebar({
         {browseItems.map((item) => {
           const Icon = item.icon;
           const active =
-            !isSearching && !showBin && !tagsActive && !calendarActive && browse === item.id;
+            !isSearching && !showBin && !tagsActive && !calendarActive && !dueActive && browse === item.id;
           return (
             <button
               key={item.id}
@@ -844,6 +865,7 @@ export function Sidebar({
           <button
             type="button"
             className="sidebar-link"
+            data-tour="quick-capture"
             onClick={onQuickCapture}
           >
             <Zap className="size-4" />
@@ -874,6 +896,7 @@ export function Sidebar({
             <button
               type="button"
               className={`sidebar-link ${settingsActive ? "sidebar-link-active" : ""}`}
+              data-tour="settings"
               onClick={() => {
                 setShowBin(false);
                 onOpenSettings();

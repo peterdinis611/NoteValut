@@ -35,8 +35,17 @@ function blockToHtml(block: Block): string {
       return `<li>${t}</li>`;
     case "numbered":
       return `<li>${t}</li>`;
-    case "todo":
-      return `<p class="todo">${block.checked ? "☑" : "☐"} ${t}</p>`;
+    case "todo": {
+      const due = block.dueAt
+        ? ` <span class="due">${escapeHtml(
+            new Date(block.dueAt).toLocaleDateString(undefined, {
+              month: "short",
+              day: "numeric",
+            }),
+          )}</span>`
+        : "";
+      return `<p class="todo">${block.checked ? "☑" : "☐"} ${t}${due}</p>`;
+    }
     case "quote":
     case "callout":
       return `<blockquote>${t}</blockquote>`;
@@ -147,6 +156,7 @@ export function exportPagePdf(title: string, icon: string, blocks: Block[]) {
     td { border: 1px solid #cbd5e1; padding: 0.35rem 0.5rem; }
     hr { border: none; border-top: 1px solid #cbd5e1; margin: 1.25rem 0; }
     .todo { font-family: system-ui, sans-serif; }
+    .todo .due { color: #0f766e; font-size: 0.85em; margin-left: 0.35rem; }
     .link { color: #0f766e; }
     mark { background: #fde68a; }
   </style>
