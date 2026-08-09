@@ -11,6 +11,10 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test --project=chromium",
+    "test:e2e:ui": "playwright test --project=chromium --ui",
+    "test:e2e:storybook": "playwright test --project=storybook",
+    "playwright:install": "playwright install chromium",
     "deploy:convex": "convex deploy",
     "postinstall": "mkdir -p public/embedpdf && cp node_modules/@embedpdf/pdfium/dist/pdfium.wasm public/embedpdf/pdfium.wasm",
     "storybook": "storybook dev -p 6006",
@@ -53,6 +57,7 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@storybook/addon-a11y": "^10.5.7",
     "@storybook/addon-docs": "^10.5.7",
     "@storybook/nextjs-vite": "^10.5.7",
