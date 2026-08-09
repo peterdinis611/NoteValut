@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = Number(process.env.PLAYWRIGHT_PORT ?? 3010);
-const BASE = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${PORT}`;
+const BASE = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${PORT}`;
 
 /**
  * Playwright e2e — specs live under `__tests__/e2e`.
@@ -39,11 +39,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npx next dev --webpack -H 127.0.0.1 -p ${PORT}`,
-    url: `${BASE}/sign-in`,
+    command: `npx next dev --webpack -H localhost -p ${PORT}`,
+    url: `http://localhost:${PORT}/not-authorized`,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
-    stdout: "pipe",
-    stderr: "pipe",
   },
 });

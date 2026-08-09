@@ -32,13 +32,11 @@ test.describe("Public routes", () => {
     );
   });
 
-  test("unknown route shows not-found status", async ({ page }) => {
+  test("unknown protected route sends guests to sign-in", async ({ page }) => {
+    // Non-public paths run through clerkMiddleware auth.protect() before Next 404.
     await page.goto("/this-route-does-not-exist-xyz");
-    await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /go home/i })).toHaveAttribute(
-      "href",
-      "/",
-    );
+    await page.waitForURL(/sign-in/, { timeout: 20_000 });
+    await expect(page).toHaveURL(/sign-in/);
   });
 
   test("invalid share link shows not-authorized state", async ({ page }) => {

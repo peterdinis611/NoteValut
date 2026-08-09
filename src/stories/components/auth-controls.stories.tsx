@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { StorybookClerkState } from "@clerk/nextjs";
+import { StorybookClerkState } from "../../../.storybook/mocks/clerk-nextjs";
 import { AuthControls } from "@/components/auth-controls";
 
 const meta = {
