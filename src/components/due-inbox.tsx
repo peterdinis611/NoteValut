@@ -33,7 +33,7 @@ const TABS: { id: DueBucket | "all"; label: string }[] = [
 ];
 
 export function DueInbox({ ownerId, onClose, onNavigate }: Props) {
-  const notes = useQuery(api.notes.list, { ownerId });
+  const notes = useQuery(api.notes.list, ownerId ? { ownerId } : "skip");
   const [tab, setTab] = useState<DueBucket | "all">("all");
 
   const hits = useMemo(() => collectDueTasks(notes), [notes]);

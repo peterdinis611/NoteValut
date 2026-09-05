@@ -1,13 +1,15 @@
 import { driver, type DriveStep } from "driver.js";
 import "driver.js/dist/driver.css";
 
+const TOUR_SEEN_KEY = "notevault.tour.v1.seen";
+
 const STEPS: DriveStep[] = [
   {
     element: "[data-tour='vault-home']",
     popover: {
-      title: "Welcome to NoteVault",
+      title: "Your vault, lit",
       description:
-        "Your personal knowledge space — notes, collections, and daily pages in one calm workspace.",
+        "NoteVault is a personal knowledge archive — pages, collections, and daily notes under one phosphor glow.",
       side: "bottom",
       align: "center",
     },
@@ -27,7 +29,7 @@ const STEPS: DriveStep[] = [
     popover: {
       title: "Find anything fast",
       description:
-        "Search by title or content. Prefer keyboard? Open the command palette with ⌘K / Ctrl+K.",
+        "Search by title or body. Prefer keyboard? ⌘K / Ctrl+K opens commands, tags, due, share, and full-text hits.",
       side: "bottom",
       align: "start",
     },
@@ -67,7 +69,7 @@ const STEPS: DriveStep[] = [
     popover: {
       title: "Capture in a flash",
       description:
-        "Park a quick idea in Inbox without breaking flow. The lightning button does the same.",
+        "Park a quick idea in Inbox without breaking flow. On mobile, use the center capture tab.",
       side: "top",
       align: "start",
     },
@@ -86,8 +88,30 @@ const STEPS: DriveStep[] = [
 
 let activeDriver: ReturnType<typeof driver> | null = null;
 
-/** Start the vault intro tour (manual only). Skips missing elements. */
-export function startVaultTour() {
+export function hasSeenVaultTour(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return localStorage.getItem(TOUR_SEEN_KEY) === "1";
+  } catch {
+    return true;
+  }
+}
+
+export function markVaultTourSeen() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(TOUR_SEEN_KEY, "1");
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+type TourOptions = {
+  onDestroyed?: () => void;
+};
+
+/** Start the vault intro tour. Skips missing elements. */
+export function startVaultTour(options?: TourOptions) {
   if (typeof window === "undefined") return;
 
   const steps = STEPS.filter((step) => {
@@ -100,29 +124,31 @@ export function startVaultTour() {
   activeDriver?.destroy();
   activeDriver = driver({
     showProgress: true,
-    progressText: "{{current}} / {{total}}",
+    progressText: "{{current}} · {{total}}",
     animate: true,
     allowClose: true,
     smoothScroll: true,
-    overlayOpacity: 0.72,
-    stagePadding: 10,
-    stageRadius: 12,
-    popoverOffset: 14,
+    overlayOpacity: 0.78,
+    stagePadding: 12,
+    stageRadius: 8,
+    popoverOffset: 16,
     popoverClass: "notevault-driver-popover",
     nextBtnText: "Next →",
     prevBtnText: "← Back",
-    doneBtnText: "Got it",
+    doneBtnText: "Enter vault",
     steps,
     onPopoverRender: (popover) => {
       const title = popover.title;
       if (title && !title.querySelector(".nv-tour-kicker")) {
         const kicker = document.createElement("p");
         kicker.className = "nv-tour-kicker";
-        kicker.textContent = "NoteVault tour";
+        kicker.textContent = "Phosphor tour";
         title.prepend(kicker);
       }
     },
     onDestroyStarted: () => {
+      markVaultTourSeen();
+      options?.onDestroyed?.();
       activeDriver?.destroy();
       activeDriver = null;
     },

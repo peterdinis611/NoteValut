@@ -1,19 +1,19 @@
 import { dark } from "@clerk/themes";
 
-/** NoteVault-tuned Clerk appearance (dark + copper accent). */
+/** NoteVault — Phosphor Archive (dark teal + lime). */
 export const clerkAppearance = {
   theme: dark,
   baseTheme: dark,
   variables: {
-    colorPrimary: "#e2a45a",
-    colorBackground: "#1a1713",
-    colorInputBackground: "#141210",
-    colorInputText: "rgba(250,245,235,0.92)",
-    colorText: "rgba(250,245,235,0.9)",
-    colorTextSecondary: "rgba(210,190,165,0.58)",
-    colorNeutral: "rgba(210,190,165,0.7)",
-    borderRadius: "0.65rem",
-    fontFamily: "var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif",
+    colorPrimary: "#c8f542",
+    colorBackground: "#101a17",
+    colorInputBackground: "#0a1210",
+    colorInputText: "rgba(232, 244, 236, 0.94)",
+    colorText: "rgba(232, 244, 236, 0.92)",
+    colorTextSecondary: "rgba(156, 184, 168, 0.62)",
+    colorNeutral: "rgba(156, 184, 168, 0.72)",
+    borderRadius: "0.4rem",
+    fontFamily: "var(--font-body), ui-sans-serif, system-ui, sans-serif",
   },
   elements: {
     rootBox: "clerk-root-box",

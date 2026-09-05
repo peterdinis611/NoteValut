@@ -38,7 +38,7 @@ import {
   Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { toDailyKey } from "@/lib/daily";
@@ -51,6 +51,7 @@ import {
   sidebarSpring,
 } from "@/lib/motion";
 import { searchNotes } from "@/lib/search";
+import { ConnectionStatus } from "./connection-status";
 import { CreateMenu } from "./create-menu";
 import { MoveDialog } from "./move-dialog";
 import { SharePanel } from "./share-panel";
@@ -101,6 +102,8 @@ type Props = {
   onCreateEntry: (parentId?: Id<"notes">, templateId?: string) => void;
   onCreateCollection: (parentId?: Id<"notes">) => void;
   onQuickCapture: () => void;
+  /** Increment to open the vault share panel (e.g. from ⌘K). */
+  openShareSignal?: number;
 };
 
 export function Sidebar({
@@ -121,6 +124,7 @@ export function Sidebar({
   onCreateEntry,
   onCreateCollection,
   onQuickCapture,
+  openShareSignal = 0,
 }: Props) {
   const toast = useToast();
   const [search, setSearch] = useState("");
@@ -138,9 +142,13 @@ export function Sidebar({
   const [dragId, setDragId] = useState<Id<"notes"> | null>(null);
   const [dropIntent, setDropIntent] = useState<DropIntent>(null);
 
-  const notes = useQuery(api.notes.list, { ownerId });
-  const trashed = useQuery(api.notes.listTrashed, { ownerId });
-  const archived = useQuery(api.notes.listArchived, { ownerId });
+  useEffect(() => {
+    if (openShareSignal > 0) setShowShare(true);
+  }, [openShareSignal]);
+
+  const notes = useQuery(api.notes.list, ownerId ? { ownerId } : "skip");
+  const trashed = useQuery(api.notes.listTrashed, ownerId ? { ownerId } : "skip");
+  const archived = useQuery(api.notes.listArchived, ownerId ? { ownerId } : "skip");
 
   const updateNote = useMutation(api.notes.update);
   const moveNote = useMutation(api.notes.move);
@@ -918,6 +926,7 @@ export function Sidebar({
         </div>
 
         <div className="sidebar-footer-user">
+          <ConnectionStatus className="sidebar-conn" />
           <AuthControls />
         </div>
       </div>

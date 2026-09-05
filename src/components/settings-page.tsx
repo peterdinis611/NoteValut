@@ -366,7 +366,7 @@ export function SettingsPage({
               onClick={() => {
                 clearCustomTheme();
                 setCssDraft("");
-                toast.success("Reset to Copper ink");
+                toast.success("Reset to Phosphor");
               }}
             >
               <RotateCcw className="size-3.5" />
@@ -387,7 +387,7 @@ export function SettingsPage({
           <textarea
             className="settings-css-editor"
             spellCheck={false}
-            placeholder={`:root {\n  --accent: #e2a45a;\n  --background: #141210;\n}`}
+            placeholder={`:root {\n  --accent: #c8f542;\n  --background: #0a1210;\n}`}
             value={cssDraft}
             onChange={(e) => setCssDraft(e.target.value)}
             rows={10}

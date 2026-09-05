@@ -1,9 +1,9 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useConvexAuth } from "convex/react";
 import { AnimatePresence, motion } from "motion/react";
 import { PanelLeft } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { VaultAccessProvider } from "@/context/vault-access";
@@ -11,16 +11,18 @@ import { toDailyKey } from "@/lib/daily";
 import { easeQuick, pageVariants, sidebarSpring } from "@/lib/motion";
 import { getTemplate } from "@/lib/templates";
 import { downloadVaultMarkdown } from "@/lib/export-vault-md";
-import { startVaultTour } from "@/lib/onboarding";
+import { startVaultTour, hasSeenVaultTour } from "@/lib/onboarding";
 import { downloadVaultBackup } from "@/lib/vault-backup";
 import { useOwnerId } from "@/hooks/use-owner-id";
 import { useVaultSettings } from "@/hooks/use-vault-settings";
 import { CalendarPage } from "./calendar-page";
 import { CommandIcons, CommandPalette, type CommandAction } from "./command-palette";
+import { ConnectionStatus } from "./connection-status";
 import { DueInbox } from "./due-inbox";
 import { KeyboardCheatSheet } from "./keyboard-cheat-sheet";
 import { GraphView } from "./graph-view";
 import { LottieStatus } from "./lottie-status";
+import { MobileBottomNav } from "./mobile-bottom-nav";
 import { NoteEditor } from "./note-editor";
 import { QuickCapture, QuickCaptureFab } from "./quick-capture";
 import { ReminderListener } from "./reminder-listener";
@@ -48,17 +50,22 @@ function useIsMobile(breakpoint = 768) {
 
 export function NoteVaultApp() {
   const ownerId = useOwnerId();
+  const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth();
   const toast = useToast();
   const isMobile = useIsMobile();
   useVaultSettings();
   const seedDemo = useMutation(api.notes.seedDemo);
   const createNote = useMutation(api.notes.create);
   const getOrCreateDaily = useMutation(api.notes.getOrCreateDaily);
+  const canQuery = Boolean(ownerId && isAuthenticated);
   const notes = useQuery(
     api.notes.list,
-    ownerId ? { ownerId, includeArchived: true } : "skip",
+    canQuery ? { ownerId: ownerId!, includeArchived: true } : "skip",
   );
-  const exportData = useQuery(api.notes.exportVault, ownerId ? { ownerId } : "skip");
+  const exportData = useQuery(
+    api.notes.exportVault,
+    canQuery ? { ownerId: ownerId! } : "skip",
+  );
   const [activeId, setActiveId] = useState<Id<"notes"> | null>(null);
   const [seeded, setSeeded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -71,15 +78,41 @@ export function NoteVaultApp() {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
+  const [shareSignal, setShareSignal] = useState(0);
+  const tourBooted = useRef(false);
 
   useEffect(() => {
     setSidebarOpen(!isMobile);
   }, [isMobile]);
 
+  /** First-login Phosphor tour — once home + sidebar targets exist. */
   useEffect(() => {
-    if (!ownerId || seeded) return;
-    seedDemo({ ownerId }).then(() => setSeeded(true));
-  }, [ownerId, seeded, seedDemo]);
+    if (!canQuery || tourBooted.current || hasSeenVaultTour()) return;
+    if (showSettings || showTags || showCalendar || showDueInbox || activeId) return;
+
+    tourBooted.current = true;
+    const boot = window.setTimeout(() => {
+      setSidebarOpen(true);
+      window.setTimeout(() => startVaultTour(), 450);
+    }, 1100);
+    return () => window.clearTimeout(boot);
+  }, [
+    canQuery,
+    showSettings,
+    showTags,
+    showCalendar,
+    showDueInbox,
+    activeId,
+  ]);
+
+  useEffect(() => {
+    if (!canQuery || seeded) return;
+    void seedDemo({ ownerId: ownerId! })
+      .then(() => setSeeded(true))
+      .catch(() => {
+        /* auth race — retry next mount */
+      });
+  }, [canQuery, ownerId, seeded, seedDemo]);
 
   useEffect(() => {
     if (!activeId || !notes) return;
@@ -301,9 +334,20 @@ export function NoteVaultApp() {
         id: "tags",
         label: "Browse tags",
         icon: CommandIcons.tags,
-        keywords: ["tag", "filter"],
+        keywords: ["tag", "filter", "#"],
         run: () => {
           openTags();
+        },
+      },
+      {
+        id: "share",
+        label: "Share vault",
+        hint: "Create or manage share links",
+        icon: CommandIcons.share,
+        keywords: ["invite", "link", "public", "collaborate"],
+        run: () => {
+          setSidebarOpen(true);
+          setShareSignal((n) => n + 1);
         },
       },
       {
@@ -369,13 +413,24 @@ export function NoteVaultApp() {
     [clearPanels, handleCreateEntry, handleCreateCollection, handleExport, handleExportMarkdown, openToday, openTags, openCalendar, openDueInbox],
   );
 
-  if (!ownerId) {
+  if (!ownerId || convexAuthLoading) {
     return (
       <LottieStatus
         compact
         variant="loading"
         title="Loading workspace…"
-        description="Preparing your local vault identity."
+        description="Preparing your vault identity."
+      />
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <LottieStatus
+        compact
+        variant="error"
+        title="Vault session not linked"
+        description="Clerk is signed in, but Convex did not get a JWT. Create a Clerk JWT template named “convex” (aud: convex), then refresh or sign out and back in."
       />
     );
   }
@@ -395,15 +450,18 @@ export function NoteVaultApp() {
   return (
     <VaultAccessProvider isOwner role="owner">
       <SoftErrorBoundary>
-        <ReminderListener
-          ownerId={ownerId}
-          onOpenNote={(id) => selectNote(id as Id<"notes">)}
-        />
+        {canQuery ? (
+          <ReminderListener
+            ownerId={ownerId}
+            onOpenNote={(id) => selectNote(id as Id<"notes">)}
+          />
+        ) : null}
       </SoftErrorBoundary>
       <div className={`app-shell ${isMobile ? "app-shell-mobile" : ""} ${sidebarOpen ? "app-shell-sidebar-open" : ""}`}>
         <AnimatePresence initial={false}>
-          {isMobile && sidebarOpen && (
+          {isMobile && sidebarOpen ? (
             <motion.button
+              key="sidebar-backdrop"
               type="button"
               className="sidebar-backdrop"
               aria-label="Close sidebar"
@@ -413,9 +471,10 @@ export function NoteVaultApp() {
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               onClick={() => setSidebarOpen(false)}
             />
-          )}
-          {sidebarOpen && (
+          ) : null}
+          {sidebarOpen ? (
             <Sidebar
+              key="vault-sidebar"
               ownerId={ownerId}
               activeId={activeId}
               settingsActive={showSettings}
@@ -445,13 +504,20 @@ export function NoteVaultApp() {
               onCreateEntry={handleCreateEntry}
               onCreateCollection={handleCreateCollection}
               onQuickCapture={() => setQuickCaptureOpen(true)}
+              openShareSignal={shareSignal}
             />
-          )}
+          ) : null}
         </AnimatePresence>
-        <main className="app-main">
+        <main className={`app-main ${isMobile ? "app-main-mobile-nav" : ""}`}>
+          {isMobile && (
+            <div className="app-conn-bar">
+              <ConnectionStatus />
+            </div>
+          )}
           <AnimatePresence>
-            {!sidebarOpen && (
+            {!sidebarOpen ? (
               <motion.button
+                key="sidebar-reopen"
                 type="button"
                 className="sidebar-reopen-btn"
                 onClick={() => setSidebarOpen(true)}
@@ -465,12 +531,12 @@ export function NoteVaultApp() {
               >
                 <PanelLeft className="size-4" />
               </motion.button>
-            )}
+            ) : null}
           </AnimatePresence>
 
           <AnimatePresence mode="wait">
             <motion.div
-              key={panel === "note" ? activeId : panel}
+              key={panel === "note" ? String(activeId ?? "note") : panel}
               className="app-main-view"
               variants={pageVariants}
               initial="hidden"
@@ -558,7 +624,33 @@ export function NoteVaultApp() {
           </AnimatePresence>
 
           <ScrollToTop resetKey={panel === "note" ? activeId : panel} />
-          <QuickCaptureFab onClick={() => setQuickCaptureOpen(true)} />
+          {!isMobile && (
+            <QuickCaptureFab onClick={() => setQuickCaptureOpen(true)} />
+          )}
+          {isMobile && (
+            <MobileBottomNav
+              active={
+                cmdOpen
+                  ? "search"
+                  : showDueInbox
+                    ? "due"
+                    : sidebarOpen
+                      ? "menu"
+                      : panel === "home"
+                        ? "home"
+                        : "home"
+              }
+              onHome={() => {
+                clearPanels();
+                setActiveId(null);
+                setSidebarOpen(false);
+              }}
+              onSearch={() => setCmdOpen(true)}
+              onCapture={() => setQuickCaptureOpen(true)}
+              onDue={() => openDueInbox()}
+              onMenu={() => setSidebarOpen((v) => !v)}
+            />
+          )}
           <QuickCapture
             ownerId={ownerId}
             open={quickCaptureOpen}
@@ -571,6 +663,7 @@ export function NoteVaultApp() {
             notes={notes?.filter((n) => !n.archived && !n.trashed)}
             actions={cmdActions}
             onNavigate={selectNote}
+            onOpenTag={(tag) => openTags(tag)}
             ownerId={ownerId}
           />
           <KeyboardCheatSheet open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />

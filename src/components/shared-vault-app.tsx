@@ -1,13 +1,14 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { Eye, FileText, FolderOpen } from "lucide-react";
+import { Eye, FileText, FolderOpen, Lock, Pencil } from "lucide-react";
 import { useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { VaultAccessProvider } from "@/context/vault-access";
 import { isFolder } from "@/lib/item-kinds";
 import { roleLabel } from "@/lib/ability";
+import { ConnectionStatus } from "./connection-status";
 import { LottieStatus } from "./lottie-status";
 import { NoteEditor } from "./note-editor";
 import { ScrollToTop } from "./scroll-to-top";
@@ -43,15 +44,15 @@ export function SharedVaultApp({ token }: Props) {
         variant="not-authorized"
         title="Not authorized"
         description="This share link is invalid, expired, or has been revoked. Ask the owner for a new invite."
-        actions={[
-          { label: "Back to NoteVault", href: "/", primary: true },
-        ]}
+        actions={[{ label: "Back to NoteVault", href: "/", primary: true }]}
       />
     );
   }
 
   const ownerId = bundle.ownerId;
   const role = bundle.role === "editor" ? "editor" : "viewer";
+  const pages = bundle.notes.filter((n) => n.kind !== "folder");
+  const collections = bundle.notes.filter((n) => n.kind === "folder");
 
   return (
     <VaultAccessProvider
@@ -66,14 +67,26 @@ export function SharedVaultApp({ token }: Props) {
           <div className="sidebar-header">
             <div className="sidebar-workspace">
               <span className="sidebar-workspace-icon">🔗</span>
-              <span className="min-w-0 flex-1 truncate text-left text-sm font-medium">
-                {bundle.share.label}
-              </span>
+              <span className="sidebar-brand">{bundle.share.label}</span>
             </div>
           </div>
           <div className="shared-badge">
-            <Eye className="size-3.5" />
+            {role === "editor" ? (
+              <Pencil className="size-3.5" />
+            ) : (
+              <Eye className="size-3.5" />
+            )}
             {roleLabel(role)}
+          </div>
+          <div className="shared-meta">
+            <span>
+              {pages.length} {pages.length === 1 ? "page" : "pages"}
+            </span>
+            <span>·</span>
+            <span>
+              {collections.length}{" "}
+              {collections.length === 1 ? "collection" : "collections"}
+            </span>
           </div>
           <nav className="sidebar-nav note-scroll">
             {bundle.share.scope === "vault" && (
@@ -98,6 +111,9 @@ export function SharedVaultApp({ token }: Props) {
               ))}
             </div>
           </nav>
+          <div className="shared-sidebar-footer">
+            <ConnectionStatus />
+          </div>
         </aside>
         <main className="app-main">
           {activeId ? (
@@ -111,34 +127,49 @@ export function SharedVaultApp({ token }: Props) {
               onCreateCollection={() => {}}
             />
           ) : (
-            <div className="vault-home note-scroll">
-              <div className="vault-home-hero">
-                <p className="vault-home-kicker">
-                  <Eye className="mr-1 inline size-3.5" />
-                  Shared vault
+            <div className="vault-home note-scroll shared-preview">
+              <div className="vault-home-hero nv-stagger">
+                <p className="vault-home-kicker shared-preview-kicker">
+                  <Lock className="size-3" />
+                  Public share preview
                 </p>
                 <h1 className="vault-home-title">{bundle.share.label}</h1>
                 <p className="vault-home-subtitle">
                   {role === "viewer"
-                    ? "You have viewer access. Browse entries and collections below."
+                    ? "You have viewer access. Browse entries and collections — editing is locked."
                     : "You have editor access — you can view and edit shared content."}
                 </p>
+                <div className="shared-preview-chips">
+                  <span className="shared-preview-chip">
+                    {role === "editor" ? <Pencil className="size-3" /> : <Eye className="size-3" />}
+                    {roleLabel(role)}
+                  </span>
+                  <span className="shared-preview-chip">
+                    {bundle.share.scope === "vault" ? "Full vault" : "Scoped share"}
+                  </span>
+                  <span className="shared-preview-chip">
+                    {pages.length} pages
+                  </span>
+                </div>
               </div>
+              <p className="shared-preview-section">Recent entries</p>
               <div className="vault-recent-grid">
-                {bundle.notes
-                  .filter((n) => n.kind !== "folder")
-                  .slice(0, 8)
-                  .map((entry) => (
-                    <button
-                      key={entry._id}
-                      type="button"
-                      className="vault-recent-card"
-                      onClick={() => setActiveId(entry._id)}
-                    >
-                      <span className="vault-row-icon">{entry.icon}</span>
-                      <span className="truncate font-medium">{entry.title || "Untitled"}</span>
-                    </button>
-                  ))}
+                {pages.slice(0, 12).map((entry) => (
+                  <button
+                    key={entry._id}
+                    type="button"
+                    className="vault-recent-card"
+                    onClick={() => setActiveId(entry._id)}
+                  >
+                    <span className="vault-row-icon">{entry.icon}</span>
+                    <span className="truncate font-medium">
+                      {entry.title || "Untitled"}
+                    </span>
+                  </button>
+                ))}
+                {pages.length === 0 && (
+                  <p className="shared-preview-empty">No pages in this share yet.</p>
+                )}
               </div>
             </div>
           )}

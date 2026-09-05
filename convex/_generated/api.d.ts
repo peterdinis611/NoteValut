@@ -10,6 +10,8 @@
 
 import type * as block from "../block.js";
 import type * as files from "../files.js";
+import type * as lib_auth from "../lib/auth.js";
+import type * as lib_searchText from "../lib/searchText.js";
 import type * as notes from "../notes.js";
 import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
@@ -28,6 +30,8 @@ import type {
 declare const fullApi: ApiFromModules<{
   block: typeof block;
   files: typeof files;
+  "lib/auth": typeof lib_auth;
+  "lib/searchText": typeof lib_searchText;
   notes: typeof notes;
   push: typeof push;
   pushActions: typeof pushActions;

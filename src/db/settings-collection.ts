@@ -52,21 +52,21 @@ export const THEME_PRESETS: Record<
 > = {
   default: {
     id: "default",
-    label: "Copper ink",
-    description: "Warm amber on parchment dark",
-    swatch: "#e2a45a",
+    label: "Phosphor",
+    description: "Abyssal teal with acid lime",
+    swatch: "#c8f542",
     vars: {
-      "--background": "#141210",
-      "--foreground": "rgba(250, 245, 235, 0.92)",
-      "--sidebar": "#1a1713",
-      "--panel": "#24201a",
-      "--hover": "rgba(255, 236, 210, 0.05)",
-      "--hover-strong": "rgba(255, 236, 210, 0.1)",
-      "--border": "rgba(255, 230, 200, 0.09)",
-      "--muted": "rgba(210, 190, 165, 0.58)",
-      "--accent": "#e2a45a",
-      "--accent-soft": "rgba(226, 164, 90, 0.14)",
-      "--topbar": "#141210",
+      "--background": "#0a1210",
+      "--foreground": "rgba(232, 244, 236, 0.94)",
+      "--sidebar": "#0e1714",
+      "--panel": "#15201c",
+      "--hover": "rgba(200, 245, 66, 0.06)",
+      "--hover-strong": "rgba(200, 245, 66, 0.12)",
+      "--border": "rgba(170, 210, 185, 0.12)",
+      "--muted": "rgba(156, 184, 168, 0.62)",
+      "--accent": "#c8f542",
+      "--accent-soft": "rgba(200, 245, 66, 0.14)",
+      "--topbar": "#0a1210",
     },
   },
   ocean: {
@@ -270,6 +270,7 @@ function familyStack(family: string): string {
 function clearFontDom() {
   document.getElementById(FONT_STYLE_ID)?.remove();
   document.getElementById(FONT_LINK_ID)?.remove();
+  document.documentElement.style.removeProperty("--font-body");
   document.documentElement.style.removeProperty("--font-geist-sans");
   document.documentElement.style.removeProperty("--font-sans");
 }
@@ -306,6 +307,7 @@ export function applyFont(settings?: SettingsRecord) {
   font-style: normal;
 }
 `.trim();
+    root.style.setProperty("--font-body", stack);
     root.style.setProperty("--font-geist-sans", stack);
     root.style.setProperty("--font-sans", stack);
     return;
@@ -321,6 +323,7 @@ export function applyFont(settings?: SettingsRecord) {
       document.head.appendChild(link);
     }
     link.href = s.fontUrl.trim();
+    root.style.setProperty("--font-body", stack);
     root.style.setProperty("--font-geist-sans", stack);
     root.style.setProperty("--font-sans", stack);
     return;
@@ -338,6 +341,15 @@ export function applyTheme(settings?: SettingsRecord) {
     s.themeId === "custom" ? THEME_PRESETS.default : THEME_PRESETS[s.themeId];
   for (const [key, value] of Object.entries(preset.vars)) {
     root.style.setProperty(key, value);
+  }
+  const accent = preset.vars["--accent"];
+  const background = preset.vars["--background"] ?? "#0a1210";
+  if (accent) {
+    root.style.setProperty(
+      "--accent-bright",
+      `color-mix(in srgb, ${accent} 72%, #fff)`,
+    );
+    root.style.setProperty("--accent-ink", background);
   }
 
   let styleEl = document.getElementById(STYLE_ID) as HTMLStyleElement | null;

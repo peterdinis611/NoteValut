@@ -16,7 +16,10 @@ type Props = {
  */
 export function ReminderListener({ ownerId, onOpenNote }: Props) {
   const toast = useToast();
-  const fired = useQuery(api.reminders.listFired, { ownerId });
+  const fired = useQuery(
+    api.reminders.listFired,
+    ownerId ? { ownerId } : "skip",
+  );
   const dismiss = useMutation(api.reminders.dismiss);
   const seen = useRef(new Set<string>());
 

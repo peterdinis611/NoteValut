@@ -15,6 +15,7 @@ import {
   Plus,
   Search,
   Settings2,
+  Share2,
   StickyNote,
   Sun,
   Tag,
@@ -44,6 +45,7 @@ type Props = {
   notes: Doc<"notes">[] | undefined;
   actions: CommandAction[];
   onNavigate: (id: Id<"notes">) => void;
+  onOpenTag?: (tag: string) => void;
   ownerId?: string;
 };
 
@@ -53,6 +55,7 @@ export function CommandPalette({
   notes,
   actions,
   onNavigate,
+  onOpenTag,
   ownerId,
 }: Props) {
   const [query, setQuery] = useState("");
@@ -61,9 +64,18 @@ export function CommandPalette({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const q = debouncedQuery.trim();
+  const qLower = q.toLowerCase();
+  const tagQuery = qLower.startsWith("#") ? qLower.slice(1).trim() : qLower;
+
   const serverHits = useQuery(
     api.notes.search,
-    open && ownerId && q.length >= 2 ? { ownerId, query: q, limit: 12 } : "skip",
+    open && ownerId && q.length >= 2 && !q.startsWith("#")
+      ? { ownerId, query: q, limit: 12 }
+      : "skip",
+  );
+  const tagRows = useQuery(
+    api.notes.listTags,
+    open && ownerId ? { ownerId } : "skip",
   );
 
   useEffect(() => {
@@ -77,10 +89,9 @@ export function CommandPalette({
   }, [open]);
 
   const noteHits = useMemo(() => {
-    if (!notes) return [];
+    if (!notes || q.startsWith("#")) return [];
     const pool = notes.filter((n) => !isFolder(n));
     if (!q) return pool.slice(0, 8);
-    // Prefer Convex FTS when indexed results are ready
     if (q.length >= 2 && serverHits !== undefined) {
       if (serverHits.length > 0) return serverHits;
     }
@@ -88,27 +99,38 @@ export function CommandPalette({
   }, [notes, q, serverHits]);
 
   const actionHits = useMemo(() => {
-    const q = debouncedQuery.trim().toLowerCase();
-    if (!q) return actions;
-    return actions.filter(
-      (a) =>
-        a.label.toLowerCase().includes(q) ||
-        a.hint?.toLowerCase().includes(q) ||
-        a.keywords?.some((k) => k.includes(q)),
-    );
-  }, [actions, debouncedQuery]);
+    if (!qLower || q.startsWith("#")) {
+      return q.startsWith("#") ? [] : q ? actions.filter(matchAction(qLower)) : actions;
+    }
+    return actions.filter(matchAction(qLower));
+  }, [actions, q, qLower]);
+
+  const tagHits = useMemo(() => {
+    if (!tagRows?.length || !onOpenTag) return [];
+    const showAll = !q || q.startsWith("#") || qLower.includes("tag");
+    if (!showAll && tagQuery.length < 1) return [];
+    const filtered = tagRows.filter((t) => {
+      if (!tagQuery) return q.startsWith("#") || !q;
+      return (
+        t.tag.toLowerCase().includes(tagQuery) ||
+        t.key.includes(tagQuery)
+      );
+    });
+    return filtered.slice(0, q.startsWith("#") ? 16 : 6);
+  }, [tagRows, tagQuery, q, qLower, onOpenTag]);
 
   type Row =
     | { kind: "action"; action: CommandAction }
+    | { kind: "tag"; tag: string; count: number }
     | { kind: "note"; note: Doc<"notes"> };
 
   const rows: Row[] = useMemo(() => {
-    const list: Row[] = actionHits.map((action) => ({ kind: "action", action }));
-    for (const note of noteHits) {
-      list.push({ kind: "note", note });
-    }
+    const list: Row[] = [];
+    for (const action of actionHits) list.push({ kind: "action", action });
+    for (const t of tagHits) list.push({ kind: "tag", tag: t.tag, count: t.count });
+    for (const note of noteHits) list.push({ kind: "note", note });
     return list;
-  }, [actionHits, noteHits]);
+  }, [actionHits, tagHits, noteHits]);
 
   useEffect(() => {
     setIndex(0);
@@ -135,13 +157,16 @@ export function CommandPalette({
         const row = rows[index];
         if (!row) return;
         if (row.kind === "action") row.action.run();
+        else if (row.kind === "tag") onOpenTag?.(row.tag);
         else onNavigate(row.note._id);
         onClose();
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, rows, index, onClose, onNavigate]);
+  }, [open, rows, index, onClose, onNavigate, onOpenTag]);
+
+  const ftsPending = q.length >= 2 && !q.startsWith("#") && serverHits === undefined;
 
   return (
     <AnimatePresence>
@@ -169,50 +194,84 @@ export function CommandPalette({
               <input
                 ref={inputRef}
                 className="cmd-input"
-                placeholder="Search notes or run a command…"
+                placeholder="Search notes, #tags, or run a command…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
               <kbd className="cmd-kbd">esc</kbd>
             </div>
+            <p className="cmd-hint">
+              Type to search · <span>#tag</span> for tags · ↑↓ enter · ⌘K
+              {ftsPending ? " · indexing…" : ""}
+            </p>
 
             <div className="cmd-list note-scroll">
               {rows.length === 0 ? (
                 <p className="cmd-empty">No matches</p>
               ) : (
                 <>
-                  {actionHits.length > 0 && (
-                    <p className="cmd-section">Commands</p>
-                  )}
                   {rows.map((row, i) => {
                     if (row.kind === "action") {
-                      const { action } = row;
+                      const showSection = i === 0;
                       return (
-                        <button
-                          key={`a-${action.id}`}
-                          type="button"
-                          className={`cmd-row ${i === index ? "cmd-row-active" : ""}`}
-                          onMouseEnter={() => setIndex(i)}
-                          onClick={() => {
-                            action.run();
-                            onClose();
-                          }}
-                        >
-                          <span className="cmd-row-icon">{action.icon}</span>
-                          <span className="min-w-0 flex-1 text-left">
-                            <span className="block truncate text-sm">{action.label}</span>
-                            {action.hint && (
-                              <span className="block truncate text-xs text-muted">{action.hint}</span>
-                            )}
-                          </span>
-                        </button>
+                        <div key={`a-${row.action.id}`}>
+                          {showSection && <p className="cmd-section">Commands</p>}
+                          <button
+                            type="button"
+                            className={`cmd-row ${i === index ? "cmd-row-active" : ""}`}
+                            onMouseEnter={() => setIndex(i)}
+                            onClick={() => {
+                              row.action.run();
+                              onClose();
+                            }}
+                          >
+                            <span className="cmd-row-icon">{row.action.icon}</span>
+                            <span className="min-w-0 flex-1 text-left">
+                              <span className="block truncate text-sm">{row.action.label}</span>
+                              {row.action.hint && (
+                                <span className="block truncate text-xs text-muted">
+                                  {row.action.hint}
+                                </span>
+                              )}
+                            </span>
+                          </button>
+                        </div>
                       );
                     }
-                    const showDivider =
-                      actionHits.length > 0 && i === actionHits.length;
+                    if (row.kind === "tag") {
+                      const showSection =
+                        i === actionHits.length ||
+                        (actionHits.length === 0 && i === 0);
+                      return (
+                        <div key={`t-${row.tag}`}>
+                          {showSection && <p className="cmd-section">Tags</p>}
+                          <button
+                            type="button"
+                            className={`cmd-row ${i === index ? "cmd-row-active" : ""}`}
+                            onMouseEnter={() => setIndex(i)}
+                            onClick={() => {
+                              onOpenTag?.(row.tag);
+                              onClose();
+                            }}
+                          >
+                            <span className="cmd-row-icon">
+                              <Hash className="size-3.5" />
+                            </span>
+                            <span className="min-w-0 flex-1 text-left">
+                              <span className="block truncate text-sm">#{row.tag}</span>
+                              <span className="block truncate text-xs text-muted">
+                                {row.count} {row.count === 1 ? "note" : "notes"}
+                              </span>
+                            </span>
+                          </button>
+                        </div>
+                      );
+                    }
+                    const noteStart = actionHits.length + tagHits.length;
+                    const showSection = i === noteStart;
                     return (
                       <div key={`n-${row.note._id}`}>
-                        {showDivider && <p className="cmd-section">Notes</p>}
+                        {showSection && <p className="cmd-section">Notes</p>}
                         <button
                           type="button"
                           className={`cmd-row ${i === index ? "cmd-row-active" : ""}`}
@@ -247,6 +306,13 @@ export function CommandPalette({
   );
 }
 
+function matchAction(q: string) {
+  return (a: CommandAction) =>
+    a.label.toLowerCase().includes(q) ||
+    a.hint?.toLowerCase().includes(q) ||
+    a.keywords?.some((k) => k.includes(q));
+}
+
 export const CommandIcons = {
   home: <Home className="size-3.5" />,
   settings: <Settings2 className="size-3.5" />,
@@ -264,4 +330,5 @@ export const CommandIcons = {
   hash: <Hash className="size-3.5" />,
   keyboard: <Keyboard className="size-3.5" />,
   network: <Network className="size-3.5" />,
+  share: <Share2 className="size-3.5" />,
 };

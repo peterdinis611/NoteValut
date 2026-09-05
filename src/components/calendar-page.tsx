@@ -68,11 +68,14 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
     () => monthGridKeys(cursor.year, cursor.month),
     [cursor.year, cursor.month],
   );
-  const existing = useQuery(api.notes.listDailyKeys, { ownerId, keys });
-  const scheduled = useQuery(api.reminders.listScheduledForKeys, {
-    ownerId,
-    keys,
-  });
+  const existing = useQuery(
+    api.notes.listDailyKeys,
+    ownerId ? { ownerId, keys } : "skip",
+  );
+  const scheduled = useQuery(
+    api.reminders.listScheduledForKeys,
+    ownerId ? { ownerId, keys } : "skip",
+  );
 
   const agenda = useMemo(() => {
     if (!existing) return [];

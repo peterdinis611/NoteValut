@@ -71,9 +71,9 @@ export function VaultHome({
     () => [...customTemplates, ...PAGE_TEMPLATES.filter((t) => t.id !== "blank")],
     [customTemplates],
   );
-  const stats = useQuery(api.notes.getVaultStats, { ownerId });
-  const notes = useQuery(api.notes.list, { ownerId });
-  const vaultSettings = useQuery(api.vaultSettings.get, { ownerId });
+  const stats = useQuery(api.notes.getVaultStats, ownerId ? { ownerId } : "skip");
+  const notes = useQuery(api.notes.list, ownerId ? { ownerId } : "skip");
+  const vaultSettings = useQuery(api.vaultSettings.get, ownerId ? { ownerId } : "skip");
   const backgroundImage = vaultSettings?.backgroundImage;
 
   async function uploadBackground(file: File | null) {

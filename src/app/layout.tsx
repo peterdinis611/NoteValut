@@ -1,25 +1,27 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Geist, Geist_Mono } from "next/font/google";
+import { IBM_Plex_Mono, Sora, Young_Serif } from "next/font/google";
 import { ConvexClientProvider } from "@/components/providers";
 import { PwaRegister } from "@/components/pwa-register";
 import { clerkAppearance } from "@/lib/clerk-appearance";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const sora = Sora({
+  variable: "--font-body",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
   subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
-const fraunces = Fraunces({
+const youngSerif = Young_Serif({
   variable: "--font-display",
   subsets: ["latin"],
-  axes: ["SOFT", "WONK", "opsz"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -39,7 +41,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#141210",
+  themeColor: "#0a1210",
   colorScheme: "dark",
 };
 
@@ -51,9 +53,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full dark`}
+      className={`${sora.variable} ${plexMono.variable} ${youngSerif.variable} h-full dark`}
     >
-      <body className="min-h-full font-sans">
+      <body className="min-h-full font-sans nv-atmosphere">
         <ClerkProvider appearance={clerkAppearance}>
           <ConvexClientProvider>{children}</ConvexClientProvider>
           <PwaRegister />

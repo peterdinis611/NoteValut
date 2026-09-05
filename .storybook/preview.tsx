@@ -66,7 +66,7 @@ const preview: Preview = {
               className="min-h-[100vh] bg-background text-foreground antialiased"
               style={{
                 fontFamily:
-                  'var(--font-geist-sans), "DM Sans", ui-sans-serif, system-ui, sans-serif',
+                  'var(--font-body), var(--font-sans), ui-sans-serif, system-ui, sans-serif',
               }}
             >
               <Story />

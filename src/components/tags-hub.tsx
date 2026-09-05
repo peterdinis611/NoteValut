@@ -21,8 +21,8 @@ type Props = {
 
 export function TagsHub({ ownerId, onClose, onNavigate, initialTag = null }: Props) {
   const toast = useToast();
-  const tags = useQuery(api.notes.listTags, { ownerId });
-  const notes = useQuery(api.notes.list, { ownerId });
+  const tags = useQuery(api.notes.listTags, ownerId ? { ownerId } : "skip");
+  const notes = useQuery(api.notes.list, ownerId ? { ownerId } : "skip");
   const renameTag = useMutation(api.notes.renameTag);
   const deleteTag = useMutation(api.notes.deleteTag);
 
