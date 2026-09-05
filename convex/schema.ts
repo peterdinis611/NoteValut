@@ -115,4 +115,19 @@ export default defineSchema({
   })
     .index("by_owner", ["ownerId"])
     .index("by_endpoint", ["endpoint"]),
+
+  /** Cached Google Fonts catalog (public metadata, refreshed daily). */
+  googleFontsCache: defineTable({
+    key: v.string(),
+    fetchedAt: v.number(),
+    items: v.array(
+      v.object({
+        family: v.string(),
+        category: v.string(),
+        variants: v.array(v.string()),
+        subsets: v.array(v.string()),
+        popularity: v.optional(v.number()),
+      }),
+    ),
+  }).index("by_key", ["key"]),
 });

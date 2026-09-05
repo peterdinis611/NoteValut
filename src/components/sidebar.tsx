@@ -466,7 +466,6 @@ export function Sidebar({
             N
           </span>
           <span className="sidebar-brand">NoteVault</span>
-          <ChevronDown className="sidebar-workspace-chevron" aria-hidden />
         </button>
         <button
           type="button"
@@ -926,7 +925,7 @@ export function Sidebar({
         </div>
 
         <div className="sidebar-footer-user">
-          <ConnectionStatus className="sidebar-conn" />
+          <ConnectionStatus variant="rail" />
           <AuthControls />
         </div>
       </div>

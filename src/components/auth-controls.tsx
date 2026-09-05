@@ -2,7 +2,7 @@
 
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 
-/** Compact Clerk controls for the sidebar footer / header. */
+/** Compact Clerk controls for the sidebar account row. */
 export function AuthControls({ className = "" }: { className?: string }) {
   return (
     <div className={`auth-controls ${className}`.trim()}>
@@ -22,7 +22,9 @@ export function AuthControls({ className = "" }: { className?: string }) {
         <UserButton
           appearance={{
             elements: {
-              avatarBox: "size-7",
+              rootBox: "nv-user-root",
+              avatarBox: "nv-user-avatar",
+              userButtonTrigger: "nv-user-trigger",
             },
           }}
         />

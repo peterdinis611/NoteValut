@@ -45,6 +45,7 @@ import {
 } from "./template-preview-dialog";
 import { TemplateEditorDialog } from "./template-editor-dialog";
 import { PushNotificationSettings } from "./push-notification-settings";
+import { GoogleFontsPicker } from "./google-fonts-picker";
 import { useToast } from "./toast";
 
 const MAX_CSS_BYTES = 100_000;
@@ -404,7 +405,7 @@ export function SettingsPage({
           <Type className="size-4 text-accent" />
           <div>
             <h2>Custom font</h2>
-            <p>Upload a font file or link a stylesheet (Google Fonts CSS)</p>
+            <p>Pick from Google Fonts, upload a file, or paste a CSS URL</p>
           </div>
         </div>
 
@@ -428,12 +429,23 @@ export function SettingsPage({
             if (file) void loadFontFile(file);
           }}
         >
+          <GoogleFontsPicker
+            onPick={(family, cssUrl) => {
+              setFontFamilyDraft(family);
+              setFontUrlDraft(cssUrl);
+              setCustomFontFromUrl(family, cssUrl);
+              toast.success(`Font “${family}” applied`);
+            }}
+          />
+
+          <div className="settings-font-or">or upload a file</div>
+
           <label className="settings-field">
             <span>Font family name</span>
             <input
               className="settings-input"
               value={fontFamilyDraft}
-              placeholder="e.g. Inter, Space Grotesk"
+              placeholder="e.g. Young Serif, Sora"
               onChange={(e) => setFontFamilyDraft(e.target.value)}
             />
           </label>
@@ -454,7 +466,7 @@ export function SettingsPage({
                 clearCustomFont();
                 setFontFamilyDraft("");
                 setFontUrlDraft("");
-                toast.success("Default Geist font restored");
+                toast.success("Default vault font restored");
               }}
             >
               <RotateCcw className="size-3.5" />
@@ -507,8 +519,8 @@ export function SettingsPage({
           </p>
           <p className="settings-hint">
             Supported files: <code>.woff2</code>, <code>.woff</code>, <code>.ttf</code>,{" "}
-            <code>.otf</code> (max 1.5 MB). For Google Fonts, paste the CSS2 URL and use the
-            exact family name.
+            <code>.otf</code> (max 1.5 MB). Font catalog uses Convex{" "}
+            <code>search</code> + <code>ensure</code> (24h cache).
           </p>
         </div>
       </section>

@@ -112,7 +112,7 @@ export function SharedVaultApp({ token }: Props) {
             </div>
           </nav>
           <div className="shared-sidebar-footer">
-            <ConnectionStatus />
+            <ConnectionStatus variant="rail" />
           </div>
         </aside>
         <main className="app-main">

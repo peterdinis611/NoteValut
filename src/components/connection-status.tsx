@@ -1,7 +1,7 @@
 "use client";
 
 import { useConvexConnectionState } from "convex/react";
-import { CloudOff, Loader2, Radio } from "lucide-react";
+import { CloudOff, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type Status = "offline" | "syncing" | "live";
@@ -27,8 +27,14 @@ function useBrowserOnline() {
   return online;
 }
 
+type Props = {
+  className?: string;
+  /** Compact rail chip for the sidebar account row. */
+  variant?: "default" | "rail";
+};
+
 /** Compact online / Convex sync chip for the vault chrome. */
-export function ConnectionStatus({ className = "" }: { className?: string }) {
+export function ConnectionStatus({ className = "", variant = "default" }: Props) {
   const online = useBrowserOnline();
   const conn = useConvexConnectionState();
 
@@ -38,23 +44,46 @@ export function ConnectionStatus({ className = "" }: { className?: string }) {
 
   const label =
     status === "offline" ? "Offline" : status === "syncing" ? "Syncing" : "Live";
-  const Icon =
-    status === "offline" ? CloudOff : status === "syncing" ? Loader2 : Radio;
+  const title =
+    status === "offline"
+      ? "No network — changes wait until you’re back online"
+      : status === "syncing"
+        ? "Talking to Convex…"
+        : "Connected to Convex";
+
+  if (variant === "rail") {
+    return (
+      <div
+        className={`nv-conn-rail nv-conn-rail-${status} ${className}`}
+        role="status"
+        aria-live="polite"
+        title={title}
+      >
+        <span className="nv-conn-rail-dot" aria-hidden />
+        {status === "syncing" ? (
+          <Loader2 className="size-3 nv-conn-spin" aria-hidden />
+        ) : status === "offline" ? (
+          <CloudOff className="size-3" aria-hidden />
+        ) : null}
+        <span className="nv-conn-rail-label">{label}</span>
+      </div>
+    );
+  }
 
   return (
     <div
-      className={`nv-conn ${status === "offline" ? "nv-conn-offline" : ""} ${status === "syncing" ? "nv-conn-sync" : ""} ${status === "live" ? "nv-conn-live" : ""} ${className}`}
+      className={`nv-conn nv-conn-${status} ${className}`}
       role="status"
       aria-live="polite"
-      title={
-        status === "offline"
-          ? "No network — changes wait until you’re back online"
-          : status === "syncing"
-            ? "Talking to Convex…"
-            : "Connected to Convex"
-      }
+      title={title}
     >
-      <Icon className={`size-3 ${status === "syncing" ? "nv-conn-spin" : ""}`} />
+      {status === "offline" ? (
+        <CloudOff className="size-3" />
+      ) : status === "syncing" ? (
+        <Loader2 className="size-3 nv-conn-spin" />
+      ) : (
+        <span className="nv-conn-dot" aria-hidden />
+      )}
       <span>{label}</span>
     </div>
   );

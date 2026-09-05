@@ -2,6 +2,7 @@
 
 import type { Block } from "@/lib/blocks";
 import { blockToneStyle } from "@/lib/colors";
+import { DueDatePicker } from "@/components/due-date-picker";
 import { Extension } from "../create-extension";
 import type { BlockRenderProps } from "../types";
 import { BlockTextInput } from "../components/block-text-input";
@@ -294,7 +295,6 @@ export const Todo = Extension({
   render: (props) => {
     const due = props.block.dueAt;
     const overdue = !!due && !props.block.checked && due < Date.now();
-    const dueValue = due ? new Date(due).toISOString().slice(0, 10) : "";
     return (
       <div
         className={`nv-block-inner nv-todo-row ${props.block.checked ? "nv-todo-done" : ""} ${overdue ? "nv-todo-overdue" : ""}`}
@@ -319,29 +319,14 @@ export const Todo = Extension({
           onPaste={props.onPaste}
           onFocus={props.onFocus}
         />
-        {!props.readOnly && (
-          <input
-            type="date"
-            className="nv-todo-due"
-            value={dueValue}
-            title="Due date"
-            aria-label="Due date"
-            onChange={(e) => {
-              const v = e.target.value;
-              props.commands.updateBlock(props.block.id, {
-                dueAt: v ? new Date(`${v}T12:00:00`).getTime() : undefined,
-              });
-            }}
-          />
-        )}
-        {props.readOnly && due && (
-          <span className={`nv-todo-due-label ${overdue ? "is-overdue" : ""}`}>
-            {new Date(due).toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-            })}
-          </span>
-        )}
+        <DueDatePicker
+          value={due}
+          overdue={overdue}
+          readOnly={props.readOnly}
+          onChange={(dueAt) =>
+            props.commands.updateBlock(props.block.id, { dueAt })
+          }
+        />
       </div>
     );
   },
