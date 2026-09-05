@@ -369,6 +369,62 @@ export function useEditor(options: EditorOptions) {
     }
 
     commands.updateBlock(block.id, { text });
+
+    // Auto-convert closed [[Title]] or [[id|Title]] wiki links into pagelink blocks
+    if (
+      (block.type === "paragraph" || block.type.startsWith("heading")) &&
+      /\[\[[^\]]+\]\]/.test(text)
+    ) {
+      const match = text.match(/\[\[([^\]|#]+)(?:\|([^\]]+))?\]\]/);
+      if (match) {
+        const rawTarget = match[1].trim();
+        const display = (match[2] || rawTarget).trim();
+        const page =
+          linkablePages.find((p) => p._id === rawTarget) ||
+          linkablePages.find(
+            (p) => (p.title || "").toLowerCase() === rawTarget.toLowerCase(),
+          ) ||
+          linkablePages.find(
+            (p) => (p.title || "").toLowerCase() === display.toLowerCase(),
+          );
+        if (page && page.kind !== "folder") {
+          const before = text.slice(0, match.index ?? 0).replace(/\s+$/, "");
+          const after = text.slice((match.index ?? 0) + match[0].length).replace(/^\s+/, "");
+          const list = [...blocksRef.current];
+          const index = list.findIndex((b) => b.id === block.id);
+          if (index >= 0) {
+            const link = createBlock("pagelink", page.title || display || "Untitled", {
+              pageId: page._id,
+            });
+            const nextBlocks: Block[] = [];
+            if (before.trim()) {
+              nextBlocks.push({ ...list[index], text: before });
+              nextBlocks.push(link);
+            } else if (list[index].type === "paragraph") {
+              nextBlocks.push(link);
+            } else {
+              nextBlocks.push({ ...list[index], text: "" });
+              nextBlocks.push(link);
+            }
+            if (after.trim()) {
+              nextBlocks.push(createBlock("paragraph", after));
+            } else {
+              nextBlocks.push(createBlock("paragraph", ""));
+            }
+            list.splice(index, 1, ...nextBlocks);
+            focusTarget.current = {
+              id: nextBlocks[nextBlocks.length - 1]!.id,
+              caret: "start",
+            };
+            commit(list);
+            setMentionBlockId(null);
+            setSlashBlockId(null);
+            return;
+          }
+        }
+      }
+    }
+
     const { isSlash } = parseSlash(text);
     const { isMention } = parseMention(text);
     if (isSlash) {

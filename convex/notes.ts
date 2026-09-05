@@ -391,6 +391,8 @@ export const update = mutation({
     pinned: v.optional(v.boolean()),
     archived: v.optional(v.boolean()),
     parentId: v.optional(v.union(v.id("notes"), v.null())),
+    fontFamily: v.optional(v.union(v.string(), v.null())),
+    fontUrl: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     const { id, ...patch } = args;
@@ -424,6 +426,8 @@ export const update = mutation({
     if (patch.pinned !== undefined) updates.pinned = patch.pinned;
     if (patch.archived !== undefined) updates.archived = patch.archived;
     if (patch.parentId !== undefined) updates.parentId = patch.parentId ?? undefined;
+    if (patch.fontFamily !== undefined) updates.fontFamily = patch.fontFamily ?? undefined;
+    if (patch.fontUrl !== undefined) updates.fontUrl = patch.fontUrl ?? undefined;
 
     const nextTitle = (updates.title as string | undefined) ?? existing.title;
     const nextContent = (updates.content as string | undefined) ?? existing.content;

@@ -41,6 +41,14 @@ import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
 import { UiTooltip } from "./ui-tooltip";
 import { VersionHistoryPanel } from "./version-history-panel";
+import { GoogleFontsPicker } from "./google-fonts-picker";
+import {
+  enqueueNotePatch,
+  isBrowserOffline,
+  queuedPatchCount,
+} from "@/lib/offline-queue";
+import { applyNoteFont, clearNoteFont } from "@/lib/note-font";
+import { getFontHistory } from "@/lib/font-history";
 
 type Props = {
   noteId: Id<"notes">;
@@ -81,18 +89,28 @@ export function NoteEditor({
   const [shareOpen, setShareOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [fontOpen, setFontOpen] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
+  const [saveState, setSaveState] = useState<"saved" | "saving" | "queued">("saved");
 
   const readOnly = globalReadOnly || !canUpdate;
 
   useEffect(() => {
-    if (!note || isFolder(note)) return;
+    if (!note || isFolder(note)) {
+      clearNoteFont();
+      return;
+    }
     setTitle(note.title);
     setTags(note.tags);
     setShowIcon(true);
     setBlocks(note.blocks?.length ? note.blocks : migrateContentToBlocks(note.content));
-  }, [note?._id, note?.title, note?.content, note?.blocks, note?.tags]);
+    applyNoteFont({
+      scopeSelector: `[data-note-id="${noteId}"]`,
+      family: note.fontFamily,
+      cssUrl: note.fontUrl,
+    });
+    return () => clearNoteFont();
+  }, [note?._id, note?.title, note?.content, note?.blocks, note?.tags, note?.fontFamily, note?.fontUrl, noteId]);
 
   function scheduleSave(patch: {
     title?: string;
@@ -100,6 +118,8 @@ export function NoteEditor({
     tags?: string[];
     coverColor?: string | null;
     coverImage?: string | null;
+    fontFamily?: string | null;
+    fontUrl?: string | null;
   }) {
     if (!note || isFolder(note) || readOnly) return;
 
@@ -119,17 +139,38 @@ export function NoteEditor({
       patch.tags = parsed.tags;
     }
 
-    setSaveState("saving");
+    setSaveState(isBrowserOffline() ? "queued" : "saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       const nextBlocks = patch.blocks ?? blocks;
-      await updateNote({
-        id: noteId,
+      const payload = {
         ...patch,
         blocks: nextBlocks,
         content: blocksToPlainText(nextBlocks),
-      });
-      setSaveState("saved");
+      };
+
+      if (isBrowserOffline()) {
+        enqueueNotePatch(noteId, ownerId, payload);
+        setSaveState("queued");
+        toast.success(
+          queuedPatchCount() === 1
+            ? "Saved offline — will sync when Live"
+            : `Queued ${queuedPatchCount()} offline edits`,
+        );
+        return;
+      }
+
+      try {
+        await updateNote({
+          id: noteId,
+          ...payload,
+        });
+        setSaveState("saved");
+      } catch {
+        enqueueNotePatch(noteId, ownerId, payload);
+        setSaveState("queued");
+        toast.error("Save failed — queued for retry");
+      }
     }, 450);
   }
 
@@ -281,6 +322,12 @@ export function NoteEditor({
           icon: MoreActionIcons.history,
           onClick: () => setHistoryOpen(true),
         },
+        {
+          id: "page-font",
+          label: note.fontFamily ? `Page font: ${note.fontFamily}` : "Page font…",
+          icon: MoreActionIcons.template,
+          onClick: () => setFontOpen(true),
+        },
       );
     }
     moreItems.push({
@@ -384,7 +431,13 @@ export function NoteEditor({
         </div>
         <div className="flex items-center gap-1">
           {!isFolder(note) && !readOnly && (
-            <span className="topbar-status">{saveState === "saving" ? "Saving…" : "Saved"}</span>
+            <span className="topbar-status">
+              {saveState === "saving"
+                ? "Saving…"
+                : saveState === "queued"
+                  ? "Queued offline"
+                  : "Saved"}
+            </span>
           )}
           {canShare && (
             <UiTooltip label="Share">
@@ -452,7 +505,7 @@ export function NoteEditor({
             />
           </div>
 
-          <article className="page-content">
+          <article className="page-content" data-note-id={noteId}>
             {showIcon && (
               <div
                 className={`page-icon-wrap ${
@@ -580,6 +633,84 @@ export function NoteEditor({
           noteId={noteId}
           readOnly={readOnly}
         />
+      )}
+      {!isFolder(note) && fontOpen && !readOnly && (
+        <div className="note-font-overlay" role="dialog" aria-label="Page font">
+          <button
+            type="button"
+            className="note-font-backdrop"
+            aria-label="Close"
+            onClick={() => setFontOpen(false)}
+          />
+          <div className="note-font-panel">
+            <header className="note-font-head">
+              <h3>Page font</h3>
+              <button type="button" className="settings-btn settings-btn-ghost" onClick={() => setFontOpen(false)}>
+                Close
+              </button>
+            </header>
+            <p className="settings-hint">
+              Overrides the vault font for this page only. Leave empty to use the vault default.
+            </p>
+            {(getFontHistory().recent.length > 0 || getFontHistory().favorites.length > 0) && (
+              <div className="settings-gf-chip-row" style={{ marginBottom: "0.75rem" }}>
+                <span className="settings-gf-chip-label">Quick pick</span>
+                <div className="settings-gf-chip-list">
+                  {[...getFontHistory().favorites, ...getFontHistory().recent]
+                    .filter(
+                      (f, i, arr) => arr.findIndex((x) => x.family === f.family) === i,
+                    )
+                    .slice(0, 10)
+                    .map((f) => (
+                      <button
+                        key={f.family}
+                        type="button"
+                        className="settings-gf-chip"
+                        style={{ fontFamily: `"${f.family}", sans-serif` }}
+                        onClick={() => {
+                          scheduleSave({ fontFamily: f.family, fontUrl: f.cssUrl });
+                          applyNoteFont({
+                            scopeSelector: `[data-note-id="${noteId}"]`,
+                            family: f.family,
+                            cssUrl: f.cssUrl,
+                          });
+                          toast.success(`Page font “${f.family}”`);
+                          setFontOpen(false);
+                        }}
+                      >
+                        {f.family}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+            <GoogleFontsPicker
+              onPick={(family, cssUrl) => {
+                scheduleSave({ fontFamily: family, fontUrl: cssUrl });
+                applyNoteFont({
+                  scopeSelector: `[data-note-id="${noteId}"]`,
+                  family,
+                  cssUrl,
+                });
+                toast.success(`Page font “${family}”`);
+                setFontOpen(false);
+              }}
+            />
+            <button
+              type="button"
+              className="settings-btn settings-btn-ghost"
+              style={{ marginTop: "0.75rem" }}
+              onClick={() => {
+                scheduleSave({ fontFamily: null, fontUrl: null });
+                clearNoteFont();
+                toast.success("Page font cleared");
+                setFontOpen(false);
+              }}
+            >
+              Use vault default font
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

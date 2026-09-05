@@ -39,6 +39,7 @@ import { startVaultTour } from "@/lib/onboarding";
 import { easeOutSoft, fadeUpVariants } from "@/lib/motion";
 import { listDefaultTemplates } from "@/lib/templates";
 import { parseVaultBackupFile } from "@/lib/vault-backup";
+import { applyThemePack, downloadThemePack, parseThemePack } from "@/lib/theme-pack";
 import {
   TemplatePreviewDialog,
   type PreviewableTemplate,
@@ -73,6 +74,7 @@ export function SettingsPage({
   const reindexSearch = useMutation(api.notes.reindexSearch);
   const fileRef = useRef<HTMLInputElement>(null);
   const fontFileRef = useRef<HTMLInputElement>(null);
+  const themePackRef = useRef<HTMLInputElement>(null);
   const backupFileRef = useRef<HTMLInputElement>(null);
   const mdImportRef = useRef<HTMLInputElement>(null);
   const [cssDraft, setCssDraft] = useState(settings.customCss);
@@ -397,6 +399,50 @@ export function SettingsPage({
             Override CSS variables like <code>--accent</code>, <code>--background</code>,{" "}
             <code>--sidebar</code>, <code>--panel</code>, <code>--muted</code>.
           </p>
+          <div className="settings-css-toolbar" style={{ marginTop: "0.35rem" }}>
+            <button
+              type="button"
+              className="settings-btn"
+              onClick={() => {
+                downloadThemePack();
+                toast.success("Theme pack downloaded");
+              }}
+            >
+              <FileText className="size-3.5" />
+              Export theme pack
+            </button>
+            <button
+              type="button"
+              className="settings-btn settings-btn-ghost"
+              onClick={() => themePackRef.current?.click()}
+            >
+              Import theme pack
+            </button>
+            <input
+              ref={themePackRef}
+              type="file"
+              accept="application/json,.json"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                void (async () => {
+                  try {
+                    const text = await file.text();
+                    const pack = parseThemePack(JSON.parse(text));
+                    applyThemePack(pack);
+                    setCssDraft(pack.customCss);
+                    setFontFamilyDraft(pack.font.family ?? "");
+                    setFontUrlDraft(pack.font.url ?? "");
+                    toast.success("Theme pack applied");
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : "Invalid theme pack");
+                  }
+                })();
+              }}
+            />
+          </div>
         </div>
       </section>
 

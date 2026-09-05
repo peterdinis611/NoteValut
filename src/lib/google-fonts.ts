@@ -41,9 +41,7 @@ export function fontKeyToVariant(key: string): string {
   return String(weight);
 }
 
-/** Build a CSS2 stylesheet URL for a Google Fonts family. */
-export function googleFontsCss2Url(family: string, variants: string[] = []): string {
-  const familyParam = family.trim().replace(/\s+/g, "+");
+function collectWeights(variants: string[]): { weights: number[]; hasItalic: boolean } {
   const weights = new Set<number>();
   let hasItalic = false;
 
@@ -74,20 +72,44 @@ export function googleFontsCss2Url(family: string, variants: string[] = []): str
     if (Number.isFinite(n)) weights.add(n);
   }
 
-  const sorted = [...weights].sort((a, b) => a - b);
-  if (sorted.length === 0) {
+  return { weights: [...weights].sort((a, b) => a - b), hasItalic };
+}
+
+/** Build a CSS2 stylesheet URL for a Google Fonts family. */
+export function googleFontsCss2Url(
+  family: string,
+  variants: string[] = [],
+  opts?: { weight?: number },
+): string {
+  const familyParam = family.trim().replace(/\s+/g, "+");
+  let { weights, hasItalic } = collectWeights(variants);
+
+  if (opts?.weight && Number.isFinite(opts.weight)) {
+    weights = [...new Set([...weights, opts.weight])].sort((a, b) => a - b);
+  }
+
+  if (weights.length === 0) {
+    if (opts?.weight) {
+      return `https://fonts.googleapis.com/css2?family=${familyParam}:wght@${opts.weight}&display=swap`;
+    }
     return `https://fonts.googleapis.com/css2?family=${familyParam}&display=swap`;
   }
 
   if (hasItalic) {
     const pairs = [
-      ...sorted.map((w) => `0,${w}`),
-      ...sorted.map((w) => `1,${w}`),
+      ...weights.map((w) => `0,${w}`),
+      ...weights.map((w) => `1,${w}`),
     ].join(";");
     return `https://fonts.googleapis.com/css2?family=${familyParam}:ital,wght@${pairs}&display=swap`;
   }
 
-  return `https://fonts.googleapis.com/css2?family=${familyParam}:wght@${sorted.join(";")}&display=swap`;
+  return `https://fonts.googleapis.com/css2?family=${familyParam}:wght@${weights.join(";")}&display=swap`;
+}
+
+/** Numeric weights available for a family (for the preview slider). */
+export function googleFontWeightOptions(variants: string[]): number[] {
+  const { weights } = collectWeights(variants);
+  return weights.length > 0 ? weights : [400, 500, 600, 700];
 }
 
 export function filterGoogleFonts(

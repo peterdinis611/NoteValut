@@ -1,6 +1,6 @@
 "use client";
 
-import { Network, X } from "lucide-react";
+import { Network, Search, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -18,7 +18,7 @@ type Node = {
   vy: number;
 };
 
-type Edge = { from: string; to: string };
+type Edge = { from: string; to: string; kind: "link" | "parent" };
 
 type Props = {
   open: boolean;
@@ -34,11 +34,11 @@ function buildGraph(notes: Doc<"notes">[]) {
   for (const page of pages) {
     for (const block of page.blocks ?? []) {
       if (block.type === "pagelink" && block.pageId && ids.has(block.pageId)) {
-        edges.push({ from: page._id, to: block.pageId });
+        edges.push({ from: page._id, to: block.pageId, kind: "link" });
       }
     }
     if (page.parentId && ids.has(page.parentId as string)) {
-      edges.push({ from: page.parentId as string, to: page._id });
+      edges.push({ from: page.parentId as string, to: page._id, kind: "parent" });
     }
   }
   return { pages, edges };
@@ -47,17 +47,50 @@ function buildGraph(notes: Doc<"notes">[]) {
 export function GraphView({ open, onClose, notes, onNavigate }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState({ w: 800, h: 560 });
+  const [query, setQuery] = useState("");
+  const [showLinks, setShowLinks] = useState(true);
+  const [showParents, setShowParents] = useState(true);
   const graph = useMemo(() => (notes ? buildGraph(notes) : null), [notes]);
+
+  const filtered = useMemo(() => {
+    if (!graph) return null;
+    const q = query.trim().toLowerCase();
+    let pages = graph.pages;
+    if (q) {
+      pages = pages.filter(
+        (p) =>
+          (p.title || "").toLowerCase().includes(q) ||
+          (p.tags ?? []).some((t) => t.toLowerCase().includes(q)),
+      );
+    }
+    const idSet = new Set(pages.map((p) => p._id as string));
+    const edges = graph.edges.filter((e) => {
+      if (!idSet.has(e.from) || !idSet.has(e.to)) return false;
+      if (e.kind === "link" && !showLinks) return false;
+      if (e.kind === "parent" && !showParents) return false;
+      return true;
+    });
+    // Keep nodes that match query OR are connected to a match when filtering edges
+    if (q) {
+      const connected = new Set<string>();
+      for (const e of edges) {
+        connected.add(e.from);
+        connected.add(e.to);
+      }
+      pages = pages.filter((p) => connected.has(p._id) || (p.title || "").toLowerCase().includes(q));
+    }
+    return { pages: pages.slice(0, 80), edges };
+  }, [graph, query, showLinks, showParents]);
 
   const [nodes, setNodes] = useState<Node[]>([]);
 
   useEffect(() => {
-    if (!open || !graph) return;
-    const { pages } = graph;
+    if (!open || !filtered) return;
+    const { pages } = filtered;
     const w = size.w;
     const h = size.h;
     setNodes(
-      pages.slice(0, 80).map((p, i) => {
+      pages.map((p, i) => {
         const angle = (i / Math.max(pages.length, 1)) * Math.PI * 2;
         const r = Math.min(w, h) * 0.28;
         return {
@@ -71,20 +104,18 @@ export function GraphView({ open, onClose, notes, onNavigate }: Props) {
         };
       }),
     );
-  }, [open, graph, size.w, size.h]);
+  }, [open, filtered, size.w, size.h]);
 
   useEffect(() => {
-    if (!open || !graph || nodes.length === 0) return;
-    let frame = 0;
+    if (!open || !filtered || nodes.length === 0) return;
     let alive = true;
     const idSet = new Set(nodes.map((n) => n.id));
-    const edges = graph.edges.filter((e) => idSet.has(e.from) && idSet.has(e.to));
+    const edges = filtered.edges.filter((e) => idSet.has(e.from) && idSet.has(e.to));
 
     function tick() {
       if (!alive) return;
       setNodes((prev) => {
         const next = prev.map((n) => ({ ...n }));
-        const byId = new Map(next.map((n) => [n.id, n]));
         const cx = size.w / 2;
         const cy = size.h / 2;
 
@@ -106,17 +137,19 @@ export function GraphView({ open, onClose, notes, onNavigate }: Props) {
         }
 
         for (const e of edges) {
-          const a = byId.get(e.from);
-          const b = byId.get(e.to);
+          const a = next.find((n) => n.id === e.from);
+          const b = next.find((n) => n.id === e.to);
           if (!a || !b) continue;
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const dist = Math.hypot(dx, dy) || 1;
           const force = (dist - 120) * 0.02;
-          a.vx += (dx / dist) * force;
-          a.vy += (dy / dist) * force;
-          b.vx -= (dx / dist) * force;
-          b.vy -= (dy / dist) * force;
+          const fx = (dx / dist) * force;
+          const fy = (dy / dist) * force;
+          a.vx += fx;
+          a.vy += fy;
+          b.vx -= fx;
+          b.vy -= fy;
         }
 
         for (const n of next) {
@@ -124,28 +157,19 @@ export function GraphView({ open, onClose, notes, onNavigate }: Props) {
           n.vy += (cy - n.y) * 0.004;
           n.vx *= 0.85;
           n.vy *= 0.85;
-          n.x = Math.max(40, Math.min(size.w - 40, n.x + n.vx));
-          n.y = Math.max(40, Math.min(size.h - 40, n.y + n.vy));
+          n.x = Math.min(size.w - 40, Math.max(40, n.x + n.vx));
+          n.y = Math.min(size.h - 40, Math.max(40, n.y + n.vy));
         }
         return next;
       });
-      frame += 1;
-      if (frame < 180) requestAnimationFrame(tick);
+      requestAnimationFrame(tick);
     }
-    requestAnimationFrame(tick);
+    const frame = requestAnimationFrame(tick);
     return () => {
       alive = false;
+      cancelAnimationFrame(frame);
     };
-  }, [open, graph, nodes.length, size.w, size.h]);
-
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, filtered, nodes.length, size.w, size.h]);
 
   useEffect(() => {
     if (!open || !svgRef.current) return;
@@ -162,8 +186,8 @@ export function GraphView({ open, onClose, notes, onNavigate }: Props) {
   if (typeof document === "undefined") return null;
 
   const edgePairs =
-    graph && nodes.length
-      ? graph.edges.filter((e) => {
+    filtered && nodes.length
+      ? filtered.edges.filter((e) => {
           const ids = new Set(nodes.map((n) => n.id));
           return ids.has(e.from) && ids.has(e.to);
         })
@@ -201,9 +225,40 @@ export function GraphView({ open, onClose, notes, onNavigate }: Props) {
                 <X className="size-4" />
               </button>
             </header>
+            <div className="graph-toolbar">
+              <label className="graph-search">
+                <Search className="size-3.5" aria-hidden />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Filter pages or tags…"
+                  aria-label="Filter graph"
+                />
+              </label>
+              <div className="graph-filters">
+                <label className="graph-filter">
+                  <input
+                    type="checkbox"
+                    checked={showLinks}
+                    onChange={(e) => setShowLinks(e.target.checked)}
+                  />
+                  Wiki links
+                </label>
+                <label className="graph-filter">
+                  <input
+                    type="checkbox"
+                    checked={showParents}
+                    onChange={(e) => setShowParents(e.target.checked)}
+                  />
+                  Hierarchy
+                </label>
+              </div>
+            </div>
             <div className="graph-body">
-              {!graph || nodes.length === 0 ? (
-                <p className="graph-empty">Link pages with [[mentions]] to see connections.</p>
+              {!filtered || nodes.length === 0 ? (
+                <p className="graph-empty">
+                  Link pages with [[mentions]] to see connections.
+                </p>
               ) : (
                 <svg ref={svgRef} className="graph-svg" width={size.w} height={size.h}>
                   {edgePairs.map((e, i) => {
@@ -217,7 +272,7 @@ export function GraphView({ open, onClose, notes, onNavigate }: Props) {
                         y1={a.y}
                         x2={b.x}
                         y2={b.y}
-                        className="graph-edge"
+                        className={`graph-edge graph-edge-${e.kind}`}
                       />
                     );
                   })}

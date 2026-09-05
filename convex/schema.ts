@@ -37,6 +37,9 @@ export default defineSchema({
     dailyKey: v.optional(v.string()),
     /** Denormalized full-text field for Convex searchIndex */
     searchText: v.optional(v.string()),
+    /** Optional page-scoped Google Font / CSS font */
+    fontFamily: v.optional(v.string()),
+    fontUrl: v.optional(v.string()),
     updatedAt: v.number(),
   })
     .index("by_owner", ["ownerId"])

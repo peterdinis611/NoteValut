@@ -6,6 +6,7 @@ import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ReactNode, useMemo } from "react";
 import { ToastProvider } from "./toast";
+import { OfflineQueueFlush } from "./offline-queue-flush";
 
 export function ConvexClientProvider({ children }: { children: ReactNode }) {
   const client = useMemo(() => {
@@ -38,7 +39,10 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
   return (
     <ConvexProviderWithClerk client={client} useAuth={useAuth}>
       <PacerProvider defaultOptions={{ debouncer: { wait: 200 } }}>
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <OfflineQueueFlush />
+          {children}
+        </ToastProvider>
       </PacerProvider>
     </ConvexProviderWithClerk>
   );

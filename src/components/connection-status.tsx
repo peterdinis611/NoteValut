@@ -46,7 +46,7 @@ export function ConnectionStatus({ className = "", variant = "default" }: Props)
     status === "offline" ? "Offline" : status === "syncing" ? "Syncing" : "Live";
   const title =
     status === "offline"
-      ? "No network — changes wait until you’re back online"
+      ? "No network — edits queue locally until you’re back online"
       : status === "syncing"
         ? "Talking to Convex…"
         : "Connected to Convex";
