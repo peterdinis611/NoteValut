@@ -3,8 +3,8 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = Number(process.env.PLAYWRIGHT_PORT ?? 3010);
 const BASE = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${PORT}`;
 
-/** App specs only — Storybook has its own project. */
-const appTestIgnore = /storybook-smoke\.spec\.ts/;
+/** Regular app e2e — skip Storybook + stress suites. */
+const appTestIgnore = /storybook-smoke\.spec\.ts|\.stress\.spec\.ts/;
 
 /**
  * Playwright e2e — specs live under `__tests__/e2e`.
@@ -12,6 +12,7 @@ const appTestIgnore = /storybook-smoke\.spec\.ts/;
  *
  * Run one browser: `npm run test:e2e` (chromium) / `:firefox` / `:webkit` / `:mobile`
  * Run desktop trio: `npm run test:e2e:all`
+ * Stress: `npm run test:stress` (opt-in; tune via STRESS_* env)
  * Storybook: `npm run test:e2e:storybook` (Storybook must be running)
  */
 export default defineConfig({
@@ -50,6 +51,19 @@ export default defineConfig({
       name: "mobile-chrome",
       use: { ...devices["Pixel 5"] },
       testIgnore: appTestIgnore,
+    },
+    {
+      name: "stress",
+      use: {
+        ...devices["Desktop Chrome"],
+        // Stress opens many contexts — keep artifacts light.
+        trace: "off",
+        video: "off",
+        screenshot: "off",
+      },
+      testMatch: /\.stress\.spec\.ts/,
+      timeout: 180_000,
+      retries: 0,
     },
     {
       name: "storybook",

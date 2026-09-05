@@ -21,6 +21,8 @@
     "test:e2e:mobile": "playwright test --project=mobile-chrome",
     "test:e2e:ui": "playwright test --project=chromium --ui",
     "test:e2e:storybook": "playwright test --project=storybook",
+    "test:stress": "playwright test --project=stress",
+    "test:stress:heavy": "STRESS_ITERATIONS=48 STRESS_CONCURRENCY=16 playwright test --project=stress",
     "playwright:install": "playwright install chromium firefox webkit",
     "deploy:convex": "convex deploy",
     "postinstall": "mkdir -p public/embedpdf && cp node_modules/@embedpdf/pdfium/dist/pdfium.wasm public/embedpdf/pdfium.wasm",
