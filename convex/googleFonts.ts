@@ -12,10 +12,19 @@ import {
   type GoogleFontItem,
   normalizeFontCategory,
 } from "./lib/googleFonts";
+import { consumeRateLimit, formatRetryAfter } from "./lib/rateLimit";
 
 const METADATA_URL = "https://fonts.google.com/metadata/fonts";
 const CACHE_KEY = "catalog";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const FETCH_TIMEOUT_MS = 12_000;
+
+/** Per authenticated user — catalog refresh attempts. */
+const USER_ENSURE_LIMIT = 6;
+const USER_ENSURE_WINDOW_MS = 60_000;
+/** Global — protect upstream from stampedes. */
+const GLOBAL_FETCH_LIMIT = 20;
+const GLOBAL_FETCH_WINDOW_MS = 60_000;
 
 const fontItemValidator = v.object({
   family: v.string(),
@@ -31,6 +40,14 @@ const listArgs = {
   sort: v.optional(v.union(v.literal("popularity"), v.literal("alpha"))),
   limit: v.optional(v.number()),
 };
+
+export type GoogleFontsErrorCode =
+  | "auth"
+  | "rate_limited"
+  | "upstream"
+  | "timeout"
+  | "parse"
+  | "unknown";
 
 type MetadataFamily = {
   family?: string;
@@ -64,20 +81,56 @@ function mapMetadataFamily(item: MetadataFamily): GoogleFontItem | null {
   };
 }
 
-async function fetchCatalog(): Promise<GoogleFontItem[]> {
-  const res = await fetch(METADATA_URL, {
-    headers: {
-      Accept: "application/json,text/plain,*/*",
-      "User-Agent": "NoteVault/1.0 (Convex Google Fonts)",
-    },
-  });
-  if (!res.ok) {
-    throw new Error(`Google Fonts metadata error (${res.status})`);
+class FontsFetchError extends Error {
+  code: GoogleFontsErrorCode;
+  constructor(code: GoogleFontsErrorCode, message: string) {
+    super(message);
+    this.code = code;
   }
-  const data = parseMetadataJson(await res.text());
-  return (data.familyMetadataList ?? [])
-    .map(mapMetadataFamily)
-    .filter((item): item is GoogleFontItem => item !== null);
+}
+
+async function fetchCatalog(): Promise<GoogleFontItem[]> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(METADATA_URL, {
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json,text/plain,*/*",
+        "User-Agent": "NoteVault/1.0 (Convex Google Fonts)",
+      },
+    });
+    if (!res.ok) {
+      throw new FontsFetchError(
+        "upstream",
+        `Google Fonts unavailable (${res.status}). Try again later.`,
+      );
+    }
+    let data: MetadataPayload;
+    try {
+      data = parseMetadataJson(await res.text());
+    } catch {
+      throw new FontsFetchError("parse", "Couldn’t parse Google Fonts catalog.");
+    }
+    const items = (data.familyMetadataList ?? [])
+      .map(mapMetadataFamily)
+      .filter((item): item is GoogleFontItem => item !== null);
+    if (items.length === 0) {
+      throw new FontsFetchError("upstream", "Google Fonts catalog was empty.");
+    }
+    return items;
+  } catch (err) {
+    if (err instanceof FontsFetchError) throw err;
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new FontsFetchError("timeout", "Google Fonts request timed out.");
+    }
+    throw new FontsFetchError(
+      "unknown",
+      err instanceof Error ? err.message : "Failed to load Google Fonts",
+    );
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function sliceCatalog(
@@ -147,6 +200,42 @@ export const setCache = internalMutation({
   },
 });
 
+/** Reserve capacity before an expensive metadata fetch. */
+export const consumeEnsureBudget = internalMutation({
+  args: { userKey: v.string() },
+  handler: async (ctx, args) => {
+    const user = await consumeRateLimit(ctx, {
+      key: `googleFonts:ensure:user:${args.userKey}`,
+      limit: USER_ENSURE_LIMIT,
+      windowMs: USER_ENSURE_WINDOW_MS,
+    });
+    if (!user.ok) {
+      return {
+        ok: false as const,
+        code: "rate_limited" as const,
+        retryAfterMs: user.retryAfterMs,
+        scope: "user" as const,
+      };
+    }
+
+    const global = await consumeRateLimit(ctx, {
+      key: "googleFonts:ensure:global",
+      limit: GLOBAL_FETCH_LIMIT,
+      windowMs: GLOBAL_FETCH_WINDOW_MS,
+    });
+    if (!global.ok) {
+      return {
+        ok: false as const,
+        code: "rate_limited" as const,
+        retryAfterMs: global.retryAfterMs,
+        scope: "global" as const,
+      };
+    }
+
+    return { ok: true as const };
+  },
+});
+
 export type SearchGoogleFontsResult =
   | {
       ready: false;
@@ -199,21 +288,27 @@ export const search = query({
   },
 });
 
+export type EnsureGoogleFontsResult =
+  | { ok: true; source: "cache" | "metadata" | "stale" }
+  | {
+      ok: false;
+      code: GoogleFontsErrorCode;
+      error: string;
+      retryAfterMs?: number;
+    };
+
 /**
  * Warm / refresh the Google Fonts catalog cache (HTTP fetch).
- * Call from client or server (`fetchAction`) when `search` reports not ready / stale.
+ * Rate-limited per user + globally. Serves stale cache when limited/upstream fails.
  */
 export const ensure = action({
   args: {
     force: v.optional(v.boolean()),
   },
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ ok: true; source: "cache" | "metadata" } | { ok: false; error: string }> => {
+  handler: async (ctx, args): Promise<EnsureGoogleFontsResult> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      return { ok: false, error: "Not authenticated" };
+      return { ok: false, code: "auth", error: "Not authenticated" };
     }
 
     try {
@@ -227,15 +322,47 @@ export const ensure = action({
         return { ok: true, source: "cache" };
       }
 
-      const catalog = await fetchCatalog();
-      await ctx.runMutation(internal.googleFonts.setCache, {
-        items: catalog,
-        fetchedAt: Date.now(),
+      const budget = await ctx.runMutation(internal.googleFonts.consumeEnsureBudget, {
+        userKey: identity.subject,
       });
-      return { ok: true, source: "metadata" };
+
+      if (!budget.ok) {
+        if (cached) {
+          // Soft-fail: keep serving yesterday's catalog.
+          return { ok: true, source: "stale" };
+        }
+        return {
+          ok: false,
+          code: "rate_limited",
+          error: `Too many font catalog refreshes. Retry in ${formatRetryAfter(budget.retryAfterMs)}.`,
+          retryAfterMs: budget.retryAfterMs,
+        };
+      }
+
+      try {
+        const catalog = await fetchCatalog();
+        await ctx.runMutation(internal.googleFonts.setCache, {
+          items: catalog,
+          fetchedAt: Date.now(),
+        });
+        return { ok: true, source: "metadata" };
+      } catch (err) {
+        if (cached) {
+          return { ok: true, source: "stale" };
+        }
+        if (err instanceof FontsFetchError) {
+          return { ok: false, code: err.code, error: err.message };
+        }
+        return {
+          ok: false,
+          code: "unknown",
+          error: err instanceof Error ? err.message : "Failed to load Google Fonts",
+        };
+      }
     } catch (err) {
       return {
         ok: false,
+        code: "unknown",
         error: err instanceof Error ? err.message : "Failed to load Google Fonts",
       };
     }
@@ -245,8 +372,10 @@ export const ensure = action({
 export type ListGoogleFontsResult = {
   items: GoogleFontItem[];
   total: number;
-  source: "cache" | "metadata";
+  source: "cache" | "metadata" | "stale";
   error?: string;
+  code?: GoogleFontsErrorCode;
+  retryAfterMs?: number;
 };
 
 /** One-shot list (ensure + search). Prefer `search` + `ensure` for Suspense/preload. */
@@ -260,38 +389,72 @@ export const list = action({
         total: 0,
         source: "cache",
         error: "Not authenticated",
+        code: "auth",
       };
     }
 
-    try {
+    const ensureResult = await (async (): Promise<EnsureGoogleFontsResult> => {
       const cached = await ctx.runQuery(internal.googleFonts.getCache, {});
       const fresh =
         cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS ? cached : null;
+      if (fresh) return { ok: true, source: "cache" };
 
-      let catalog: GoogleFontItem[];
-      let source: "cache" | "metadata";
+      const budget = await ctx.runMutation(internal.googleFonts.consumeEnsureBudget, {
+        userKey: identity.subject,
+      });
+      if (!budget.ok) {
+        if (cached) return { ok: true, source: "stale" };
+        return {
+          ok: false,
+          code: "rate_limited",
+          error: `Too many font catalog refreshes. Retry in ${formatRetryAfter(budget.retryAfterMs)}.`,
+          retryAfterMs: budget.retryAfterMs,
+        };
+      }
 
-      if (fresh) {
-        catalog = fresh.items;
-        source = "cache";
-      } else {
-        catalog = await fetchCatalog();
+      try {
+        const catalog = await fetchCatalog();
         await ctx.runMutation(internal.googleFonts.setCache, {
           items: catalog,
           fetchedAt: Date.now(),
         });
-        source = "metadata";
+        return { ok: true, source: "metadata" };
+      } catch (err) {
+        if (cached) return { ok: true, source: "stale" };
+        if (err instanceof FontsFetchError) {
+          return { ok: false, code: err.code, error: err.message };
+        }
+        return {
+          ok: false,
+          code: "unknown",
+          error: err instanceof Error ? err.message : "Failed to load Google Fonts",
+        };
       }
+    })();
 
-      const { items, total } = sliceCatalog(catalog, args);
-      return { items, total, source };
-    } catch (err) {
+    if (!ensureResult.ok) {
       return {
         items: [],
         total: 0,
         source: "cache",
-        error: err instanceof Error ? err.message : "Failed to load Google Fonts",
+        error: ensureResult.error,
+        code: ensureResult.code,
+        retryAfterMs: ensureResult.retryAfterMs,
       };
     }
+
+    const cached = await ctx.runQuery(internal.googleFonts.getCache, {});
+    if (!cached) {
+      return {
+        items: [],
+        total: 0,
+        source: "cache",
+        error: "Catalog still empty",
+        code: "upstream",
+      };
+    }
+
+    const { items, total } = sliceCatalog(cached.items, args);
+    return { items, total, source: ensureResult.source };
   },
 });

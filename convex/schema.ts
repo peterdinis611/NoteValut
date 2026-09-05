@@ -133,4 +133,11 @@ export default defineSchema({
       }),
     ),
   }).index("by_key", ["key"]),
+
+  /** Fixed-window rate limits (e.g. googleFonts.ensure). */
+  rateLimits: defineTable({
+    key: v.string(),
+    windowStart: v.number(),
+    count: v.number(),
+  }).index("by_key", ["key"]),
 });

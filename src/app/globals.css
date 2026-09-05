@@ -6721,6 +6721,12 @@ body {
   font-size: 0.75rem;
   line-height: 1.4;
   color: color-mix(in srgb, #e85d4c 85%, var(--foreground));
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.settings-gf-error p {
+  margin: 0;
 }
 .settings-gf-meta {
   margin: 0;

@@ -7,7 +7,7 @@ import {
   useQuery,
   type Preloaded,
 } from "convex/react";
-import { useEffect, useEffectEvent, useState, useSyncExternalStore } from "react";
+import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
 import { api } from "../../convex/_generated/api";
 import {
   googleFontsCss2Url,
@@ -62,10 +62,14 @@ function GoogleFontsPickerInner({ onPick, seed }: InnerProps) {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [category, setCategory] = useState("");
   const [ensureError, setEnsureError] = useState<string | null>(null);
+  const [retryAfterMs, setRetryAfterMs] = useState<number | null>(null);
   const [ensuring, setEnsuring] = useState(false);
   const [pending, setPending] = useState<GoogleFontItem | null>(null);
   const [weight, setWeight] = useState(400);
   const [favTick, setFavTick] = useState(0);
+  const ensureInFlight = useRef(false);
+  const lastEnsureAt = useRef(0);
+  const staleRefreshDone = useRef(false);
 
   useEffect(() => {
     const id = window.setTimeout(() => setDebouncedQuery(query.trim()), 280);
@@ -84,28 +88,50 @@ function GoogleFontsPickerInner({ onPick, seed }: InnerProps) {
   const result = live ?? (useSeed ? seed : undefined);
 
   const warmCatalog = useEffectEvent(async (force: boolean) => {
+    if (ensureInFlight.current) return;
+    const now = Date.now();
+    // Client-side cooldown — avoid action spam while typing / remounting.
+    if (!force && now - lastEnsureAt.current < 4_000) return;
+
+    ensureInFlight.current = true;
+    lastEnsureAt.current = now;
     setEnsuring(true);
     setEnsureError(null);
+    setRetryAfterMs(null);
     try {
       const res = await ensureCatalog({ force });
-      if (!res.ok) setEnsureError(res.error);
+      if (!res.ok) {
+        setEnsureError(res.error);
+        setRetryAfterMs(res.retryAfterMs ?? null);
+        return;
+      }
+      if (force || res.source === "metadata") {
+        staleRefreshDone.current = true;
+      }
     } catch (err) {
       setEnsureError(err instanceof Error ? err.message : "Couldn’t load Google Fonts");
     } finally {
+      ensureInFlight.current = false;
       setEnsuring(false);
     }
   });
 
   useEffect(() => {
     if (!result) return;
-    if (!result.ready || result.stale) {
-      void warmCatalog(Boolean(result.ready && result.stale));
+    if (!result.ready) {
+      void warmCatalog(false);
+      return;
+    }
+    // Background refresh at most once per mount when catalog is stale.
+    if (result.stale && !staleRefreshDone.current) {
+      staleRefreshDone.current = true;
+      void warmCatalog(false);
     }
   }, [result?.ready, result?.stale]);
 
   const items: GoogleFontItem[] = result?.ready ? result.items : [];
   const total = result?.ready ? result.total : 0;
-  const loading = !result || !result.ready || ensuring;
+  const loading = (!result || !result.ready) && ensuring;
   const error = ensureError;
 
   const weightOptions = pending ? googleFontWeightOptions(pending.variants) : [400];
@@ -231,9 +257,25 @@ function GoogleFontsPickerInner({ onPick, seed }: InnerProps) {
       </div>
 
       {error ? (
-        <p className="settings-gf-error" role="alert">
-          {error}
-        </p>
+        <div className="settings-gf-error" role="alert">
+          <p>{error}</p>
+          <button
+            type="button"
+            className="settings-btn settings-btn-ghost"
+            disabled={ensuring || (retryAfterMs !== null && retryAfterMs > 0)}
+            onClick={() => {
+              staleRefreshDone.current = false;
+              lastEnsureAt.current = 0;
+              void warmCatalog(true);
+            }}
+          >
+            {ensuring
+              ? "Retrying…"
+              : retryAfterMs
+                ? `Retry available soon`
+                : "Retry"}
+          </button>
+        </div>
       ) : null}
 
       {pending ? (

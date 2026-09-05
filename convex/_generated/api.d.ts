@@ -13,6 +13,7 @@ import type * as files from "../files.js";
 import type * as googleFonts from "../googleFonts.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_googleFonts from "../lib/googleFonts.js";
+import type * as lib_rateLimit from "../lib/rateLimit.js";
 import type * as lib_searchText from "../lib/searchText.js";
 import type * as notes from "../notes.js";
 import type * as push from "../push.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   googleFonts: typeof googleFonts;
   "lib/auth": typeof lib_auth;
   "lib/googleFonts": typeof lib_googleFonts;
+  "lib/rateLimit": typeof lib_rateLimit;
   "lib/searchText": typeof lib_searchText;
   notes: typeof notes;
   push: typeof push;
