@@ -11,11 +11,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { MediaUploadButton } from "@/components/media-upload-button";
 import { useToast } from "@/components/toast";
-import {
-  OFFICE_ACCEPT,
-  fileExtension,
-  officeKindLabel,
-} from "@/hooks/use-vault-upload";
+import { OFFICE_ACCEPT, fileExtension, officeKindLabel } from "@/hooks/use-vault-upload";
 import type { BlockRenderProps } from "../types";
 
 function FileKindIcon({ name }: { name: string }) {
@@ -63,7 +59,9 @@ export function FileBlockView(props: BlockRenderProps) {
           </span>
           <div className="nv-file-empty-copy">
             <p className="nv-file-empty-title">Attach an Office file</p>
-            <p className="nv-file-empty-hint">Word, Excel, or PowerPoint (.doc/.docx, .xls/.xlsx, .ppt/.pptx)</p>
+            <p className="nv-file-empty-hint">
+              Word, Excel, or PowerPoint (.doc/.docx, .xls/.xlsx, .ppt/.pptx)
+            </p>
           </div>
           {!props.readOnly && (
             <MediaUploadButton

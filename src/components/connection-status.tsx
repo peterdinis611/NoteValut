@@ -7,9 +7,7 @@ import { useEffect, useState } from "react";
 type Status = "offline" | "syncing" | "live";
 
 function useBrowserOnline() {
-  const [online, setOnline] = useState(
-    typeof navigator === "undefined" ? true : navigator.onLine,
-  );
+  const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   useEffect(() => {
     function on() {
       setOnline(true);
@@ -42,8 +40,7 @@ export function ConnectionStatus({ className = "", variant = "default" }: Props)
   if (!online) status = "offline";
   else if (!conn.isWebSocketConnected || conn.hasInflightRequests) status = "syncing";
 
-  const label =
-    status === "offline" ? "Offline" : status === "syncing" ? "Syncing" : "Live";
+  const label = status === "offline" ? "Offline" : status === "syncing" ? "Syncing" : "Live";
   const title =
     status === "offline"
       ? "No network — edits queue locally until you’re back online"

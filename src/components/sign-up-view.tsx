@@ -38,11 +38,5 @@ export function SignUpView() {
     })();
   }, [clerk]);
 
-  return (
-    <SignUp
-      appearance={clerkAppearance}
-      forceRedirectUrl="/"
-      signInUrl="/sign-in"
-    />
-  );
+  return <SignUp appearance={clerkAppearance} forceRedirectUrl="/" signInUrl="/sign-in" />;
 }

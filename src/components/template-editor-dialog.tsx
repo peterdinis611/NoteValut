@@ -98,12 +98,7 @@ export function TemplateEditorDialog({ open, onClose, onSaved }: Props) {
                   Define starter blocks for new pages from the create menu
                 </p>
               </div>
-              <button
-                type="button"
-                className="settings-close"
-                onClick={onClose}
-                aria-label="Close"
-              >
+              <button type="button" className="settings-close" onClick={onClose} aria-label="Close">
                 <X className="size-4" />
               </button>
             </header>

@@ -38,16 +38,11 @@ function formatChip(dueAt: number) {
 export function DueDatePicker({ value, overdue, readOnly, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const selectedKey = value ? toDailyKey(new Date(value)) : null;
-  const [cursor, setCursor] = useState(() =>
-    monthCursorFromKey(selectedKey ?? toDailyKey()),
-  );
+  const [cursor, setCursor] = useState(() => monthCursorFromKey(selectedKey ?? toDailyKey()));
   const rootRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
 
-  const grid = useMemo(
-    () => monthGridKeys(cursor.year, cursor.month),
-    [cursor.year, cursor.month],
-  );
+  const grid = useMemo(() => monthGridKeys(cursor.year, cursor.month), [cursor.year, cursor.month]);
 
   useEffect(() => {
     if (!open) return;
@@ -150,9 +145,7 @@ export function DueDatePicker({ value, overdue, readOnly, onChange }: Props) {
             >
               <ChevronLeft className="size-4" />
             </button>
-            <p className="nv-due-month-label">
-              {formatMonthLabel(cursor.year, cursor.month)}
-            </p>
+            <p className="nv-due-month-label">{formatMonthLabel(cursor.year, cursor.month)}</p>
             <button
               type="button"
               className="nv-due-nav"

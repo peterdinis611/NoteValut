@@ -96,9 +96,7 @@ export function LottieStatus({
 }: Props) {
   const loop = variant === "loading" || variant === "not-found" || variant === "not-authorized";
   const hasDetail =
-    Boolean(detail?.trim()) ||
-    Boolean(detailRows?.length) ||
-    Boolean(detailStack?.trim());
+    Boolean(detail?.trim()) || Boolean(detailRows?.length) || Boolean(detailStack?.trim());
 
   const copyText = [
     detailPreview,
@@ -110,9 +108,7 @@ export function LottieStatus({
     .join("\n");
 
   return (
-    <div
-      className={`status-page status-page-${variant} ${compact ? "status-page-compact" : ""}`}
-    >
+    <div className={`status-page status-page-${variant} ${compact ? "status-page-compact" : ""}`}>
       <div className="status-glow" aria-hidden />
       <motion.div
         className="status-shell"
@@ -154,11 +150,7 @@ export function LottieStatus({
                   {detailRows.map((row) => (
                     <div key={row.label} className="status-detail-row">
                       <dt>{row.label}</dt>
-                      <dd
-                        className={
-                          row.mono !== false ? "status-detail-mono" : undefined
-                        }
-                      >
+                      <dd className={row.mono !== false ? "status-detail-mono" : undefined}>
                         {row.value}
                       </dd>
                     </div>

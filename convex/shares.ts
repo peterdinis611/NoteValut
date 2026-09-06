@@ -12,10 +12,7 @@ function isActive(item: { archived: boolean; trashed?: boolean }) {
   return !item.archived && !item.trashed;
 }
 
-async function collectDescendants(
-  ctx: QueryCtx,
-  rootId: Id<"notes">,
-): Promise<Doc<"notes">[]> {
+async function collectDescendants(ctx: QueryCtx, rootId: Id<"notes">): Promise<Doc<"notes">[]> {
   const result: Doc<"notes">[] = [];
   const queue = [rootId];
 

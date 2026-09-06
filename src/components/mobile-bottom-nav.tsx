@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  CalendarClock,
-  Home,
-  Menu,
-  Search,
-  Zap,
-} from "lucide-react";
+import { CalendarClock, Home, Menu, Search, Zap } from "lucide-react";
 
 type Tab = "home" | "search" | "capture" | "due" | "menu";
 
@@ -20,14 +14,7 @@ type Props = {
 };
 
 /** Fixed mobile tab bar — replaces relying only on the slide-over sidebar. */
-export function MobileBottomNav({
-  active,
-  onHome,
-  onSearch,
-  onCapture,
-  onDue,
-  onMenu,
-}: Props) {
+export function MobileBottomNav({ active, onHome, onSearch, onCapture, onDue, onMenu }: Props) {
   return (
     <nav className="mobile-bottom-nav" aria-label="Primary">
       <button

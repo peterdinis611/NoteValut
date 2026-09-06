@@ -36,9 +36,7 @@ function tagsFromInput(input: CreateCustomTemplateInput): string[] {
 /**
  * Validate and persist a custom page template (Settings “New template” / Save as template).
  */
-export function createCustomTemplate(
-  input: CreateCustomTemplateInput,
-): CreateCustomTemplateResult {
+export function createCustomTemplate(input: CreateCustomTemplateInput): CreateCustomTemplateResult {
   const nameResult = parseTemplateName(input.name.trim() || "Untitled template");
   if (!nameResult.success) {
     return { success: false, error: firstIssue(nameResult) };

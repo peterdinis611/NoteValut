@@ -139,9 +139,7 @@ export const Locked: Story = {
         "notes:get": locked,
         "notes:listChildren": lockedChildren,
         "notes:list": sampleNotes(),
-        "notes:getBreadcrumbs": [
-          { id: locked._id, title: locked.title, icon: locked.icon },
-        ],
+        "notes:getBreadcrumbs": [{ id: locked._id, title: locked.title, icon: locked.icon }],
         "notes:listBacklinks": [],
         "notes:listTags": sampleTags(),
         "shares:list": [],

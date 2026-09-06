@@ -100,9 +100,7 @@ export const Heading1 = Extension({
   },
   placeholder: () => "Title",
   inputTag: "input",
-  render: (props) => (
-    <TextBlock props={props} className="nv-h1" placeholder="Title" tag="input" />
-  ),
+  render: (props) => <TextBlock props={props} className="nv-h1" placeholder="Title" tag="input" />,
 });
 
 export const Heading2 = Extension({
@@ -323,9 +321,7 @@ export const Todo = Extension({
           value={due}
           overdue={overdue}
           readOnly={props.readOnly}
-          onChange={(dueAt) =>
-            props.commands.updateBlock(props.block.id, { dueAt })
-          }
+          onChange={(dueAt) => props.commands.updateBlock(props.block.id, { dueAt })}
         />
       </div>
     );
@@ -347,9 +343,7 @@ export const Quote = Extension({
     },
   ],
   placeholder: () => "Quote",
-  render: (props) => (
-    <TextBlock props={props} className="nv-quote" placeholder="Quote" />
-  ),
+  render: (props) => <TextBlock props={props} className="nv-quote" placeholder="Quote" />,
 });
 
 export const Code = Extension({

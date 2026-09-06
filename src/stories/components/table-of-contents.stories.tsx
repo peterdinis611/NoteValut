@@ -24,14 +24,11 @@ export const TooFewHeadings: Story = {
   render: () => (
     <div className="space-y-2 p-4 text-sm text-muted">
       <p>
-        Fewer than two headings → <code className="text-foreground">TableOfContents</code>{" "}
-        returns null.
+        Fewer than two headings → <code className="text-foreground">TableOfContents</code> returns
+        null.
       </p>
       <TableOfContents
-        blocks={[
-          createBlock("heading1", "Only heading"),
-          createBlock("paragraph", "Body text"),
-        ]}
+        blocks={[createBlock("heading1", "Only heading"), createBlock("paragraph", "Body text")]}
         onJump={fn()}
       />
       <p className="text-xs">End of story.</p>

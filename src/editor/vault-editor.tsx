@@ -81,8 +81,7 @@ export function VaultEditor({
     if (readOnly) return;
     const files = [...fileList];
     if (!files.length) return;
-    const anchor =
-      editor.focusedId ?? editor.blocks[editor.blocks.length - 1]?.id;
+    const anchor = editor.focusedId ?? editor.blocks[editor.blocks.length - 1]?.id;
     if (!anchor) return;
 
     let afterId = anchor;
@@ -94,8 +93,7 @@ export function VaultEditor({
       }
       try {
         const uploaded = await uploadFile(file);
-        const title =
-          kind === "file" ? file.name : file.name.replace(/\.[^.]+$/, "");
+        const title = kind === "file" ? file.name : file.name.replace(/\.[^.]+$/, "");
         const id = editor.commands.insertBlockAfter(afterId, kind, title);
         editor.commands.updateBlock(id, { url: uploaded.url });
         afterId = id;
@@ -261,7 +259,11 @@ function SortableBlockRow({
       onMouseLeave={() => editor.setHoveredId(null)}
     >
       {!readOnly && (
-        <div className={`nv-gutter ${showChrome ? "nv-gutter-visible" : ""}`} role="toolbar" aria-label="Block actions">
+        <div
+          className={`nv-gutter ${showChrome ? "nv-gutter-visible" : ""}`}
+          role="toolbar"
+          aria-label="Block actions"
+        >
           <button
             type="button"
             className="nv-gutter-btn"
@@ -304,9 +306,7 @@ function SortableBlockRow({
             aria-label={block.pinned ? "Unpin block" : "Pin block"}
             title={block.pinned ? "Unpin bookmark" : "Bookmark on this page"}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() =>
-              editor.commands.updateBlock(block.id, { pinned: !block.pinned })
-            }
+            onClick={() => editor.commands.updateBlock(block.id, { pinned: !block.pinned })}
           >
             <Bookmark className={`size-3.5 ${block.pinned ? "fill-current" : ""}`} />
           </button>

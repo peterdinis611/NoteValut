@@ -10,11 +10,7 @@ import {
 import { RenderLayer, RenderPluginPackage } from "@embedpdf/plugin-render/react";
 import { Scroller, ScrollPluginPackage, useScroll } from "@embedpdf/plugin-scroll/react";
 import { Viewport, ViewportPluginPackage } from "@embedpdf/plugin-viewport/react";
-import {
-  ZoomMode,
-  ZoomPluginPackage,
-  useZoom,
-} from "@embedpdf/plugin-zoom/react";
+import { ZoomMode, ZoomPluginPackage, useZoom } from "@embedpdf/plugin-zoom/react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -92,13 +88,15 @@ export function PdfViewer({
     let cancelled = false;
     setSource(null);
     setSourceError(null);
-    void resolveDocSource(src, title).then((doc) => {
-      if (cancelled) return;
-      setSource(doc);
-    }).catch((err: unknown) => {
-      if (cancelled) return;
-      setSourceError(err instanceof Error ? err.message : "Couldn’t load PDF");
-    });
+    void resolveDocSource(src, title)
+      .then((doc) => {
+        if (cancelled) return;
+        setSource(doc);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setSourceError(err instanceof Error ? err.message : "Couldn’t load PDF");
+      });
     return () => {
       cancelled = true;
     };
@@ -318,11 +316,7 @@ function PdfShell({
               aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
               onClick={onToggleFullscreen}
             >
-              {fullscreen ? (
-                <Minimize2 className="size-3.5" />
-              ) : (
-                <Expand className="size-3.5" />
-              )}
+              {fullscreen ? <Minimize2 className="size-3.5" /> : <Expand className="size-3.5" />}
             </button>
           )}
         </div>

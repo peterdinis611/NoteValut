@@ -31,10 +31,7 @@ export function VirtualList<T>({
 
   return (
     <div ref={parentRef} className={className ?? "virtual-list"}>
-      <div
-        className="virtual-list-inner"
-        style={{ height: virtualizer.getTotalSize() }}
-      >
+      <div className="virtual-list-inner" style={{ height: virtualizer.getTotalSize() }}>
         {virtualizer.getVirtualItems().map((row) => (
           <div
             key={row.key}

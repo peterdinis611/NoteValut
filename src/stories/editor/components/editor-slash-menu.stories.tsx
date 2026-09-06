@@ -180,9 +180,7 @@ export const Full: Story = {
 export const Filtered: Story = {
   args: {
     commands: sampleCommands.filter(
-      (c) =>
-        c.keywords.some((k) => k.includes("head")) ||
-        c.label.toLowerCase().includes("head"),
+      (c) => c.keywords.some((k) => k.includes("head")) || c.label.toLowerCase().includes("head"),
     ),
     query: "head",
     selectedIndex: 0,

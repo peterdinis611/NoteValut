@@ -45,9 +45,7 @@ const GROUPS: Group[] = [
   },
   {
     title: "Headings",
-    items: [
-      { keys: "⌘ ⌥ 1–6", action: "Set heading level" },
-    ],
+    items: [{ keys: "⌘ ⌥ 1–6", action: "Set heading level" }],
   },
 ];
 
@@ -82,7 +80,12 @@ export function KeyboardCheatSheet({ open, onClose }: Props) {
           exit="exit"
           transition={{ duration: 0.15 }}
         >
-          <button type="button" className="shortcuts-backdrop" aria-label="Close" onClick={onClose} />
+          <button
+            type="button"
+            className="shortcuts-backdrop"
+            aria-label="Close"
+            onClick={onClose}
+          />
           <motion.div
             className="shortcuts-panel"
             role="dialog"
@@ -99,7 +102,12 @@ export function KeyboardCheatSheet({ open, onClose }: Props) {
                 <Keyboard className="size-4 text-accent" />
                 <h2 className="shortcuts-title">Keyboard shortcuts</h2>
               </div>
-              <button type="button" className="shortcuts-close" aria-label="Close" onClick={onClose}>
+              <button
+                type="button"
+                className="shortcuts-close"
+                aria-label="Close"
+                onClick={onClose}
+              >
                 <X className="size-4" />
               </button>
             </header>

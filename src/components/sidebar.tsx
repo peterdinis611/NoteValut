@@ -313,9 +313,7 @@ export function Sidebar({
     !isSearching &&
     !showBin;
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const dragItem = dragId ? notesById.get(dragId) : null;
 
@@ -460,490 +458,490 @@ export function Sidebar({
         transition={sidebarSpring}
         style={mobile ? undefined : { width: SIDEBAR_WIDTH }}
       >
-      <div className="sidebar-header">
-        <button type="button" className="sidebar-workspace" onClick={onGoHome}>
-          <span className="sidebar-mark" aria-hidden>
-            N
-          </span>
-          <span className="sidebar-brand">NoteVault</span>
-        </button>
-        <button
-          type="button"
-          className="sidebar-icon-btn"
-          onClick={onCollapse}
-          aria-label="Collapse sidebar"
-        >
-          <PanelLeftClose className="size-4" />
-        </button>
-      </div>
-
-      <div className={`sidebar-search-wrap ${searchPending ? "sidebar-search-pending" : ""}`} data-tour="search">
-        <Search className="sidebar-search-icon" />
-        <input
-          className="sidebar-search"
-          placeholder="Search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-busy={searchPending}
-        />
-      </div>
-
-      <div className="sidebar-menu">
-        <button
-          type="button"
-          className={`sidebar-link ${homeActive ? "sidebar-link-active" : ""}`}
-          onClick={() => {
-            setBrowse("all");
-            setShowBin(false);
-            onGoHome();
-          }}
-        >
-          <Home className="size-4" />
-          <span>Home</span>
-        </button>
-        <button
-          type="button"
-          className="sidebar-link"
-          onClick={async () => {
-            try {
-              const id = await getOrCreateDaily({ ownerId, dailyKey: toDailyKey() });
-              setShowBin(false);
-              onSelect(id);
-            } catch {
-              toast.error("Couldn’t open today");
-            }
-          }}
-        >
-          <Sun className="size-4" />
-          <span>Today</span>
-        </button>
-        {onOpenCalendar && (
+        <div className="sidebar-header">
+          <button type="button" className="sidebar-workspace" onClick={onGoHome}>
+            <span className="sidebar-mark" aria-hidden>
+              N
+            </span>
+            <span className="sidebar-brand">NoteVault</span>
+          </button>
           <button
             type="button"
-            className={`sidebar-link ${calendarActive ? "sidebar-link-active" : ""}`}
-            onClick={() => {
-              setShowBin(false);
-              onOpenCalendar();
-            }}
+            className="sidebar-icon-btn"
+            onClick={onCollapse}
+            aria-label="Collapse sidebar"
           >
-            <CalendarDays className="size-4" />
-            <span>Calendar</span>
+            <PanelLeftClose className="size-4" />
           </button>
-        )}
-        {onOpenDueInbox && (
-          <button
-            type="button"
-            className={`sidebar-link ${dueActive ? "sidebar-link-active" : ""}`}
-            data-tour="due-inbox"
-            onClick={() => {
-              setShowBin(false);
-              onOpenDueInbox();
-            }}
-          >
-            <Inbox className="size-4" />
-            <span>Due inbox</span>
-          </button>
-        )}
+        </div>
 
-        <div className="sidebar-menu-divider" />
-
-        <div className="sidebar-create-wrap">
-          <button
-            type="button"
-            data-create-trigger
-            className="sidebar-link sidebar-link-create"
-            onClick={() => setShowCreate((v) => !v)}
-          >
-            <Plus className="size-4" />
-            <span>New page</span>
-          </button>
-          <CreateMenu
-            open={showCreate}
-            onClose={() => setShowCreate(false)}
-            onCreateEntry={(templateId) => onCreateEntry(undefined, templateId)}
-            onCreateCollection={() => onCreateCollection()}
+        <div
+          className={`sidebar-search-wrap ${searchPending ? "sidebar-search-pending" : ""}`}
+          data-tour="search"
+        >
+          <Search className="sidebar-search-icon" />
+          <input
+            className="sidebar-search"
+            placeholder="Search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-busy={searchPending}
           />
         </div>
 
-        {browseItems.map((item) => {
-          const Icon = item.icon;
-          const active =
-            !isSearching && !showBin && !tagsActive && !calendarActive && !dueActive && browse === item.id;
-          return (
+        <div className="sidebar-menu">
+          <button
+            type="button"
+            className={`sidebar-link ${homeActive ? "sidebar-link-active" : ""}`}
+            onClick={() => {
+              setBrowse("all");
+              setShowBin(false);
+              onGoHome();
+            }}
+          >
+            <Home className="size-4" />
+            <span>Home</span>
+          </button>
+          <button
+            type="button"
+            className="sidebar-link"
+            onClick={async () => {
+              try {
+                const id = await getOrCreateDaily({ ownerId, dailyKey: toDailyKey() });
+                setShowBin(false);
+                onSelect(id);
+              } catch {
+                toast.error("Couldn’t open today");
+              }
+            }}
+          >
+            <Sun className="size-4" />
+            <span>Today</span>
+          </button>
+          {onOpenCalendar && (
             <button
-              key={item.id}
               type="button"
-              className={`sidebar-link ${active ? "sidebar-link-active" : ""}`}
-              onClick={() => setBrowseMode(item.id)}
+              className={`sidebar-link ${calendarActive ? "sidebar-link-active" : ""}`}
+              onClick={() => {
+                setShowBin(false);
+                onOpenCalendar();
+              }}
             >
-              <Icon className="size-4" />
-              <span>{item.label}</span>
+              <CalendarDays className="size-4" />
+              <span>Calendar</span>
             </button>
-          );
-        })}
-      </div>
+          )}
+          {onOpenDueInbox && (
+            <button
+              type="button"
+              className={`sidebar-link ${dueActive ? "sidebar-link-active" : ""}`}
+              data-tour="due-inbox"
+              onClick={() => {
+                setShowBin(false);
+                onOpenDueInbox();
+              }}
+            >
+              <Inbox className="size-4" />
+              <span>Due inbox</span>
+            </button>
+          )}
 
-      <nav className="sidebar-nav note-scroll">
-        {selectedIds.size > 0 && (
-          <div className="sidebar-bulk">
-            <div className="sidebar-bulk-top">
-              <span className="sidebar-bulk-count">{selectedIds.size} selected</span>
-              <div className="sidebar-bulk-actions">
-                <button type="button" onClick={() => void runBulk("pin")}>
-                  Star
-                </button>
-                <button type="button" onClick={() => setBulkMoveOpen(true)}>
-                  Move
-                </button>
-                <button type="button" onClick={() => void runBulk("archive")}>
-                  Archive
-                </button>
-                <button type="button" onClick={() => void runBulk("trash")}>
-                  Trash
-                </button>
-                <button type="button" className="sidebar-bulk-clear" onClick={clearSelection}>
-                  Clear
-                </button>
-              </div>
-            </div>
-            <div className="sidebar-bulk-tag">
-              <input
-                value={bulkTag}
-                onChange={(e) => setBulkTag(e.target.value)}
-                placeholder="Add tag…"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void runBulk("tag");
-                }}
-              />
-              <button type="button" onClick={() => void runBulk("tag")}>
-                Add
-              </button>
-              <button type="button" onClick={() => void runBulk("untag")}>
-                Remove
-              </button>
-            </div>
-          </div>
-        )}
-        {notes === undefined ? (
-          <p className="sidebar-empty">Loading…</p>
-        ) : isSearching ? (
-          <SidebarSection
-            title={searchPending ? "Searching…" : `Results · ${searchResults.length}`}
-          >
-            {searchResults.length === 0 ? (
-              <p className="sidebar-empty">No matches</p>
-            ) : (
-              <VirtualList
-                items={searchResults}
-                estimateSize={36}
-                overscan={10}
-                className="sidebar-virtual"
-                getKey={(item) => item._id}
-                renderItem={(item) => (
-                  <SidebarItem
-                    item={item}
-                    active={item._id === activeId}
-                    selected={selectedIds.has(item._id)}
-                    snippet={"snippet" in item ? (item as { snippet?: string }).snippet : undefined}
-                    onToggleSelect={() => toggleSelect(item._id)}
-                    onSelect={() => onSelect(item._id)}
-                    onTogglePin={() => handleTogglePin(item._id, item.pinned)}
-                    onTrash={() => handleTrash(item._id)}
-                  />
-                )}
-              />
-            )}
-          </SidebarSection>
-        ) : browse === "favorites" ? (
-          <SidebarSection title="Favorites">
-            {pinned.length === 0 ? (
-              <EmptyHint text="Pin entries to keep them here." />
-            ) : (
-              <VirtualNoteList
-                items={pinned}
-                activeId={activeId}
-                selectedIds={selectedIds}
-                onSelect={onSelect}
-                onToggleSelect={toggleSelect}
-                onTogglePin={handleTogglePin}
-                onTrash={handleTrash}
-              />
-            )}
-          </SidebarSection>
-        ) : browse === "recent" ? (
-          <SidebarSection title="Recent">
-            {recent.length === 0 ? (
-              <EmptyHint text="Edited pages show up here." />
-            ) : (
-              <VirtualNoteList
-                items={recent}
-                activeId={activeId}
-                selectedIds={selectedIds}
-                onSelect={onSelect}
-                onToggleSelect={toggleSelect}
-                onTogglePin={handleTogglePin}
-                onTrash={handleTrash}
-              />
-            )}
-          </SidebarSection>
-        ) : browse === "collections" ? (
-          <SidebarSection title="Collections">
+          <div className="sidebar-menu-divider" />
+
+          <div className="sidebar-create-wrap">
             <button
               type="button"
-              className="sidebar-inline-cta"
-              onClick={() => onCreateCollection()}
+              data-create-trigger
+              className="sidebar-link sidebar-link-create"
+              onClick={() => setShowCreate((v) => !v)}
             >
-              <Plus className="size-3.5" />
-              New collection
+              <Plus className="size-4" />
+              <span>New page</span>
             </button>
-            {collections.length === 0 ? (
-              <EmptyHint text="Group related pages into collections." />
-            ) : (
-              <VirtualNoteList
-                items={collections}
-                activeId={activeId}
-                selectedIds={selectedIds}
-                onSelect={onSelect}
-                onToggleSelect={toggleSelect}
-                onTogglePin={handleTogglePin}
-                onTrash={handleTrash}
-              />
-            )}
-          </SidebarSection>
-        ) : browse === "archive" ? (
-          <SidebarSection title="Archive">
-            {archived === undefined ? (
-              <p className="sidebar-empty">Loading…</p>
-            ) : archivedItems.length === 0 ? (
-              <EmptyHint text="Archived pages show up here." />
-            ) : (
-              <ul className="sidebar-section-items">
-                {archivedItems.map((item) => (
-                  <li key={item._id} className="sidebar-bin-item">
-                    <button
-                      type="button"
-                      className="sidebar-bin-label min-w-0 flex-1 text-left"
-                      onClick={() => onSelect(item._id)}
-                    >
-                      <span>{item.icon}</span>
-                      <span className="truncate">{item.title || "Untitled"}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="sidebar-bin-restore"
-                      onClick={() => void handleUnarchive(item._id)}
-                    >
-                      Restore
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </SidebarSection>
-        ) : (
-          <SidebarSection
-            title="Private"
-            action={
+            <CreateMenu
+              open={showCreate}
+              onClose={() => setShowCreate(false)}
+              onCreateEntry={(templateId) => onCreateEntry(undefined, templateId)}
+              onCreateCollection={() => onCreateCollection()}
+            />
+          </div>
+
+          {browseItems.map((item) => {
+            const Icon = item.icon;
+            const active =
+              !isSearching &&
+              !showBin &&
+              !tagsActive &&
+              !calendarActive &&
+              !dueActive &&
+              browse === item.id;
+            return (
               <button
+                key={item.id}
                 type="button"
-                className="sidebar-section-action"
-                onClick={() => onCreateEntry()}
-                aria-label="New entry"
+                className={`sidebar-link ${active ? "sidebar-link-active" : ""}`}
+                onClick={() => setBrowseMode(item.id)}
               >
-                <Plus className="size-3.5" />
+                <Icon className="size-4" />
+                <span>{item.label}</span>
               </button>
-            }
-          >
-            {rootItems.length === 0 ? (
-              <div className="sidebar-empty-state">
-                <p className="sidebar-empty-title">Nothing here yet</p>
-                <p className="sidebar-empty-copy">
-                  {trashCount > 0
-                    ? `${trashCount} item${trashCount === 1 ? "" : "s"} in the bin — restore or create new.`
-                    : "Create an entry or collection to get started."}
-                </p>
-                <div className="sidebar-empty-actions">
-                  <button
-                    type="button"
-                    className="sidebar-empty-cta"
-                    onClick={() => onCreateEntry()}
-                  >
-                    <Plus className="size-3.5" />
-                    Entry
+            );
+          })}
+        </div>
+
+        <nav className="sidebar-nav note-scroll">
+          {selectedIds.size > 0 && (
+            <div className="sidebar-bulk">
+              <div className="sidebar-bulk-top">
+                <span className="sidebar-bulk-count">{selectedIds.size} selected</span>
+                <div className="sidebar-bulk-actions">
+                  <button type="button" onClick={() => void runBulk("pin")}>
+                    Star
                   </button>
-                  <button
-                    type="button"
-                    className="sidebar-empty-cta"
-                    onClick={() => onCreateCollection()}
-                  >
-                    <FolderOpen className="size-3.5" />
-                    Collection
+                  <button type="button" onClick={() => setBulkMoveOpen(true)}>
+                    Move
+                  </button>
+                  <button type="button" onClick={() => void runBulk("archive")}>
+                    Archive
+                  </button>
+                  <button type="button" onClick={() => void runBulk("trash")}>
+                    Trash
+                  </button>
+                  <button type="button" className="sidebar-bulk-clear" onClick={clearSelection}>
+                    Clear
                   </button>
                 </div>
               </div>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragStart={(event: DragStartEvent) => {
-                  setDragId(event.active.id as Id<"notes">);
-                }}
-                onDragMove={(event) => setDropIntent(getDropIntent(event))}
-                onDragCancel={() => {
-                  setDragId(null);
-                  setDropIntent(null);
-                }}
-                onDragEnd={(event) => void handleTreeDragEnd(event)}
-              >
-                <ul className="sidebar-tree">
-                  {rootItems.map((item) => (
-                    <TreeNode
-                      key={item._id}
+              <div className="sidebar-bulk-tag">
+                <input
+                  value={bulkTag}
+                  onChange={(e) => setBulkTag(e.target.value)}
+                  placeholder="Add tag…"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void runBulk("tag");
+                  }}
+                />
+                <button type="button" onClick={() => void runBulk("tag")}>
+                  Add
+                </button>
+                <button type="button" onClick={() => void runBulk("untag")}>
+                  Remove
+                </button>
+              </div>
+            </div>
+          )}
+          {notes === undefined ? (
+            <p className="sidebar-empty">Loading…</p>
+          ) : isSearching ? (
+            <SidebarSection
+              title={searchPending ? "Searching…" : `Results · ${searchResults.length}`}
+            >
+              {searchResults.length === 0 ? (
+                <p className="sidebar-empty">No matches</p>
+              ) : (
+                <VirtualList
+                  items={searchResults}
+                  estimateSize={36}
+                  overscan={10}
+                  className="sidebar-virtual"
+                  getKey={(item) => item._id}
+                  renderItem={(item) => (
+                    <SidebarItem
                       item={item}
-                      depth={0}
-                      activeId={activeId}
-                      selectedIds={selectedIds}
-                      childrenByParent={childrenByParent}
-                      expanded={expanded}
-                      dropIntent={dropIntent}
-                      draggingId={dragId}
-                      onToggleExpanded={(id, next) =>
-                        setExpanded((e) => ({ ...e, [id]: next }))
+                      active={item._id === activeId}
+                      selected={selectedIds.has(item._id)}
+                      snippet={
+                        "snippet" in item ? (item as { snippet?: string }).snippet : undefined
                       }
-                      onSelect={onSelect}
-                      onToggleSelect={toggleSelect}
-                      onCreateEntry={onCreateEntry}
-                      onCreateCollection={onCreateCollection}
-                      onTogglePin={handleTogglePin}
-                      onTrash={handleTrash}
+                      onToggleSelect={() => toggleSelect(item._id)}
+                      onSelect={() => onSelect(item._id)}
+                      onTogglePin={() => handleTogglePin(item._id, item.pinned)}
+                      onTrash={() => handleTrash(item._id)}
                     />
+                  )}
+                />
+              )}
+            </SidebarSection>
+          ) : browse === "favorites" ? (
+            <SidebarSection title="Favorites">
+              {pinned.length === 0 ? (
+                <EmptyHint text="Pin entries to keep them here." />
+              ) : (
+                <VirtualNoteList
+                  items={pinned}
+                  activeId={activeId}
+                  selectedIds={selectedIds}
+                  onSelect={onSelect}
+                  onToggleSelect={toggleSelect}
+                  onTogglePin={handleTogglePin}
+                  onTrash={handleTrash}
+                />
+              )}
+            </SidebarSection>
+          ) : browse === "recent" ? (
+            <SidebarSection title="Recent">
+              {recent.length === 0 ? (
+                <EmptyHint text="Edited pages show up here." />
+              ) : (
+                <VirtualNoteList
+                  items={recent}
+                  activeId={activeId}
+                  selectedIds={selectedIds}
+                  onSelect={onSelect}
+                  onToggleSelect={toggleSelect}
+                  onTogglePin={handleTogglePin}
+                  onTrash={handleTrash}
+                />
+              )}
+            </SidebarSection>
+          ) : browse === "collections" ? (
+            <SidebarSection title="Collections">
+              <button
+                type="button"
+                className="sidebar-inline-cta"
+                onClick={() => onCreateCollection()}
+              >
+                <Plus className="size-3.5" />
+                New collection
+              </button>
+              {collections.length === 0 ? (
+                <EmptyHint text="Group related pages into collections." />
+              ) : (
+                <VirtualNoteList
+                  items={collections}
+                  activeId={activeId}
+                  selectedIds={selectedIds}
+                  onSelect={onSelect}
+                  onToggleSelect={toggleSelect}
+                  onTogglePin={handleTogglePin}
+                  onTrash={handleTrash}
+                />
+              )}
+            </SidebarSection>
+          ) : browse === "archive" ? (
+            <SidebarSection title="Archive">
+              {archived === undefined ? (
+                <p className="sidebar-empty">Loading…</p>
+              ) : archivedItems.length === 0 ? (
+                <EmptyHint text="Archived pages show up here." />
+              ) : (
+                <ul className="sidebar-section-items">
+                  {archivedItems.map((item) => (
+                    <li key={item._id} className="sidebar-bin-item">
+                      <button
+                        type="button"
+                        className="sidebar-bin-label min-w-0 flex-1 text-left"
+                        onClick={() => onSelect(item._id)}
+                      >
+                        <span>{item.icon}</span>
+                        <span className="truncate">{item.title || "Untitled"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="sidebar-bin-restore"
+                        onClick={() => void handleUnarchive(item._id)}
+                      >
+                        Restore
+                      </button>
+                    </li>
                   ))}
                 </ul>
-                <DragOverlay dropAnimation={null}>
-                  {dragItem ? (
-                    <div className="sidebar-drag-overlay">
-                      <span>{dragItem.icon}</span>
-                      <span className="truncate">{dragItem.title || "Untitled"}</span>
-                    </div>
-                  ) : null}
-                </DragOverlay>
-              </DndContext>
-            )}
-          </SidebarSection>
-        )}
-      </nav>
-
-      <div className="sidebar-footer">
-        {showBin && (
-          <div className="sidebar-bin">
-            <p className="sidebar-bin-title">Trash</p>
-            {trashCount === 0 ? (
-              <p className="sidebar-empty">Trash is empty</p>
-            ) : (
-              <>
-                {trashed?.map((item) => (
-                  <div key={item._id} className="sidebar-bin-item">
-                    <span className="sidebar-bin-label">
-                      <span>{item.icon}</span>
-                      <span className="truncate">{item.title || "Untitled"}</span>
-                    </span>
-                    <button
-                      type="button"
-                      className="sidebar-bin-restore"
-                      onClick={() => handleRestore(item._id)}
-                    >
-                      Restore
-                    </button>
-                  </div>
-                ))}
+              )}
+            </SidebarSection>
+          ) : (
+            <SidebarSection
+              title="Private"
+              action={
                 <button
                   type="button"
-                  className="sidebar-empty-bin"
-                  onClick={handleEmptyTrash}
+                  className="sidebar-section-action"
+                  onClick={() => onCreateEntry()}
+                  aria-label="New entry"
                 >
-                  Empty trash
+                  <Plus className="size-3.5" />
                 </button>
-              </>
+              }
+            >
+              {rootItems.length === 0 ? (
+                <div className="sidebar-empty-state">
+                  <p className="sidebar-empty-title">Nothing here yet</p>
+                  <p className="sidebar-empty-copy">
+                    {trashCount > 0
+                      ? `${trashCount} item${trashCount === 1 ? "" : "s"} in the bin — restore or create new.`
+                      : "Create an entry or collection to get started."}
+                  </p>
+                  <div className="sidebar-empty-actions">
+                    <button
+                      type="button"
+                      className="sidebar-empty-cta"
+                      onClick={() => onCreateEntry()}
+                    >
+                      <Plus className="size-3.5" />
+                      Entry
+                    </button>
+                    <button
+                      type="button"
+                      className="sidebar-empty-cta"
+                      onClick={() => onCreateCollection()}
+                    >
+                      <FolderOpen className="size-3.5" />
+                      Collection
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={(event: DragStartEvent) => {
+                    setDragId(event.active.id as Id<"notes">);
+                  }}
+                  onDragMove={(event) => setDropIntent(getDropIntent(event))}
+                  onDragCancel={() => {
+                    setDragId(null);
+                    setDropIntent(null);
+                  }}
+                  onDragEnd={(event) => void handleTreeDragEnd(event)}
+                >
+                  <ul className="sidebar-tree">
+                    {rootItems.map((item) => (
+                      <TreeNode
+                        key={item._id}
+                        item={item}
+                        depth={0}
+                        activeId={activeId}
+                        selectedIds={selectedIds}
+                        childrenByParent={childrenByParent}
+                        expanded={expanded}
+                        dropIntent={dropIntent}
+                        draggingId={dragId}
+                        onToggleExpanded={(id, next) => setExpanded((e) => ({ ...e, [id]: next }))}
+                        onSelect={onSelect}
+                        onToggleSelect={toggleSelect}
+                        onCreateEntry={onCreateEntry}
+                        onCreateCollection={onCreateCollection}
+                        onTogglePin={handleTogglePin}
+                        onTrash={handleTrash}
+                      />
+                    ))}
+                  </ul>
+                  <DragOverlay dropAnimation={null}>
+                    {dragItem ? (
+                      <div className="sidebar-drag-overlay">
+                        <span>{dragItem.icon}</span>
+                        <span className="truncate">{dragItem.title || "Untitled"}</span>
+                      </div>
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
+              )}
+            </SidebarSection>
+          )}
+        </nav>
+
+        <div className="sidebar-footer">
+          {showBin && (
+            <div className="sidebar-bin">
+              <p className="sidebar-bin-title">Trash</p>
+              {trashCount === 0 ? (
+                <p className="sidebar-empty">Trash is empty</p>
+              ) : (
+                <>
+                  {trashed?.map((item) => (
+                    <div key={item._id} className="sidebar-bin-item">
+                      <span className="sidebar-bin-label">
+                        <span>{item.icon}</span>
+                        <span className="truncate">{item.title || "Untitled"}</span>
+                      </span>
+                      <button
+                        type="button"
+                        className="sidebar-bin-restore"
+                        onClick={() => handleRestore(item._id)}
+                      >
+                        Restore
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" className="sidebar-empty-bin" onClick={handleEmptyTrash}>
+                    Empty trash
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          <div className="sidebar-footer-links">
+            <button
+              type="button"
+              className="sidebar-link"
+              data-tour="quick-capture"
+              onClick={onQuickCapture}
+            >
+              <Zap className="size-4" />
+              <span>Quick capture</span>
+            </button>
+            {onOpenTags && (
+              <button
+                type="button"
+                className={`sidebar-link ${tagsActive ? "sidebar-link-active" : ""}`}
+                onClick={() => {
+                  setShowBin(false);
+                  onOpenTags();
+                }}
+              >
+                <Tag className="size-4" />
+                <span>Tags</span>
+              </button>
             )}
+            <button type="button" className="sidebar-link" onClick={() => setShowShare(true)}>
+              <Share2 className="size-4" />
+              <span>Share</span>
+            </button>
+            {onOpenSettings && (
+              <button
+                type="button"
+                className={`sidebar-link ${settingsActive ? "sidebar-link-active" : ""}`}
+                data-tour="settings"
+                onClick={() => {
+                  setShowBin(false);
+                  onOpenSettings();
+                }}
+              >
+                <Settings2 className="size-4" />
+                <span>Settings</span>
+              </button>
+            )}
+            <button
+              type="button"
+              className={`sidebar-link ${showBin ? "sidebar-link-active" : ""}`}
+              onClick={() => setShowBin((v) => !v)}
+            >
+              <Trash2 className="size-4" />
+              <span>Trash</span>
+              {trashCount > 0 && <span className="sidebar-count">{trashCount}</span>}
+            </button>
           </div>
-        )}
 
-        <div className="sidebar-footer-links">
-          <button
-            type="button"
-            className="sidebar-link"
-            data-tour="quick-capture"
-            onClick={onQuickCapture}
-          >
-            <Zap className="size-4" />
-            <span>Quick capture</span>
-          </button>
-          {onOpenTags && (
-            <button
-              type="button"
-              className={`sidebar-link ${tagsActive ? "sidebar-link-active" : ""}`}
-              onClick={() => {
-                setShowBin(false);
-                onOpenTags();
-              }}
-            >
-              <Tag className="size-4" />
-              <span>Tags</span>
-            </button>
-          )}
-          <button
-            type="button"
-            className="sidebar-link"
-            onClick={() => setShowShare(true)}
-          >
-            <Share2 className="size-4" />
-            <span>Share</span>
-          </button>
-          {onOpenSettings && (
-            <button
-              type="button"
-              className={`sidebar-link ${settingsActive ? "sidebar-link-active" : ""}`}
-              data-tour="settings"
-              onClick={() => {
-                setShowBin(false);
-                onOpenSettings();
-              }}
-            >
-              <Settings2 className="size-4" />
-              <span>Settings</span>
-            </button>
-          )}
-          <button
-            type="button"
-            className={`sidebar-link ${showBin ? "sidebar-link-active" : ""}`}
-            onClick={() => setShowBin((v) => !v)}
-          >
-            <Trash2 className="size-4" />
-            <span>Trash</span>
-            {trashCount > 0 && <span className="sidebar-count">{trashCount}</span>}
-          </button>
+          <div className="sidebar-footer-user">
+            <ConnectionStatus variant="rail" />
+            <AuthControls />
+          </div>
         </div>
 
-        <div className="sidebar-footer-user">
-          <ConnectionStatus variant="rail" />
-          <AuthControls />
-        </div>
-      </div>
-
-      <SharePanel
-        ownerId={ownerId}
-        open={showShare}
-        onClose={() => setShowShare(false)}
-        scope="vault"
-        title="NoteVault"
-      />
-      <MoveDialog
-        open={bulkMoveOpen}
-        onClose={() => setBulkMoveOpen(false)}
-        onMoved={clearSelection}
-        ownerId={ownerId}
-        noteIds={[...selectedIds] as Id<"notes">[]}
-      />
+        <SharePanel
+          ownerId={ownerId}
+          open={showShare}
+          onClose={() => setShowShare(false)}
+          scope="vault"
+          title="NoteVault"
+        />
+        <MoveDialog
+          open={bulkMoveOpen}
+          onClose={() => setBulkMoveOpen(false)}
+          onMoved={clearSelection}
+          ownerId={ownerId}
+          noteIds={[...selectedIds] as Id<"notes">[]}
+        />
       </motion.aside>
     </motion.div>
   );
@@ -1124,9 +1122,7 @@ function TreeNode({
   }
 
   const dropPos =
-    dropIntent?.overId === item._id && draggingId !== item._id
-      ? dropIntent.position
-      : null;
+    dropIntent?.overId === item._id && draggingId !== item._id ? dropIntent.position : null;
 
   return (
     <li>

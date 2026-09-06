@@ -35,10 +35,7 @@ function indexNotes(notes: NoteSearchHit[]): IndexedNote[] {
   }));
 }
 
-export function searchNotes(
-  notes: NoteSearchHit[],
-  query: string,
-): NoteSearchHit[] {
+export function searchNotes(notes: NoteSearchHit[], query: string): NoteSearchHit[] {
   const q = query.trim();
   if (!q) return notes;
   const indexed = indexNotes(notes);

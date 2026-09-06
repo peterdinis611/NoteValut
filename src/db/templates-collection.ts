@@ -54,10 +54,7 @@ export function saveCustomTemplate(
   };
 
   for (const existing of templatesCollection.values()) {
-    if (
-      existing.id !== next.id &&
-      existing.name.toLowerCase() === next.name.toLowerCase()
-    ) {
+    if (existing.id !== next.id && existing.name.toLowerCase() === next.name.toLowerCase()) {
       templatesCollection.delete(existing.id);
     }
   }

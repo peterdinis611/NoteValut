@@ -14,17 +14,13 @@ type Props = {
   onSelect: (page: Doc<"notes">) => void;
 };
 
-export function EditorMentionMenu({
-  pages,
-  query,
-  selectedIndex,
-  onHoverIndex,
-  onSelect,
-}: Props) {
+export function EditorMentionMenu({ pages, query, selectedIndex, onHoverIndex, onSelect }: Props) {
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = listRef.current?.querySelector<HTMLElement>(`[data-mention-index="${selectedIndex}"]`);
+    const el = listRef.current?.querySelector<HTMLElement>(
+      `[data-mention-index="${selectedIndex}"]`,
+    );
     el?.scrollIntoView({ block: "nearest" });
   }, [selectedIndex]);
 
@@ -60,7 +56,9 @@ export function EditorMentionMenu({
                 onSelect(page);
               }}
             >
-              <span className="nv-mention-icon">{page.icon || <FileText className="size-3.5" />}</span>
+              <span className="nv-mention-icon">
+                {page.icon || <FileText className="size-3.5" />}
+              </span>
               <span className="nv-mention-title truncate">{page.title || "Untitled"}</span>
             </button>
           ))

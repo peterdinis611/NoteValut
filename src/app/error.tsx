@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  LottieStatus,
-  errorStatusDetails,
-} from "@/components/lottie-status";
+import { LottieStatus, errorStatusDetails } from "@/components/lottie-status";
 
 type Props = {
   error: Error & { digest?: string };
@@ -25,10 +22,7 @@ export default function ErrorPage({ error, reset }: Props) {
     });
   }, [error]);
 
-  const details = useMemo(
-    () => errorStatusDetails(error, extras),
-    [error, extras],
-  );
+  const details = useMemo(() => errorStatusDetails(error, extras), [error, extras]);
 
   return (
     <LottieStatus

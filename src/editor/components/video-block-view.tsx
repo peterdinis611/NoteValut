@@ -76,7 +76,11 @@ export function VideoBlockView(props: BlockRenderProps) {
         </div>
         <div className="nv-video-providers" aria-label="Supported providers">
           {VIDEO_PROVIDER_CATALOG.map((p) => (
-            <span key={p.id} className={`nv-video-provider-chip nv-video-badge-${p.id}`} title={p.example}>
+            <span
+              key={p.id}
+              className={`nv-video-provider-chip nv-video-badge-${p.id}`}
+              title={p.example}
+            >
               {p.label}
             </span>
           ))}
@@ -222,11 +226,7 @@ export function VideoBlockView(props: BlockRenderProps) {
         <div className="nv-video-status nv-video-status-error">
           <Film className="size-5" />
           <p>Couldn’t parse this URL</p>
-          <button
-            type="button"
-            className="nv-video-url-apply"
-            onClick={() => setEditingUrl(true)}
-          >
+          <button type="button" className="nv-video-url-apply" onClick={() => setEditingUrl(true)}>
             Edit link
           </button>
         </div>

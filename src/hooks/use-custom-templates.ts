@@ -57,9 +57,5 @@ export function useCustomTemplates(): CustomPageTemplate[] {
     migrateLegacyLocalStorageOnce();
   }, []);
 
-  return useSyncExternalStore(
-    subscribeTemplates,
-    getClientSnapshot,
-    getServerSnapshot,
-  );
+  return useSyncExternalStore(subscribeTemplates, getClientSnapshot, getServerSnapshot);
 }

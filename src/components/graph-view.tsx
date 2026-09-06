@@ -77,7 +77,9 @@ export function GraphView({ open, onClose, notes, onNavigate }: Props) {
         connected.add(e.from);
         connected.add(e.to);
       }
-      pages = pages.filter((p) => connected.has(p._id) || (p.title || "").toLowerCase().includes(q));
+      pages = pages.filter(
+        (p) => connected.has(p._id) || (p.title || "").toLowerCase().includes(q),
+      );
     }
     return { pages: pages.slice(0, 80), edges };
   }, [graph, query, showLinks, showParents]);
@@ -256,9 +258,7 @@ export function GraphView({ open, onClose, notes, onNavigate }: Props) {
             </div>
             <div className="graph-body">
               {!filtered || nodes.length === 0 ? (
-                <p className="graph-empty">
-                  Link pages with [[mentions]] to see connections.
-                </p>
+                <p className="graph-empty">Link pages with [[mentions]] to see connections.</p>
               ) : (
                 <svg ref={svgRef} className="graph-svg" width={size.w} height={size.h}>
                   {edgePairs.map((e, i) => {

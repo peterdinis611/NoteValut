@@ -56,11 +56,7 @@ export function DailyCalendar({ ownerId, onOpenNote, compact = false }: Props) {
           >
             <ChevronLeft className="size-4" />
           </button>
-          <button
-            type="button"
-            className="settings-btn"
-            onClick={() => void openDay(toDailyKey())}
-          >
+          <button type="button" className="settings-btn" onClick={() => void openDay(toDailyKey())}>
             Today
           </button>
           <button

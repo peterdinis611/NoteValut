@@ -121,9 +121,7 @@ export function EditorSlashMenu({
               <div className="nv-slash-stack">
                 {items.map((cmd) => {
                   const globalIndex = commands.indexOf(cmd);
-                  const Icon = cmd.id.startsWith("custom-")
-                    ? Boxes
-                    : (ICONS[cmd.id] ?? Boxes);
+                  const Icon = cmd.id.startsWith("custom-") ? Boxes : (ICONS[cmd.id] ?? Boxes);
                   const active = globalIndex === selectedIndex;
                   return (
                     <button

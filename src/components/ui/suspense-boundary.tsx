@@ -26,9 +26,7 @@ export function SuspenseBoundary({
   return (
     <Suspense
       fallback={
-        fallback ?? (
-          <PreloadSpinner label={label} hint={hint} size={size} compact={compact} />
-        )
+        fallback ?? <PreloadSpinner label={label} hint={hint} size={size} compact={compact} />
       }
     >
       {children}

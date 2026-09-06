@@ -12,16 +12,8 @@ import {
   type Block,
   type BlockType,
 } from "@/lib/blocks";
-import {
-  collectSlashCommands,
-  getExtensionForType,
-  mergeExtensions,
-} from "./create-extension";
-import type {
-  EditorCommands,
-  EditorOptions,
-  SlashCommandDef,
-} from "./types";
+import { collectSlashCommands, getExtensionForType, mergeExtensions } from "./create-extension";
+import type { EditorCommands, EditorOptions, SlashCommandDef } from "./types";
 import { loadCustomBlockTemplates, subscribeCustomBlocks } from "./custom-blocks";
 
 export function useEditor(options: EditorOptions) {
@@ -57,9 +49,7 @@ export function useEditor(options: EditorOptions) {
     return [...base, ...saved];
   }, [extensions, customTick]);
 
-  const [blocks, setBlocks] = useState<Block[]>(
-    content.length ? content : defaultBlocks(),
-  );
+  const [blocks, setBlocks] = useState<Block[]>(content.length ? content : defaultBlocks());
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [slashBlockId, setSlashBlockId] = useState<string | null>(null);
@@ -97,8 +87,7 @@ export function useEditor(options: EditorOptions) {
     (next: Block[]) => {
       const base = next.length ? next : defaultBlocks();
       const last = base[base.length - 1];
-      const endsWithAtom =
-        !!last && !!getExtensionForType(extensions, last.type)?.atom;
+      const endsWithAtom = !!last && !!getExtensionForType(extensions, last.type)?.atom;
       const safe = endsWithAtom ? [...base, createBlock("paragraph", "")] : base;
       setBlocks(safe);
       onUpdate(safe);
@@ -139,9 +128,7 @@ export function useEditor(options: EditorOptions) {
                         ? (extras?.checked ?? true)
                         : undefined,
                   calloutVariant:
-                    type === "callout"
-                      ? (extras?.calloutVariant ?? "info")
-                      : undefined,
+                    type === "callout" ? (extras?.calloutVariant ?? "info") : undefined,
                   pageId: type === "pagelink" ? extras?.pageId : undefined,
                   language: type === "code" ? (extras?.language ?? "auto") : undefined,
                   url:
@@ -243,10 +230,9 @@ export function useEditor(options: EditorOptions) {
         }
 
         const pages = linkablePages;
-        const saved =
-          command.id.startsWith("custom-")
-            ? loadCustomBlockTemplates().find((t) => `custom-${t.id}` === command.id)
-            : undefined;
+        const saved = command.id.startsWith("custom-")
+          ? loadCustomBlockTemplates().find((t) => `custom-${t.id}` === command.id)
+          : undefined;
         commit(
           blocksRef.current.map((b) =>
             b.id !== blockId
@@ -256,17 +242,10 @@ export function useEditor(options: EditorOptions) {
                   type: command.type,
                   text: saved?.body ?? "",
                   checked:
-                    command.type === "todo"
-                      ? false
-                      : command.type === "toggle"
-                        ? true
-                        : undefined,
+                    command.type === "todo" ? false : command.type === "toggle" ? true : undefined,
                   calloutVariant:
-                    command.type === "callout"
-                      ? (command.calloutVariant ?? "info")
-                      : undefined,
-                  pageId:
-                    command.type === "pagelink" ? pages[0]?._id : undefined,
+                    command.type === "callout" ? (command.calloutVariant ?? "info") : undefined,
+                  pageId: command.type === "pagelink" ? pages[0]?._id : undefined,
                   language: command.type === "code" ? "auto" : undefined,
                   url: undefined,
                   label:
@@ -310,9 +289,7 @@ export function useEditor(options: EditorOptions) {
         setSlashBlockId(null);
       },
       clearSlash: (blockId) => {
-        commit(
-          blocksRef.current.map((b) => (b.id === blockId ? { ...b, text: "" } : b)),
-        );
+        commit(blocksRef.current.map((b) => (b.id === blockId ? { ...b, text: "" } : b)));
         setSlashBlockId(null);
         setMentionBlockId(null);
       },
@@ -346,9 +323,7 @@ export function useEditor(options: EditorOptions) {
     const q = query.trim().toLowerCase();
     const pages = linkablePages.filter((p) => p.kind !== "folder");
     if (!q) return pages.slice(0, 20);
-    return pages
-      .filter((p) => (p.title || "").toLowerCase().includes(q))
-      .slice(0, 20);
+    return pages.filter((p) => (p.title || "").toLowerCase().includes(q)).slice(0, 20);
   }
 
   function handleTextChange(block: Block, text: string) {
@@ -381,12 +356,8 @@ export function useEditor(options: EditorOptions) {
         const display = (match[2] || rawTarget).trim();
         const page =
           linkablePages.find((p) => p._id === rawTarget) ||
-          linkablePages.find(
-            (p) => (p.title || "").toLowerCase() === rawTarget.toLowerCase(),
-          ) ||
-          linkablePages.find(
-            (p) => (p.title || "").toLowerCase() === display.toLowerCase(),
-          );
+          linkablePages.find((p) => (p.title || "").toLowerCase() === rawTarget.toLowerCase()) ||
+          linkablePages.find((p) => (p.title || "").toLowerCase() === display.toLowerCase());
         if (page && page.kind !== "folder") {
           const before = text.slice(0, match.index ?? 0).replace(/\s+$/, "");
           const after = text.slice((match.index ?? 0) + match[0].length).replace(/^\s+/, "");
@@ -447,9 +418,8 @@ export function useEditor(options: EditorOptions) {
     if (!current || current.type === "code") return false;
 
     const looksLikeMd =
-      /(^|\n)(#{1,6}\s|```|\|?.+\|.+\n\|?\s*[-:| ]+\||^\s*[-*]\s|\d+\.\s)/m.test(
-        clipboardText,
-      ) || clipboardText.includes("\n\n");
+      /(^|\n)(#{1,6}\s|```|\|?.+\|.+\n\|?\s*[-:| ]+\||^\s*[-*]\s|\d+\.\s)/m.test(clipboardText) ||
+      clipboardText.includes("\n\n");
     if (!looksLikeMd || clipboardText.length < 8) return false;
 
     const parsed = markdownToBlocks(clipboardText);
@@ -487,8 +457,7 @@ export function useEditor(options: EditorOptions) {
       if (e.key === "ArrowUp") {
         e.preventDefault();
         setMentionIndex(
-          (i) =>
-            (i - 1 + Math.max(mentionPages.length, 1)) % Math.max(mentionPages.length, 1),
+          (i) => (i - 1 + Math.max(mentionPages.length, 1)) % Math.max(mentionPages.length, 1),
         );
         return;
       }
@@ -513,9 +482,7 @@ export function useEditor(options: EditorOptions) {
       }
       if (e.key === "ArrowUp") {
         e.preventDefault();
-        setSlashIndex(
-          (i) => (i - 1 + Math.max(filtered.length, 1)) % Math.max(filtered.length, 1),
-        );
+        setSlashIndex((i) => (i - 1 + Math.max(filtered.length, 1)) % Math.max(filtered.length, 1));
         return;
       }
       if (e.key === "Enter" && filtered.length) {
@@ -534,12 +501,7 @@ export function useEditor(options: EditorOptions) {
     const ext = getExtensionForType(extensions, block.type);
     if (ext?.keyboardShortcuts) {
       const mod = e.metaKey || e.ctrlKey;
-      const key = [
-        mod ? "Mod" : "",
-        e.altKey ? "Alt" : "",
-        e.shiftKey ? "Shift" : "",
-        e.key,
-      ]
+      const key = [mod ? "Mod" : "", e.altKey ? "Alt" : "", e.shiftKey ? "Shift" : "", e.key]
         .filter(Boolean)
         .join("-");
       const handler = ext.keyboardShortcuts[key] ?? ext.keyboardShortcuts[e.key];
@@ -633,8 +595,7 @@ export function useEditor(options: EditorOptions) {
       const el = e.currentTarget;
       if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return;
       const atStart = el.selectionStart === 0 && el.selectionEnd === 0;
-      const atEnd =
-        el.selectionStart === el.value.length && el.selectionEnd === el.value.length;
+      const atEnd = el.selectionStart === el.value.length && el.selectionEnd === el.value.length;
       const index = blocksRef.current.findIndex((b) => b.id === block.id);
       if (e.key === "ArrowUp" && atStart && index > 0) {
         e.preventDefault();

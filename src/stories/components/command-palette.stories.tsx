@@ -42,7 +42,9 @@ const meta = {
     layout: "fullscreen",
     convex: {
       queries: {
-        "notes:search": sampleNotes().filter((n) => n.kind === "page").slice(0, 4),
+        "notes:search": sampleNotes()
+          .filter((n) => n.kind === "page")
+          .slice(0, 4),
       },
     },
   },

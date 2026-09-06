@@ -40,10 +40,7 @@ import { easeOutSoft, fadeUpVariants } from "@/lib/motion";
 import { listDefaultTemplates } from "@/lib/templates";
 import { parseVaultBackupFile } from "@/lib/vault-backup";
 import { applyThemePack, downloadThemePack, parseThemePack } from "@/lib/theme-pack";
-import {
-  TemplatePreviewDialog,
-  type PreviewableTemplate,
-} from "./template-preview-dialog";
+import { TemplatePreviewDialog, type PreviewableTemplate } from "./template-preview-dialog";
 import { TemplateEditorDialog } from "./template-editor-dialog";
 import { PushNotificationSettings } from "./push-notification-settings";
 import { GoogleFontsPicker } from "./google-fonts-picker";
@@ -60,13 +57,7 @@ type Props = {
   onStartTour?: () => void;
 };
 
-export function SettingsPage({
-  ownerId,
-  onClose,
-  onExport,
-  onExportMarkdown,
-  onStartTour,
-}: Props) {
+export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onStartTour }: Props) {
   const toast = useToast();
   const settings = useVaultSettings();
   const templates = useCustomTemplates();
@@ -83,9 +74,7 @@ export function SettingsPage({
   const [fontUrlDraft, setFontUrlDraft] = useState(settings.fontUrl ?? "");
   const [fontDragging, setFontDragging] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [importSource, setImportSource] = useState<"markdown" | "obsidian" | "notion">(
-    "markdown",
-  );
+  const [importSource, setImportSource] = useState<"markdown" | "obsidian" | "notion">("markdown");
   const [preview, setPreview] = useState<PreviewableTemplate | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -238,11 +227,14 @@ export function SettingsPage({
             Workspace
           </p>
           <h1 className="settings-title">Settings</h1>
-          <p className="settings-subtitle">
-            Themes, fonts, custom CSS, and vault preferences
-          </p>
+          <p className="settings-subtitle">Themes, fonts, custom CSS, and vault preferences</p>
         </div>
-        <button type="button" className="settings-close" onClick={onClose} aria-label="Close settings">
+        <button
+          type="button"
+          className="settings-close"
+          onClick={onClose}
+          aria-label="Close settings"
+        >
           <X className="size-4" />
         </button>
       </header>
@@ -284,31 +276,28 @@ export function SettingsPage({
         </div>
 
         <div className="settings-theme-grid">
-          {(Object.values(THEME_PRESETS) as (typeof THEME_PRESETS)[keyof typeof THEME_PRESETS][]).map(
-            (preset) => {
-              const active = settings.themeId === preset.id;
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  className={`settings-theme-card ${active ? "settings-theme-card-active" : ""}`}
-                  onClick={() => {
-                    setThemePreset(preset.id);
-                    toast.success(`${preset.label} theme`);
-                  }}
-                >
-                  <span
-                    className="settings-theme-swatch"
-                    style={{ background: preset.swatch }}
-                  />
-                  <span className="settings-theme-meta">
-                    <span className="settings-theme-name">{preset.label}</span>
-                    <span className="settings-theme-desc">{preset.description}</span>
-                  </span>
-                </button>
-              );
-            },
-          )}
+          {(
+            Object.values(THEME_PRESETS) as (typeof THEME_PRESETS)[keyof typeof THEME_PRESETS][]
+          ).map((preset) => {
+            const active = settings.themeId === preset.id;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                className={`settings-theme-card ${active ? "settings-theme-card-active" : ""}`}
+                onClick={() => {
+                  setThemePreset(preset.id);
+                  toast.success(`${preset.label} theme`);
+                }}
+              >
+                <span className="settings-theme-swatch" style={{ background: preset.swatch }} />
+                <span className="settings-theme-meta">
+                  <span className="settings-theme-name">{preset.label}</span>
+                  <span className="settings-theme-desc">{preset.description}</span>
+                </span>
+              </button>
+            );
+          })}
           <button
             type="button"
             className={`settings-theme-card ${
@@ -352,11 +341,7 @@ export function SettingsPage({
           }}
         >
           <div className="settings-css-toolbar">
-            <button
-              type="button"
-              className="settings-btn"
-              onClick={() => fileRef.current?.click()}
-            >
+            <button type="button" className="settings-btn" onClick={() => fileRef.current?.click()}>
               <FileUp className="size-3.5" />
               Upload .css
             </button>
@@ -565,8 +550,8 @@ export function SettingsPage({
           </p>
           <p className="settings-hint">
             Supported files: <code>.woff2</code>, <code>.woff</code>, <code>.ttf</code>,{" "}
-            <code>.otf</code> (max 1.5 MB). Font catalog uses Convex{" "}
-            <code>search</code> + <code>ensure</code> (24h cache).
+            <code>.otf</code> (max 1.5 MB). Font catalog uses Convex <code>search</code> +{" "}
+            <code>ensure</code> (24h cache).
           </p>
         </div>
       </section>
@@ -619,8 +604,8 @@ export function SettingsPage({
           />
         </div>
         <p className="settings-hint">
-          Export includes pages and collections (not trash). Markdown dumps pages as
-          one file. Import merges as new items and remaps parent links.
+          Export includes pages and collections (not trash). Markdown dumps pages as one file.
+          Import merges as new items and remaps parent links.
         </p>
         <div className="settings-css-toolbar" style={{ marginTop: "0.75rem" }}>
           <button
@@ -631,9 +616,7 @@ export function SettingsPage({
               void (async () => {
                 try {
                   const res = await reindexSearch({ ownerId });
-                  toast.success(
-                    `Search index updated (${res.updated}/${res.total} notes)`,
-                  );
+                  toast.success(`Search index updated (${res.updated}/${res.total} notes)`);
                 } catch {
                   toast.error("Couldn’t rebuild search index");
                 }
@@ -706,9 +689,9 @@ export function SettingsPage({
           />
         </div>
         <p className="settings-hint">
-          Obsidian: reads YAML frontmatter and <code>[[wikilinks]]</code>. Notion: picks
-          exported Markdown pages (export as Markdown &amp; CSV, then select the .md files).
-          Each file becomes a new page.
+          Obsidian: reads YAML frontmatter and <code>[[wikilinks]]</code>. Notion: picks exported
+          Markdown pages (export as Markdown &amp; CSV, then select the .md files). Each file
+          becomes a new page.
         </p>
       </section>
 
@@ -762,11 +745,7 @@ export function SettingsPage({
               <p>Saved page templates stored in TanStack DB</p>
             </div>
           </div>
-          <button
-            type="button"
-            className="settings-btn"
-            onClick={() => setCreateOpen(true)}
-          >
+          <button type="button" className="settings-btn" onClick={() => setCreateOpen(true)}>
             <Plus className="size-3.5" />
             New template
           </button>

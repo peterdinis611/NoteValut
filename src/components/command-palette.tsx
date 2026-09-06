@@ -73,10 +73,7 @@ export function CommandPalette({
       ? { ownerId, query: q, limit: 12 }
       : "skip",
   );
-  const tagRows = useQuery(
-    api.notes.listTags,
-    open && ownerId ? { ownerId } : "skip",
-  );
+  const tagRows = useQuery(api.notes.listTags, open && ownerId ? { ownerId } : "skip");
 
   useEffect(() => {
     if (!open) {
@@ -111,10 +108,7 @@ export function CommandPalette({
     if (!showAll && tagQuery.length < 1) return [];
     const filtered = tagRows.filter((t) => {
       if (!tagQuery) return q.startsWith("#") || !q;
-      return (
-        t.tag.toLowerCase().includes(tagQuery) ||
-        t.key.includes(tagQuery)
-      );
+      return t.tag.toLowerCase().includes(tagQuery) || t.key.includes(tagQuery);
     });
     return filtered.slice(0, q.startsWith("#") ? 16 : 6);
   }, [tagRows, tagQuery, q, qLower, onOpenTag]);
@@ -240,8 +234,7 @@ export function CommandPalette({
                     }
                     if (row.kind === "tag") {
                       const showSection =
-                        i === actionHits.length ||
-                        (actionHits.length === 0 && i === 0);
+                        i === actionHits.length || (actionHits.length === 0 && i === 0);
                       return (
                         <div key={`t-${row.tag}`}>
                           {showSection && <p className="cmd-section">Tags</p>}

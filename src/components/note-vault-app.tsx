@@ -62,10 +62,7 @@ export function NoteVaultApp() {
     api.notes.list,
     canQuery ? { ownerId: ownerId!, includeArchived: true } : "skip",
   );
-  const exportData = useQuery(
-    api.notes.exportVault,
-    canQuery ? { ownerId: ownerId! } : "skip",
-  );
+  const exportData = useQuery(api.notes.exportVault, canQuery ? { ownerId: ownerId! } : "skip");
   const [activeId, setActiveId] = useState<Id<"notes"> | null>(null);
   const [seeded, setSeeded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -96,14 +93,7 @@ export function NoteVaultApp() {
       window.setTimeout(() => startVaultTour(), 450);
     }, 1100);
     return () => window.clearTimeout(boot);
-  }, [
-    canQuery,
-    showSettings,
-    showTags,
-    showCalendar,
-    showDueInbox,
-    activeId,
-  ]);
+  }, [canQuery, showSettings, showTags, showCalendar, showDueInbox, activeId]);
 
   useEffect(() => {
     if (!canQuery || seeded) return;
@@ -220,9 +210,7 @@ export function NoteVaultApp() {
         clearPanels();
         setActiveId(id);
         if (isMobile) setSidebarOpen(false);
-        toast.success(
-          template.id === "blank" ? "Entry created" : `Created from ${template.name}`,
-        );
+        toast.success(template.id === "blank" ? "Entry created" : `Created from ${template.name}`);
       } catch {
         toast.error("Couldn’t create entry");
       }
@@ -410,7 +398,17 @@ export function NoteVaultApp() {
         run: () => setGraphOpen(true),
       },
     ],
-    [clearPanels, handleCreateEntry, handleCreateCollection, handleExport, handleExportMarkdown, openToday, openTags, openCalendar, openDueInbox],
+    [
+      clearPanels,
+      handleCreateEntry,
+      handleCreateCollection,
+      handleExport,
+      handleExportMarkdown,
+      openToday,
+      openTags,
+      openCalendar,
+      openDueInbox,
+    ],
   );
 
   if (!ownerId || convexAuthLoading) {
@@ -451,13 +449,12 @@ export function NoteVaultApp() {
     <VaultAccessProvider isOwner role="owner">
       <SoftErrorBoundary>
         {canQuery ? (
-          <ReminderListener
-            ownerId={ownerId}
-            onOpenNote={(id) => selectNote(id as Id<"notes">)}
-          />
+          <ReminderListener ownerId={ownerId} onOpenNote={(id) => selectNote(id as Id<"notes">)} />
         ) : null}
       </SoftErrorBoundary>
-      <div className={`app-shell ${isMobile ? "app-shell-mobile" : ""} ${sidebarOpen ? "app-shell-sidebar-open" : ""}`}>
+      <div
+        className={`app-shell ${isMobile ? "app-shell-mobile" : ""} ${sidebarOpen ? "app-shell-sidebar-open" : ""}`}
+      >
         <AnimatePresence initial={false}>
           {isMobile && sidebarOpen ? (
             <motion.button
@@ -624,9 +621,7 @@ export function NoteVaultApp() {
           </AnimatePresence>
 
           <ScrollToTop resetKey={panel === "note" ? activeId : panel} />
-          {!isMobile && (
-            <QuickCaptureFab onClick={() => setQuickCaptureOpen(true)} />
-          )}
+          {!isMobile && <QuickCaptureFab onClick={() => setQuickCaptureOpen(true)} />}
           {isMobile && (
             <MobileBottomNav
               active={

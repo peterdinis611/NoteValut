@@ -53,10 +53,7 @@ export const BlockSchema = v.object({
 
 export const BlocksSchema = v.pipe(v.array(BlockSchema), v.minLength(1));
 
-export const NoteTitleSchema = v.pipe(
-  v.string(),
-  v.maxLength(200, "Title is too long"),
-);
+export const NoteTitleSchema = v.pipe(v.string(), v.maxLength(200, "Title is too long"));
 
 export const TagSchema = v.pipe(
   v.string(),

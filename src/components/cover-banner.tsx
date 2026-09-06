@@ -185,7 +185,9 @@ export function CoverBanner({
       )}
 
       {!readOnly && (
-        <div className={`page-header-actions ${hasCover || showPicker ? "page-header-actions-visible" : ""}`}>
+        <div
+          className={`page-header-actions ${hasCover || showPicker ? "page-header-actions-visible" : ""}`}
+        >
           <button
             type="button"
             className="page-header-action"
@@ -221,9 +223,7 @@ export function CoverBanner({
         </div>
       )}
 
-      {dragging && !readOnly && (
-        <div className="cover-drop-hint">Drop image to set cover</div>
-      )}
+      {dragging && !readOnly && <div className="cover-drop-hint">Drop image to set cover</div>}
 
       <input
         ref={fileRef}

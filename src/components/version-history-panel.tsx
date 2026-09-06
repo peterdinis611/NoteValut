@@ -81,9 +81,7 @@ export function VersionHistoryPanel({ open, onClose, noteId, readOnly = false }:
                       <p className="text-xs text-muted">
                         {formatRelativeTime(ver.createdAt)} · {ver.blockCount} blocks
                       </p>
-                      {ver.preview.trim() && (
-                        <p className="history-preview">{ver.preview}</p>
-                      )}
+                      {ver.preview.trim() && <p className="history-preview">{ver.preview}</p>}
                     </div>
                     <button
                       type="button"

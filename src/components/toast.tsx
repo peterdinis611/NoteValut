@@ -1,20 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import {
-  CheckCircle2,
-  Info,
-  X,
-  XCircle,
-} from "lucide-react";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { CheckCircle2, Info, X, XCircle } from "lucide-react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { easeOutSoft } from "@/lib/motion";
 
 type ToastKind = "success" | "error" | "info";

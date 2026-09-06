@@ -18,10 +18,7 @@ export function mergeExtensions(extensions: Extension[]): Extension[] {
   return result;
 }
 
-export function getExtensionForType(
-  extensions: Extension[],
-  type: string,
-): Extension | undefined {
+export function getExtensionForType(extensions: Extension[], type: string): Extension | undefined {
   return extensions.find((ext) => ext.types?.includes(type as never));
 }
 

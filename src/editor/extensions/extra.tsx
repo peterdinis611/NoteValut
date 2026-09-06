@@ -84,8 +84,7 @@ export const Toggle = Extension({
           type="button"
           className="nv-toggle-head"
           onClick={() =>
-            !props.readOnly &&
-            props.commands.updateBlock(props.block.id, { checked: !open })
+            !props.readOnly && props.commands.updateBlock(props.block.id, { checked: !open })
           }
         >
           {open ? (
@@ -144,4 +143,3 @@ export const ImageBlock = Extension({
   ],
   render: (props) => <ImageBlockView {...props} />,
 });
-

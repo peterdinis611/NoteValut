@@ -14,9 +14,7 @@ const env = stressEnv();
 test.describe.configure({ mode: "parallel" });
 
 test.describe("Stress — public surfaces", () => {
-  test(`sign-in burst ×${env.iterations} (c=${env.concurrency})`, async ({
-    browser,
-  }) => {
+  test(`sign-in burst ×${env.iterations} (c=${env.concurrency})`, async ({ browser }) => {
     test.setTimeout(180_000);
 
     const samples = await burstGoto(
@@ -37,30 +35,20 @@ test.describe("Stress — public surfaces", () => {
     assertBudgets("sign-in burst", samples);
   });
 
-  test(`auth-redirect burst ×${env.iterations} (c=${env.concurrency})`, async ({
-    browser,
-  }) => {
+  test(`auth-redirect burst ×${env.iterations} (c=${env.concurrency})`, async ({ browser }) => {
     test.setTimeout(180_000);
 
-    const samples = await burstGoto(
-      browser,
-      "/",
-      env.iterations,
-      env.concurrency,
-      async (page) => {
-        await page.waitForURL(/sign-in/, { timeout: 20_000 });
-        await expect(page.locator(".clerk-auth-page")).toBeVisible({
-          timeout: 20_000,
-        });
-      },
-    );
+    const samples = await burstGoto(browser, "/", env.iterations, env.concurrency, async (page) => {
+      await page.waitForURL(/sign-in/, { timeout: 20_000 });
+      await expect(page.locator(".clerk-auth-page")).toBeVisible({
+        timeout: 20_000,
+      });
+    });
 
     assertBudgets("auth-redirect burst", samples);
   });
 
-  test(`not-authorized burst ×${env.iterations} (c=${env.concurrency})`, async ({
-    browser,
-  }) => {
+  test(`not-authorized burst ×${env.iterations} (c=${env.concurrency})`, async ({ browser }) => {
     test.setTimeout(180_000);
 
     const samples = await burstGoto(
@@ -69,9 +57,9 @@ test.describe("Stress — public surfaces", () => {
       env.iterations,
       env.concurrency,
       async (page) => {
-        await expect(
-          page.getByRole("heading", { name: "Not authorized" }),
-        ).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByRole("heading", { name: "Not authorized" })).toBeVisible({
+          timeout: 20_000,
+        });
       },
     );
 
@@ -118,17 +106,17 @@ test.describe("Stress — public surfaces", () => {
       {
         path: "/sign-up",
         ready: async () => {
-          await expect(
-            page.getByText("Create your vault account"),
-          ).toBeVisible({ timeout: 20_000 });
+          await expect(page.getByText("Create your vault account")).toBeVisible({
+            timeout: 20_000,
+          });
         },
       },
       {
         path: "/not-authorized",
         ready: async () => {
-          await expect(
-            page.getByRole("heading", { name: "Not authorized" }),
-          ).toBeVisible({ timeout: 20_000 });
+          await expect(page.getByRole("heading", { name: "Not authorized" })).toBeVisible({
+            timeout: 20_000,
+          });
         },
       },
       {
@@ -179,9 +167,9 @@ test.describe("Stress — public surfaces", () => {
             return;
           }
           if (path === "/not-authorized") {
-            await expect(
-              p.getByRole("heading", { name: "Not authorized" }),
-            ).toBeVisible({ timeout: 20_000 });
+            await expect(p.getByRole("heading", { name: "Not authorized" })).toBeVisible({
+              timeout: 20_000,
+            });
             return;
           }
           if (path === "/") {

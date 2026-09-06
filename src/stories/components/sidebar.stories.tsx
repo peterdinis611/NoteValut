@@ -1,12 +1,7 @@
 import type { ComponentType } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { fn, userEvent, within } from "storybook/test";
-import {
-  noteId,
-  ownerId,
-  sampleNotes,
-  sampleVaultSettings,
-} from "../../../.storybook/fixtures";
+import { noteId, ownerId, sampleNotes, sampleVaultSettings } from "../../../.storybook/fixtures";
 import { Sidebar } from "@/components/sidebar";
 
 const notes = sampleNotes();

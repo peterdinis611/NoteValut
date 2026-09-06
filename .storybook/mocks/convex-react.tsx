@@ -1,9 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useMemo,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 
 type ConvexMockBag = {
   /** Map of `module:fn` → query result (e.g. `notes:list`). */
@@ -18,13 +13,8 @@ export function StorybookConvexProvider({
   queries = {},
   defaultQuery,
 }: ConvexMockBag & { children: ReactNode }) {
-  const value = useMemo(
-    () => ({ queries, defaultQuery }),
-    [queries, defaultQuery],
-  );
-  return (
-    <ConvexMockContext.Provider value={value}>{children}</ConvexMockContext.Provider>
-  );
+  const value = useMemo(() => ({ queries, defaultQuery }), [queries, defaultQuery]);
+  return <ConvexMockContext.Provider value={value}>{children}</ConvexMockContext.Provider>;
 }
 
 function refKey(ref: unknown): string {

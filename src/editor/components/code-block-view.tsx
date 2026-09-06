@@ -14,10 +14,7 @@ export function CodeBlockView(props: BlockRenderProps) {
   const language = block.language ?? "auto";
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  const preview = useMemo(
-    () => highlightCode(block.text, language),
-    [block.text, language],
-  );
+  const preview = useMemo(() => highlightCode(block.text, language), [block.text, language]);
 
   const showPreview = readOnly || (!editing && !isFocused && !!block.text);
 

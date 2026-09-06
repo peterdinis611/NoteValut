@@ -131,9 +131,7 @@ export function PdfBlockView(props: BlockRenderProps) {
           <div className="nv-pdf-empty-copy">
             <p className="nv-pdf-empty-title">Embed a PDF</p>
             <p className="nv-pdf-empty-hint">
-              {uploading
-                ? "Uploading…"
-                : "Upload, drop a .pdf here, or paste a direct link"}
+              {uploading ? "Uploading…" : "Upload, drop a .pdf here, or paste a direct link"}
             </p>
           </div>
         </div>

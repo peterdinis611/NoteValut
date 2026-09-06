@@ -23,13 +23,10 @@ export const Empty: Story = {
   render: () => (
     <div className="space-y-2 p-4 text-sm text-muted">
       <p>
-        With no pinned blocks, <code className="text-foreground">PagePins</code>{" "}
-        returns null — nothing below this note is expected.
+        With no pinned blocks, <code className="text-foreground">PagePins</code> returns null —
+        nothing below this note is expected.
       </p>
-      <PagePins
-        blocks={sampleBlocks().map((b) => ({ ...b, pinned: false }))}
-        onJump={fn()}
-      />
+      <PagePins blocks={sampleBlocks().map((b) => ({ ...b, pinned: false }))} onJump={fn()} />
       <p className="text-xs">End of story.</p>
     </div>
   ),

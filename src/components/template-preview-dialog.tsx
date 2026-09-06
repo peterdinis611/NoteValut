@@ -89,11 +89,7 @@ export function TemplatePreviewDialog({ template, onClose }: Props) {
             </header>
 
             <div className="template-preview-body note-scroll">
-              <VaultEditor
-                blocks={template.blocks}
-                onChange={() => {}}
-                readOnly
-              />
+              <VaultEditor blocks={template.blocks} onChange={() => {}} readOnly />
             </div>
           </motion.div>
         </motion.div>

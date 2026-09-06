@@ -33,11 +33,11 @@ export function BacklinksPanel({ ownerId, noteId, onNavigate }: Props) {
               className="page-backlinks-item"
               onClick={() => onNavigate(link._id)}
             >
-              <span className="page-backlinks-icon">{link.icon || <FileText className="size-3.5" />}</span>
+              <span className="page-backlinks-icon">
+                {link.icon || <FileText className="size-3.5" />}
+              </span>
               <span className="page-backlinks-title">{link.title || "Untitled"}</span>
-              {link.count > 1 && (
-                <span className="page-backlinks-count">{link.count}</span>
-              )}
+              {link.count > 1 && <span className="page-backlinks-count">{link.count}</span>}
             </button>
           </li>
         ))}

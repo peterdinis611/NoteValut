@@ -1,22 +1,12 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import {
-  CalendarClock,
-  CheckCircle2,
-  Inbox,
-  X,
-} from "lucide-react";
+import { CalendarClock, CheckCircle2, Inbox, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import {
-  collectDueTasks,
-  formatDueLabel,
-  groupDueTasks,
-  type DueBucket,
-} from "@/lib/due-tasks";
+import { collectDueTasks, formatDueLabel, groupDueTasks, type DueBucket } from "@/lib/due-tasks";
 import { easeOutSoft, fadeUpVariants } from "@/lib/motion";
 
 type Props = {
@@ -41,12 +31,7 @@ export function DueInbox({ ownerId, onClose, onNavigate }: Props) {
 
   const visible = useMemo(() => {
     if (tab === "all") {
-      return [
-        ...groups.overdue,
-        ...groups.today,
-        ...groups.upcoming,
-        ...groups.later,
-      ];
+      return [...groups.overdue, ...groups.today, ...groups.upcoming, ...groups.later];
     }
     return groups[tab];
   }, [groups, tab]);
@@ -74,8 +59,7 @@ export function DueInbox({ ownerId, onClose, onNavigate }: Props) {
           </p>
           <h1 className="settings-title">Due inbox</h1>
           <p className="settings-subtitle">
-            Open todos with due dates across your vault — overdue, today, and
-            upcoming.
+            Open todos with due dates across your vault — overdue, today, and upcoming.
           </p>
         </div>
         <button

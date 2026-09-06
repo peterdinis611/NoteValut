@@ -1,11 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { NoteVaultApp } from "@/components/note-vault-app";
-import {
-  ownerId,
-  sampleNotes,
-  sampleTags,
-  vaultStats,
-} from "../../../.storybook/fixtures";
+import { ownerId, sampleNotes, sampleTags, vaultStats } from "../../../.storybook/fixtures";
 
 const notes = sampleNotes();
 

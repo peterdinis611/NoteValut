@@ -1,10 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import {
-  noteId,
-  sampleNotes,
-  sampleSharedVault,
-  sampleTags,
-} from "../../../.storybook/fixtures";
+import { noteId, sampleNotes, sampleSharedVault, sampleTags } from "../../../.storybook/fixtures";
 import { SharedVaultApp } from "@/components/shared-vault-app";
 
 const notes = sampleNotes().filter((n) => !n.archived && !n.trashed);

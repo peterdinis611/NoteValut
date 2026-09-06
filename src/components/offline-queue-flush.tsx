@@ -4,11 +4,7 @@ import { useMutation } from "convex/react";
 import { useEffect, useRef } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import {
-  drainQueuedPatches,
-  subscribeOfflineQueue,
-  queuedPatchCount,
-} from "@/lib/offline-queue";
+import { drainQueuedPatches, subscribeOfflineQueue, queuedPatchCount } from "@/lib/offline-queue";
 import { useToast } from "./toast";
 
 /**
@@ -42,9 +38,7 @@ export function OfflineQueueFlush() {
           }
         }
         if (ok > 0) {
-          toast.success(
-            ok === 1 ? "Synced 1 offline edit" : `Synced ${ok} offline edits`,
-          );
+          toast.success(ok === 1 ? "Synced 1 offline edit" : `Synced ${ok} offline edits`);
         }
       } finally {
         flushing.current = false;

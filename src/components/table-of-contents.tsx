@@ -42,11 +42,7 @@ export function TableOfContents({ blocks, onJump }: Props) {
       <ul className="page-toc-list">
         {items.map((item) => (
           <li key={item.id} style={{ paddingLeft: `${(item.level - 1) * 0.65}rem` }}>
-            <button
-              type="button"
-              className="page-toc-link"
-              onClick={() => onJump(item.id)}
-            >
+            <button type="button" className="page-toc-link" onClick={() => onJump(item.id)}>
               {item.text}
             </button>
           </li>

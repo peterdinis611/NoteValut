@@ -9,7 +9,11 @@ function ToastDemo() {
       <button type="button" className="settings-btn" onClick={() => toast.success("Saved")}>
         Success
       </button>
-      <button type="button" className="settings-btn" onClick={() => toast.error("Something failed")}>
+      <button
+        type="button"
+        className="settings-btn"
+        onClick={() => toast.error("Something failed")}
+      >
         Error
       </button>
       <button type="button" className="settings-btn" onClick={() => toast.info("Heads up")}>
@@ -19,13 +23,7 @@ function ToastDemo() {
   );
 }
 
-function AutoFire({
-  kind,
-  message,
-}: {
-  kind: "success" | "error" | "info";
-  message: string;
-}) {
+function AutoFire({ kind, message }: { kind: "success" | "error" | "info"; message: string }) {
   const toast = useToast();
   useEffect(() => {
     toast[kind](message);

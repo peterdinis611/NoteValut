@@ -82,9 +82,7 @@ export const Empty: Story = {
       queries: {
         "notes:list": sampleNotes().map((n) => ({
           ...n,
-          blocks: (n.blocks ?? []).map((b) =>
-            b.type === "todo" ? { ...b, dueAt: undefined } : b,
-          ),
+          blocks: (n.blocks ?? []).map((b) => (b.type === "todo" ? { ...b, dueAt: undefined } : b)),
         })),
       },
     },

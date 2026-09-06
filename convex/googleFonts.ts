@@ -1,11 +1,6 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import {
-  action,
-  internalMutation,
-  internalQuery,
-  query,
-} from "./_generated/server";
+import { action, internalMutation, internalQuery, query } from "./_generated/server";
 import {
   filterGoogleFonts,
   fontKeyToVariant,
@@ -156,10 +151,8 @@ function sliceCatalog(
 
   const items = filterGoogleFonts(all, q, { category, limit });
   const total = category
-    ? all.filter(
-        (item) =>
-          normalizeFontCategory(item.category) === normalizeFontCategory(category),
-      ).length
+    ? all.filter((item) => normalizeFontCategory(item.category) === normalizeFontCategory(category))
+        .length
     : all.length;
 
   return { items, total };
@@ -314,9 +307,7 @@ export const ensure = action({
     try {
       const cached = await ctx.runQuery(internal.googleFonts.getCache, {});
       const fresh =
-        cached && !args.force && Date.now() - cached.fetchedAt < CACHE_TTL_MS
-          ? cached
-          : null;
+        cached && !args.force && Date.now() - cached.fetchedAt < CACHE_TTL_MS ? cached : null;
 
       if (fresh) {
         return { ok: true, source: "cache" };
@@ -395,8 +386,7 @@ export const list = action({
 
     const ensureResult = await (async (): Promise<EnsureGoogleFontsResult> => {
       const cached = await ctx.runQuery(internal.googleFonts.getCache, {});
-      const fresh =
-        cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS ? cached : null;
+      const fresh = cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS ? cached : null;
       if (fresh) return { ok: true, source: "cache" };
 
       const budget = await ctx.runMutation(internal.googleFonts.consumeEnsureBudget, {

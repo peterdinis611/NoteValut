@@ -74,9 +74,7 @@ export function MoveDialog({
         await bulkUpdate({ ids, parentId });
       }
       toast.success(
-        parentId
-          ? `Moved ${ids.length} to collection`
-          : `Moved ${ids.length} to vault root`,
+        parentId ? `Moved ${ids.length} to collection` : `Moved ${ids.length} to vault root`,
       );
       onMoved?.();
       onClose();
@@ -150,12 +148,12 @@ export function MoveDialog({
                   onClick={() => void moveTo(folder._id)}
                 >
                   <FolderOpen className="size-3.5" />
-                  <span className="truncate">{folder.icon} {folder.title || "Untitled"}</span>
+                  <span className="truncate">
+                    {folder.icon} {folder.title || "Untitled"}
+                  </span>
                 </button>
               ))}
-              {collections.length === 0 && (
-                <p className="move-empty">No collections match</p>
-              )}
+              {collections.length === 0 && <p className="move-empty">No collections match</p>}
             </div>
           </motion.div>
         </motion.div>

@@ -19,8 +19,7 @@ export function downloadVaultMarkdown(backup: ExportVaultPayload) {
 
   for (const note of pages) {
     const blocks = (note.blocks ?? []) as Block[];
-    const body =
-      blocks.length > 0 ? blocksToMarkdown(blocks) : note.content || "";
+    const body = blocks.length > 0 ? blocksToMarkdown(blocks) : note.content || "";
     parts.push(`# ${note.icon ? `${note.icon} ` : ""}${note.title || "Untitled"}`);
     if (note.tags?.length) {
       parts.push(`Tags: ${note.tags.map((t) => `#${t}`).join(" ")}`);

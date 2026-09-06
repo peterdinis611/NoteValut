@@ -179,7 +179,11 @@ export function blocksToPlainText(blocks: Block[]): string {
   return blocksToMarkdown(blocks);
 }
 
-export function notePreviewFromBlocks(blocks: Block[] | undefined, content: string, max = 80): string {
+export function notePreviewFromBlocks(
+  blocks: Block[] | undefined,
+  content: string,
+  max = 80,
+): string {
   const source = blocks?.length
     ? blocks
         .filter((b) => b.type !== "divider" && b.type !== "table" && (b.text.trim() || b.url))
@@ -199,9 +203,8 @@ export function countOpenTasks(blocks: Block[] | undefined): number {
 
 export function countOverdueTasks(blocks: Block[] | undefined, now = Date.now()): number {
   return (
-    blocks?.filter(
-      (b) => b.type === "todo" && !b.checked && b.dueAt !== undefined && b.dueAt < now,
-    ).length ?? 0
+    blocks?.filter((b) => b.type === "todo" && !b.checked && b.dueAt !== undefined && b.dueAt < now)
+      .length ?? 0
   );
 }
 
@@ -286,7 +289,8 @@ export function markdownToBlocks(md: string): Block[] {
     else if (line.startsWith("### ")) blocks.push(createBlock("heading3", line.slice(4)));
     else if (line.startsWith("## ")) blocks.push(createBlock("heading2", line.slice(3)));
     else if (line.startsWith("# ")) blocks.push(createBlock("heading1", line.slice(2)));
-    else if (line.startsWith("- [ ] ")) blocks.push(createBlock("todo", line.slice(6), { checked: false }));
+    else if (line.startsWith("- [ ] "))
+      blocks.push(createBlock("todo", line.slice(6), { checked: false }));
     else if (line.startsWith("- [x] ") || line.startsWith("- [X] "))
       blocks.push(createBlock("todo", line.slice(6), { checked: true }));
     else if (line.startsWith("- ") || line.startsWith("* "))
@@ -402,7 +406,8 @@ export function matchMarkdownShortcut(
   if (text === "##### ") return { type: "heading5", rest: "" };
   if (text === "###### ") return { type: "heading6", rest: "" };
   if (text === "- " || text === "* ") return { type: "bullet", rest: "" };
-  if (text === "[] " || text === "[ ] ") return { type: "todo", rest: "", extras: { checked: false } };
+  if (text === "[] " || text === "[ ] ")
+    return { type: "todo", rest: "", extras: { checked: false } };
   if (text === "> ") return { type: "quote", rest: "" };
   if (text === "``` ") return { type: "code", rest: "", extras: { language: "auto" } };
   if (/^\d+\.\s$/.test(text)) return { type: "numbered", rest: "" };
@@ -411,4 +416,3 @@ export function matchMarkdownShortcut(
 
 export { youtubeEmbedUrl, resolveVideoSource } from "@/lib/video";
 export type { VideoProvider, VideoSource } from "@/lib/video";
-

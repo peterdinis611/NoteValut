@@ -96,10 +96,7 @@ export function googleFontsCss2Url(
   }
 
   if (hasItalic) {
-    const pairs = [
-      ...weights.map((w) => `0,${w}`),
-      ...weights.map((w) => `1,${w}`),
-    ].join(";");
+    const pairs = [...weights.map((w) => `0,${w}`), ...weights.map((w) => `1,${w}`)].join(";");
     return `https://fonts.googleapis.com/css2?family=${familyParam}:ital,wght@${pairs}&display=swap`;
   }
 
@@ -128,8 +125,7 @@ export function filterGoogleFonts(
   if (q) {
     filtered = filtered.filter(
       (item) =>
-        item.family.toLowerCase().includes(q) ||
-        normalizeFontCategory(item.category).includes(q),
+        item.family.toLowerCase().includes(q) || normalizeFontCategory(item.category).includes(q),
     );
   }
   return filtered.slice(0, limit);

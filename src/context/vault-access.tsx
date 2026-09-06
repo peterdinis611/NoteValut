@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useMemo,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import {
   defineAbilityFor,
   isReadOnlyRole,
@@ -49,8 +44,7 @@ export function VaultAccessProvider({
   sharePermission,
   isOwner = false,
 }: ProviderProps) {
-  const role: VaultRole =
-    roleProp ?? (isOwner ? "owner" : roleFromPermission(sharePermission));
+  const role: VaultRole = roleProp ?? (isOwner ? "owner" : roleFromPermission(sharePermission));
 
   const ability = useMemo(() => defineAbilityFor(role), [role]);
   const readOnly = isReadOnlyRole(role);
@@ -63,8 +57,7 @@ export function VaultAccessProvider({
       shareToken,
       shareScope,
       sharePermission:
-        sharePermission ??
-        (role === "editor" ? "write" : role === "viewer" ? "read" : undefined),
+        sharePermission ?? (role === "editor" ? "write" : role === "viewer" ? "read" : undefined),
       isOwner: isOwner || role === "owner",
     }),
     [ability, isOwner, readOnly, role, sharePermission, shareScope, shareToken],

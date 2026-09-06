@@ -11,11 +11,7 @@ export function tagKey(tag: string): string {
  * Returns empty string if nothing left.
  */
 export function normalizeTag(input: string): string {
-  return input
-    .trim()
-    .replace(/^#+/, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return input.trim().replace(/^#+/, "").replace(/\s+/g, " ").trim();
 }
 
 export type NormalizeTagsResult =
@@ -76,11 +72,7 @@ export function removeTagFromList(tags: string[], raw: string): string[] {
 }
 
 /** Rename one tag key across a list. */
-export function renameTagInList(
-  tags: string[],
-  from: string,
-  to: string,
-): NormalizeTagsResult {
+export function renameTagInList(tags: string[], from: string, to: string): NormalizeTagsResult {
   const fromKey = tagKey(normalizeTag(from));
   const next = tags.map((t) => (tagKey(t) === fromKey ? normalizeTag(to) : t));
   return normalizeTags(next);

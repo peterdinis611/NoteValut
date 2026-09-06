@@ -48,8 +48,7 @@ export function VideoViewer({
         <Film className="size-5" />
         <p>Unsupported video URL</p>
         <span>
-          YouTube, Vimeo, Loom, Twitch, TikTok, Dailymotion, Streamable, Wistia, or a
-          direct file
+          YouTube, Vimeo, Loom, Twitch, TikTok, Dailymotion, Streamable, Wistia, or a direct file
         </span>
       </div>
     );
@@ -99,9 +98,7 @@ function VideoChrome({
   return (
     <header className="nv-video-toolbar">
       <div className="nv-video-toolbar-meta">
-        <span className={`nv-video-badge nv-video-badge-${source.provider}`}>
-          {source.label}
-        </span>
+        <span className={`nv-video-badge nv-video-badge-${source.provider}`}>{source.label}</span>
         <span className="nv-video-toolbar-title">{title?.trim() || "Video"}</span>
       </div>
       <div className="nv-video-toolbar-actions">
@@ -123,11 +120,7 @@ function VideoChrome({
             aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
             onClick={onToggleFullscreen}
           >
-            {fullscreen ? (
-              <Minimize2 className="size-3.5" />
-            ) : (
-              <Expand className="size-3.5" />
-            )}
+            {fullscreen ? <Minimize2 className="size-3.5" /> : <Expand className="size-3.5" />}
           </button>
         )}
       </div>
@@ -173,12 +166,7 @@ function NativeVideoPlayer({ src, title }: { src: string; title: string }) {
         onLoadedMetadata={() => setDuration(ref.current?.duration ?? 0)}
       />
       {!playing && (
-        <button
-          type="button"
-          className="nv-video-play-fab"
-          aria-label="Play"
-          onClick={togglePlay}
-        >
+        <button type="button" className="nv-video-play-fab" aria-label="Play" onClick={togglePlay}>
           <Play className="size-7 fill-current" />
         </button>
       )}
@@ -294,12 +282,7 @@ export function VideoViewerOverlay({
             >
               <X className="size-4" />
             </button>
-            <VideoViewer
-              src={src}
-              title={title}
-              fullscreen
-              onToggleFullscreen={onClose}
-            />
+            <VideoViewer src={src} title={title} fullscreen onToggleFullscreen={onClose} />
           </motion.div>
         </motion.div>
       )}

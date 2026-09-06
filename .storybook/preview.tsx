@@ -57,16 +57,13 @@ const preview: Preview = {
         defaultQuery?: unknown;
       };
       return (
-        <StorybookConvexProvider
-          queries={convex.queries}
-          defaultQuery={convex.defaultQuery}
-        >
+        <StorybookConvexProvider queries={convex.queries} defaultQuery={convex.defaultQuery}>
           <ToastProvider>
             <div
               className="min-h-[100vh] bg-background text-foreground antialiased"
               style={{
                 fontFamily:
-                  'var(--font-body), var(--font-sans), ui-sans-serif, system-ui, sans-serif',
+                  "var(--font-body), var(--font-sans), ui-sans-serif, system-ui, sans-serif",
               }}
             >
               <Story />

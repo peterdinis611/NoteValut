@@ -220,9 +220,7 @@ export const WebLink = Extension({
               className="nv-weblink-input"
               placeholder="https://github.com/… · notion.so · linear.app"
               value={url}
-              onChange={(e) =>
-                props.commands.updateBlock(props.block.id, { url: e.target.value })
-              }
+              onChange={(e) => props.commands.updateBlock(props.block.id, { url: e.target.value })}
               onFocus={props.onFocus}
             />
             <input
@@ -262,17 +260,13 @@ export const WebLink = Extension({
             </span>
             <span className="nv-weblink-meta">
               <span className="nv-weblink-badge">{embed.label}</span>
-              <span className="nv-weblink-title">
-                {props.block.label || embed.title || title}
-              </span>
+              <span className="nv-weblink-title">{props.block.label || embed.title || title}</span>
               <span className="nv-weblink-host">{embed.subtitle || host}</span>
             </span>
             <ExternalLink className="size-3.5 text-muted" />
           </a>
         ) : (
-          <div className="nv-weblink-empty">
-            Paste a GitHub, Notion, Linear, or any URL
-          </div>
+          <div className="nv-weblink-empty">Paste a GitHub, Notion, Linear, or any URL</div>
         )}
       </div>
     );

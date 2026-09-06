@@ -1,8 +1,4 @@
-import {
-  fetchAction,
-  fetchQuery,
-  preloadQuery,
-} from "convex/nextjs";
+import { fetchAction, fetchQuery, preloadQuery } from "convex/nextjs";
 import type { Preloaded } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
@@ -45,9 +41,7 @@ export async function preloadGoogleFonts(
 /**
  * Server Actions / RSC: warm the catalog cache (HTTP fetch on Convex).
  */
-export async function ensureGoogleFontsCatalog(
-  opts?: { force?: boolean } & ConvexAuthOptions,
-) {
+export async function ensureGoogleFontsCatalog(opts?: { force?: boolean } & ConvexAuthOptions) {
   const { force, ...options } = opts ?? {};
   return await fetchAction(api.googleFonts.ensure, { force }, options);
 }

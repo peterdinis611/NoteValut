@@ -40,21 +40,13 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 5;
 const ZOOM_STEP = 0.35;
 
-export function ImageViewer({
-  open,
-  onClose,
-  images,
-  index = 0,
-  onIndexChange,
-}: Props) {
+export function ImageViewer({ open, onClose, images, index = 0, onIndexChange }: Props) {
   const [mounted, setMounted] = useState(false);
   const [active, setActive] = useState(index);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
-  const dragOrigin = useRef<{ x: number; y: number; ox: number; oy: number } | null>(
-    null,
-  );
+  const dragOrigin = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
   const resetTransform = useCallback(() => {
     setScale(1);
@@ -199,9 +191,7 @@ export function ImageViewer({
 
           <header className="image-viewer-bar">
             <div className="image-viewer-meta">
-              <p className="image-viewer-caption">
-                {current.alt?.trim() || "Image"}
-              </p>
+              <p className="image-viewer-caption">{current.alt?.trim() || "Image"}</p>
               {hasGallery && (
                 <span className="image-viewer-count">
                   {active + 1} / {images.length}
@@ -220,11 +210,7 @@ export function ImageViewer({
                 label={scale > 1 ? "Fit" : "Zoom 200%"}
                 onClick={() => (scale > 1 ? resetTransform() : setScale(2))}
               >
-                {scale > 1 ? (
-                  <Minimize2 className="size-4" />
-                ) : (
-                  <Maximize2 className="size-4" />
-                )}
+                {scale > 1 ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
               </ToolBtn>
               <ToolBtn label="Reset" onClick={resetTransform}>
                 <RotateCcw className="size-4" />

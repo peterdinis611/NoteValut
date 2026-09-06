@@ -337,18 +337,14 @@ export function applyTheme(settings?: SettingsRecord) {
   const s = normalizeSettings(settings ?? getSettings());
   const root = document.documentElement;
 
-  const preset =
-    s.themeId === "custom" ? THEME_PRESETS.default : THEME_PRESETS[s.themeId];
+  const preset = s.themeId === "custom" ? THEME_PRESETS.default : THEME_PRESETS[s.themeId];
   for (const [key, value] of Object.entries(preset.vars)) {
     root.style.setProperty(key, value);
   }
   const accent = preset.vars["--accent"];
   const background = preset.vars["--background"] ?? "#0a1210";
   if (accent) {
-    root.style.setProperty(
-      "--accent-bright",
-      `color-mix(in srgb, ${accent} 72%, #fff)`,
-    );
+    root.style.setProperty("--accent-bright", `color-mix(in srgb, ${accent} 72%, #fff)`);
     root.style.setProperty("--accent-ink", background);
   }
 
@@ -426,9 +422,7 @@ export function clearCustomFont() {
 }
 
 export function familyNameFromFile(fileName: string): string {
-  return sanitizeFontFamily(
-    fileName.replace(/\.(woff2?|ttf|otf)$/i, "").replace(/[-_]+/g, " "),
-  );
+  return sanitizeFontFamily(fileName.replace(/\.(woff2?|ttf|otf)$/i, "").replace(/[-_]+/g, " "));
 }
 
 export async function readFontFileAsDataUrl(file: File): Promise<string> {

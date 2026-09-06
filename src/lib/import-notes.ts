@@ -1,8 +1,4 @@
-import {
-  createBlock,
-  markdownToBlocks,
-  type Block,
-} from "@/lib/blocks";
+import { createBlock, markdownToBlocks, type Block } from "@/lib/blocks";
 import { normalizeTags } from "@/lib/tags";
 
 export type ImportedNoteDraft = {
@@ -98,11 +94,13 @@ export function normalizeNotionMarkdown(md: string): string {
 }
 
 function titleFromFilename(name: string): string {
-  return name
-    .replace(/\.(md|markdown|txt)$/i, "")
-    .replace(/^\d{8,14}[-_]?/, "")
-    .replace(/[-_]+/g, " ")
-    .trim() || "Untitled";
+  return (
+    name
+      .replace(/\.(md|markdown|txt)$/i, "")
+      .replace(/^\d{8,14}[-_]?/, "")
+      .replace(/[-_]+/g, " ")
+      .trim() || "Untitled"
+  );
 }
 
 function titleFromBody(body: string, fallback: string): string {
@@ -152,18 +150,14 @@ export function markdownFileToDraft(
   };
 }
 
-export function detectImportSource(
-  filenames: string[],
-): "markdown" | "obsidian" | "notion" {
+export function detectImportSource(filenames: string[]): "markdown" | "obsidian" | "notion" {
   const joined = filenames.join(" ").toLowerCase();
   if (joined.includes("obsidian") || filenames.some((f) => f.includes(".obsidian"))) {
     return "obsidian";
   }
   if (joined.includes("notion")) return "notion";
   // Heuristic: many exports with UUID-ish names → Notion
-  const uuidish = filenames.filter((f) =>
-    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/i.test(f),
-  ).length;
+  const uuidish = filenames.filter((f) => /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/i.test(f)).length;
   if (uuidish >= 2) return "notion";
   return "markdown";
 }
@@ -172,8 +166,9 @@ export async function importMarkdownFiles(
   files: FileList | File[],
   sourceHint?: "markdown" | "obsidian" | "notion",
 ): Promise<ImportedNoteDraft[]> {
-  const list = [...files].filter((f) =>
-    /\.(md|markdown|txt)$/i.test(f.name) || f.type === "text/markdown" || f.type === "text/plain",
+  const list = [...files].filter(
+    (f) =>
+      /\.(md|markdown|txt)$/i.test(f.name) || f.type === "text/markdown" || f.type === "text/plain",
   );
   if (!list.length) throw new Error("No Markdown files found");
 

@@ -6,10 +6,7 @@ import { blockToneStyle } from "@/lib/colors";
 import { firstIssue, parseCustomBlock } from "@/lib/validation";
 import { useToast } from "@/components/toast";
 import { Extension } from "../create-extension";
-import {
-  saveCustomBlockTemplate,
-  type CustomBlockTemplate,
-} from "../custom-blocks";
+import { saveCustomBlockTemplate, type CustomBlockTemplate } from "../custom-blocks";
 import type { BlockRenderProps } from "../types";
 import { BlockTextInput } from "../components/block-text-input";
 
@@ -155,9 +152,7 @@ function CustomBlockView(props: BlockRenderProps) {
             value={label}
             readOnly={props.readOnly}
             placeholder="e.g. Meeting notes"
-            onChange={(e) =>
-              props.commands.updateBlock(props.block.id, { label: e.target.value })
-            }
+            onChange={(e) => props.commands.updateBlock(props.block.id, { label: e.target.value })}
             onFocus={props.onFocus}
           />
         </label>
@@ -190,11 +185,7 @@ function CustomBlockView(props: BlockRenderProps) {
             <div className="nv-custom-file-chip">
               <span className="truncate">{fileName}</span>
               {!props.readOnly && (
-                <button
-                  type="button"
-                  aria-label="Remove file content"
-                  onClick={clearFile}
-                >
+                <button type="button" aria-label="Remove file content" onClick={clearFile}>
                   <X className="size-3.5" />
                 </button>
               )}

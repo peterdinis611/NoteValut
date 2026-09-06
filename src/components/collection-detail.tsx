@@ -17,12 +17,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
-import {
-  type Block,
-  blocksToPlainText,
-  defaultBlocks,
-  migrateContentToBlocks,
-} from "@/lib/blocks";
+import { type Block, blocksToPlainText, defaultBlocks, migrateContentToBlocks } from "@/lib/blocks";
 import { getLabelColor, LABEL_COLORS } from "@/lib/colors";
 import { formatRelativeTime } from "@/lib/format";
 import { isFolder } from "@/lib/item-kinds";
@@ -65,10 +60,7 @@ export function CollectionDetail({
   const [folderBlocks, setFolderBlocks] = useState<Block[]>(defaultBlocks());
   const [shareOpen, setShareOpen] = useState(false);
   const customTemplates = useCustomTemplates();
-  const templateOptions = useMemo(
-    () => [...customTemplates, ...PAGE_TEMPLATES],
-    [customTemplates],
-  );
+  const templateOptions = useMemo(() => [...customTemplates, ...PAGE_TEMPLATES], [customTemplates]);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
 
@@ -136,14 +128,14 @@ export function CollectionDetail({
             void updateNote({
               id: folder._id,
               coverColor: cover,
-              coverImage: cover ? null : folder.coverImage ?? null,
+              coverImage: cover ? null : (folder.coverImage ?? null),
             })
           }
           onSetCoverImage={(url) =>
             void updateNote({
               id: folder._id,
               coverImage: url,
-              coverColor: url ? null : folder.coverColor ?? null,
+              coverColor: url ? null : (folder.coverColor ?? null),
             })
           }
           onError={(msg) => toast.error(msg)}
@@ -176,7 +168,11 @@ export function CollectionDetail({
             </p>
           </div>
           {canShare && (
-            <button type="button" className="vault-btn-secondary" onClick={() => setShareOpen(true)}>
+            <button
+              type="button"
+              className="vault-btn-secondary"
+              onClick={() => setShareOpen(true)}
+            >
               <Share2 className="size-4" />
               Share
             </button>
@@ -253,11 +249,19 @@ export function CollectionDetail({
           >
             {!readOnly && (
               <div className="collection-view-toolbar">
-                <button type="button" className="vault-btn-primary" onClick={() => onCreateEntry(folder._id, folder.defaultTemplateId ?? "blank")}>
+                <button
+                  type="button"
+                  className="vault-btn-primary"
+                  onClick={() => onCreateEntry(folder._id, folder.defaultTemplateId ?? "blank")}
+                >
                   <Plus className="size-4" />
                   New entry
                 </button>
-                <button type="button" className="vault-btn-secondary" onClick={() => onCreateCollection(folder._id)}>
+                <button
+                  type="button"
+                  className="vault-btn-secondary"
+                  onClick={() => onCreateCollection(folder._id)}
+                >
                   <FolderOpen className="size-4" />
                   Sub-collection
                 </button>
@@ -388,9 +392,7 @@ export function CollectionDetail({
                 className="share-select"
                 value={folder.defaultTemplateId ?? "blank"}
                 disabled={readOnly}
-                onChange={(e) =>
-                  updateNote({ id: folder._id, defaultTemplateId: e.target.value })
-                }
+                onChange={(e) => updateNote({ id: folder._id, defaultTemplateId: e.target.value })}
               >
                 {templateOptions.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -409,9 +411,7 @@ export function CollectionDetail({
                   onChange={async (e) => {
                     try {
                       await updateNote({ id: folder._id, isLocked: e.target.checked });
-                      toast.success(
-                        e.target.checked ? "Collection locked" : "Collection unlocked",
-                      );
+                      toast.success(e.target.checked ? "Collection locked" : "Collection unlocked");
                     } catch {
                       toast.error("Couldn’t update lock");
                     }
@@ -459,7 +459,11 @@ function TabBtn({
   children: React.ReactNode;
 }) {
   return (
-    <button type="button" className={`collection-tab ${active ? "collection-tab-active" : ""}`} onClick={onClick}>
+    <button
+      type="button"
+      className={`collection-tab ${active ? "collection-tab-active" : ""}`}
+      onClick={onClick}
+    >
       {children}
     </button>
   );
@@ -554,7 +558,10 @@ function CollectionTable({
         const st = item.status || "";
         if (statusFilter === "none" ? st !== "" : st !== statusFilter) return false;
       }
-      if (tagFilter && !(item.tags ?? []).some((t) => t.toLowerCase() === tagFilter.toLowerCase())) {
+      if (
+        tagFilter &&
+        !(item.tags ?? []).some((t) => t.toLowerCase() === tagFilter.toLowerCase())
+      ) {
         return false;
       }
       return true;
@@ -617,9 +624,7 @@ function CollectionTable({
                     className="db-table-select"
                     value={item.status ?? ""}
                     disabled={readOnly || isFolder(item)}
-                    onChange={(e) =>
-                      onUpdate(item._id, { status: e.target.value || null })
-                    }
+                    onChange={(e) => onUpdate(item._id, { status: e.target.value || null })}
                   >
                     {STATUS_OPTIONS.map((s) => (
                       <option key={s || "none"} value={s}>

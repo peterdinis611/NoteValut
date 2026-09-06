@@ -1,10 +1,6 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import {
-  internalMutation,
-  mutation,
-  query,
-} from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireOwner } from "./lib/auth";
 
 function formatReminderTitle(dailyKey: string) {
@@ -69,11 +65,7 @@ export const schedule = mutation({
       createdAt: now,
     });
 
-    const jobId = await ctx.scheduler.runAt(
-      args.remindAt,
-      internal.reminders.fire,
-      { reminderId },
-    );
+    const jobId = await ctx.scheduler.runAt(args.remindAt, internal.reminders.fire, { reminderId });
     await ctx.db.patch(reminderId, { jobId });
     return reminderId;
   },
@@ -121,9 +113,7 @@ export const listFired = query({
     await requireOwner(ctx, args.ownerId);
     return await ctx.db
       .query("reminders")
-      .withIndex("by_owner_status", (q) =>
-        q.eq("ownerId", args.ownerId).eq("status", "fired"),
-      )
+      .withIndex("by_owner_status", (q) => q.eq("ownerId", args.ownerId).eq("status", "fired"))
       .collect();
   },
 });
@@ -136,16 +126,11 @@ export const listScheduledForKeys = query({
   },
   handler: async (ctx, args) => {
     await requireOwner(ctx, args.ownerId);
-    const found: Record<
-      string,
-      { id: string; remindAt: number; title: string }
-    > = {};
+    const found: Record<string, { id: string; remindAt: number; title: string }> = {};
     for (const key of args.keys) {
       const rows = await ctx.db
         .query("reminders")
-        .withIndex("by_owner_daily", (q) =>
-          q.eq("ownerId", args.ownerId).eq("dailyKey", key),
-        )
+        .withIndex("by_owner_daily", (q) => q.eq("ownerId", args.ownerId).eq("dailyKey", key))
         .collect();
       const scheduled = rows
         .filter((r) => r.status === "scheduled")

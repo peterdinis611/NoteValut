@@ -29,8 +29,7 @@ export function detectEmbed(url: string): EmbedMeta {
 
   if (host === "github.com" || host === "gist.github.com") {
     const parts = path.split("/").filter(Boolean);
-    const title =
-      parts.length >= 2 ? `${parts[0]}/${parts[1]}` : parts[0] || "GitHub";
+    const title = parts.length >= 2 ? `${parts[0]}/${parts[1]}` : parts[0] || "GitHub";
     const kind =
       parts[2] === "pull"
         ? `PR #${parts[3] ?? ""}`

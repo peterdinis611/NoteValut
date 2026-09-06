@@ -13,7 +13,11 @@ export function formatRelativeTime(timestamp: number): string {
   });
 }
 
-export function notePreview(content: string, blocks?: { text: string; type: string }[], max = 80): string {
+export function notePreview(
+  content: string,
+  blocks?: { text: string; type: string }[],
+  max = 80,
+): string {
   if (blocks?.length) {
     const fromBlocks = blocks
       .filter((b) => b.type !== "divider" && b.text.trim())

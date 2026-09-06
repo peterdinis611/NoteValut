@@ -52,8 +52,7 @@ export type InlineSegment =
 /** Parse a subset of markdown inline marks for display. */
 export function parseInlineSegments(input: string): InlineSegment[] {
   if (!input) return [{ type: "text", value: "" }];
-  const pattern =
-    /(\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`|==([^=]+)==)/g;
+  const pattern = /(\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`|==([^=]+)==)/g;
   const segments: InlineSegment[] = [];
   let last = 0;
   let match: RegExpExecArray | null;

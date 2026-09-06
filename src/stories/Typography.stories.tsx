@@ -32,8 +32,8 @@ function TypographyCanvas() {
               'var(--font-geist-sans), var(--font-sans), "DM Sans", ui-sans-serif, system-ui, sans-serif',
           }}
         >
-          Body copy, UI chrome, menus, and controls use the sans stack. The quick brown fox
-          jumps over the lazy vault.
+          Body copy, UI chrome, menus, and controls use the sans stack. The quick brown fox jumps
+          over the lazy vault.
         </p>
         <p
           className="text-sm text-muted"
@@ -54,7 +54,7 @@ function TypographyCanvas() {
             fontFamily: "var(--font-mono), ui-monospace, monospace",
           }}
         >
-{`const accent = "var(--accent)";
+          {`const accent = "var(--accent)";
 function greet(name: string) {
   return \`Hello, \${name}\`;
 }`}

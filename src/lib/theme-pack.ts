@@ -28,8 +28,7 @@ const MAX_DATA_URL = 200_000;
 
 export function exportThemePack(settings?: SettingsRecord): ThemePack {
   const s = settings ?? getSettings();
-  const dataUrl =
-    s.fontDataUrl && s.fontDataUrl.length <= MAX_DATA_URL ? s.fontDataUrl : undefined;
+  const dataUrl = s.fontDataUrl && s.fontDataUrl.length <= MAX_DATA_URL ? s.fontDataUrl : undefined;
   return {
     version: THEME_PACK_VERSION,
     exportedAt: Date.now(),

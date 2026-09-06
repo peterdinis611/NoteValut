@@ -11,11 +11,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import {
-  CODE_LANGUAGES,
-  POPULAR_PICKER_IDS,
-  type LanguageOption,
-} from "@/lib/highlight";
+import { CODE_LANGUAGES, POPULAR_PICKER_IDS, type LanguageOption } from "@/lib/highlight";
 import { dropdownVariants, easeOutSoft } from "@/lib/motion";
 
 type Props = {
@@ -28,13 +24,7 @@ type Props = {
 
 type MenuPos = { top: number; left: number; width: number };
 
-export function CodeLanguagePicker({
-  value,
-  disabled,
-  detected,
-  onChange,
-  onFocus,
-}: Props) {
+export function CodeLanguagePicker({ value, disabled, detected, onChange, onFocus }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -101,7 +91,12 @@ export function CodeLanguagePicker({
     if (!open) return;
     updatePos();
     setQuery("");
-    setActiveIndex(Math.max(0, flatList.findIndex((l) => l.id === value)));
+    setActiveIndex(
+      Math.max(
+        0,
+        flatList.findIndex((l) => l.id === value),
+      ),
+    );
     requestAnimationFrame(() => searchRef.current?.focus());
     function onScroll() {
       updatePos();
@@ -165,8 +160,7 @@ export function CodeLanguagePicker({
     }
   }
 
-  const displayLabel =
-    value === "auto" && detected ? `Auto · ${detected}` : current.label;
+  const displayLabel = value === "auto" && detected ? `Auto · ${detected}` : current.label;
 
   const menu =
     open && pos ? (
@@ -203,9 +197,7 @@ export function CodeLanguagePicker({
             }}
             onKeyDown={onSearchKeyDown}
           />
-          {query && (
-            <kbd className="nv-code-lang-kbd">esc</kbd>
-          )}
+          {query && <kbd className="nv-code-lang-kbd">esc</kbd>}
         </div>
 
         <div className="nv-code-lang-list note-scroll" ref={listRef}>
@@ -238,9 +230,7 @@ export function CodeLanguagePicker({
                       onMouseEnter={() => setActiveIndex(i)}
                       onClick={() => select(lang.id)}
                     >
-                      {lang.id === "auto" ? (
-                        <Sparkles className="size-3 opacity-70" />
-                      ) : null}
+                      {lang.id === "auto" ? <Sparkles className="size-3 opacity-70" /> : null}
                       {lang.label}
                     </button>
                   );
@@ -280,11 +270,7 @@ export function CodeLanguagePicker({
         <ChevronsUpDown className="size-3 opacity-50" />
       </button>
 
-      {mounted &&
-        createPortal(
-          <AnimatePresence>{menu}</AnimatePresence>,
-          document.body,
-        )}
+      {mounted && createPortal(<AnimatePresence>{menu}</AnimatePresence>, document.body)}
     </div>
   );
 }

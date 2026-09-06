@@ -45,15 +45,12 @@ export function filterGoogleFonts(
 
   let filtered = items;
   if (category) {
-    filtered = filtered.filter(
-      (item) => normalizeFontCategory(item.category) === category,
-    );
+    filtered = filtered.filter((item) => normalizeFontCategory(item.category) === category);
   }
   if (q) {
     filtered = filtered.filter(
       (item) =>
-        item.family.toLowerCase().includes(q) ||
-        normalizeFontCategory(item.category).includes(q),
+        item.family.toLowerCase().includes(q) || normalizeFontCategory(item.category).includes(q),
     );
   }
   return filtered.slice(0, limit);

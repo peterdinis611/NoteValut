@@ -9,19 +9,11 @@ export function tagKey(tag: string): string {
 }
 
 export function normalizeTag(input: string): string {
-  return input
-    .trim()
-    .replace(/^#+/, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return input.trim().replace(/^#+/, "").replace(/\s+/g, " ").trim();
 }
 
 function isValidTag(tag: string): boolean {
-  return (
-    tag.length >= 1 &&
-    tag.length <= MAX_TAG_LEN &&
-    TAG_RE.test(tag)
-  );
+  return tag.length >= 1 && tag.length <= MAX_TAG_LEN && TAG_RE.test(tag);
 }
 
 /** Normalize, validate, dedupe. Throws on invalid input. */
@@ -40,9 +32,7 @@ export function assertTags(input: unknown): string[] {
     const tag = normalizeTag(raw);
     if (!tag) continue;
     if (!isValidTag(tag)) {
-      throw new Error(
-        `Invalid tag “${tag.slice(0, 24)}” — use letters, numbers, spaces, - or _`,
-      );
+      throw new Error(`Invalid tag “${tag.slice(0, 24)}” — use letters, numbers, spaces, - or _`);
     }
     const key = tagKey(tag);
     if (seen.has(key)) continue;

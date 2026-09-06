@@ -80,14 +80,10 @@ export const search = query({
     const limit = Math.min(args.limit ?? 24, 48);
     const hits = await ctx.db
       .query("notes")
-      .withSearchIndex("search_body", (s) =>
-        s.search("searchText", q).eq("ownerId", args.ownerId),
-      )
+      .withSearchIndex("search_body", (s) => s.search("searchText", q).eq("ownerId", args.ownerId))
       .take(limit * 2);
 
-    return hits
-      .filter((n) => !n.trashed && !n.archived)
-      .slice(0, limit);
+    return hits.filter((n) => !n.trashed && !n.archived).slice(0, limit);
   },
 });
 
@@ -159,9 +155,7 @@ export const listTrashed = query({
       .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
       .collect();
 
-    return notes
-      .filter((n) => n.trashed)
-      .sort((a, b) => (b.trashedAt ?? 0) - (a.trashedAt ?? 0));
+    return notes.filter((n) => n.trashed).sort((a, b) => (b.trashedAt ?? 0) - (a.trashedAt ?? 0));
   },
 });
 
@@ -175,9 +169,7 @@ export const listArchived = query({
       .order("desc")
       .collect();
 
-    return notes
-      .filter((n) => n.archived && !n.trashed)
-      .sort((a, b) => b.updatedAt - a.updatedAt);
+    return notes.filter((n) => n.archived && !n.trashed).sort((a, b) => b.updatedAt - a.updatedAt);
   },
 });
 
@@ -324,7 +316,9 @@ export const create = mutation({
     const now = Date.now();
     const kind = args.kind ?? "page";
     const isFolder = kind === "folder";
-    const blocks = isFolder ? undefined : (args.blocks ?? [{ id: newId(), type: "paragraph", text: "" }]);
+    const blocks = isFolder
+      ? undefined
+      : (args.blocks ?? [{ id: newId(), type: "paragraph", text: "" }]);
     const content = blocks ? blocks.map((b) => b.text).join("\n") : "";
     const title = args.title ?? (isFolder ? "New collection" : "Untitled");
     const tags = assertTags(args.tags ?? []);
@@ -378,12 +372,8 @@ export const update = mutation({
     coverImage: v.optional(v.union(v.string(), v.null())),
     color: v.optional(v.union(v.string(), v.null())),
     description: v.optional(v.union(v.string(), v.null())),
-    viewMode: v.optional(
-      v.union(v.literal("grid"), v.literal("list"), v.literal("table")),
-    ),
-    sortMode: v.optional(
-      v.union(v.literal("updated"), v.literal("name"), v.literal("kind")),
-    ),
+    viewMode: v.optional(v.union(v.literal("grid"), v.literal("list"), v.literal("table"))),
+    sortMode: v.optional(v.union(v.literal("updated"), v.literal("name"), v.literal("kind"))),
     defaultTemplateId: v.optional(v.union(v.string(), v.null())),
     isLocked: v.optional(v.boolean()),
     status: v.optional(v.union(v.string(), v.null())),
@@ -431,21 +421,16 @@ export const update = mutation({
 
     const nextTitle = (updates.title as string | undefined) ?? existing.title;
     const nextContent = (updates.content as string | undefined) ?? existing.content;
-    const nextBlocks =
-      (updates.blocks as typeof existing.blocks | undefined) ?? existing.blocks;
+    const nextBlocks = (updates.blocks as typeof existing.blocks | undefined) ?? existing.blocks;
     const nextFolderBlocks =
-      (updates.folderBlocks as typeof existing.folderBlocks | undefined) ??
-      existing.folderBlocks;
+      (updates.folderBlocks as typeof existing.folderBlocks | undefined) ?? existing.folderBlocks;
     const nextDescription =
       updates.description !== undefined
         ? (updates.description as string | undefined)
         : existing.description;
     const nextStatus =
-      updates.status !== undefined
-        ? (updates.status as string | undefined)
-        : existing.status;
-    const nextTags =
-      (updates.tags as string[] | undefined) ?? existing.tags;
+      updates.status !== undefined ? (updates.status as string | undefined) : existing.status;
+    const nextTags = (updates.tags as string[] | undefined) ?? existing.tags;
 
     updates.searchText = buildNoteSearchText({
       title: nextTitle,
@@ -470,8 +455,7 @@ export const update = mutation({
         patch.blocks === undefined ||
         JSON.stringify(patch.blocks) === JSON.stringify(existing.blocks ?? []);
       const tagsSame =
-        patch.tags === undefined ||
-        JSON.stringify(patch.tags) === JSON.stringify(existing.tags);
+        patch.tags === undefined || JSON.stringify(patch.tags) === JSON.stringify(existing.tags);
 
       if (!(titleSame && contentSame && blocksSame && tagsSame)) {
         await snapshotNote(ctx, id);
@@ -516,12 +500,7 @@ export const move = mutation({
 
     const parentKey = args.parentId ?? null;
     const siblings = ownerNotes
-      .filter(
-        (n) =>
-          n._id !== args.id &&
-          !n.trashed &&
-          (n.parentId ?? null) === parentKey,
-      )
+      .filter((n) => n._id !== args.id && !n.trashed && (n.parentId ?? null) === parentKey)
       .sort(compareSidebarOrder);
 
     const orderedIds: Id<"notes">[] = [];
@@ -602,9 +581,7 @@ export const listBacklinks = query({
         title: n.title,
         icon: n.icon,
         updatedAt: n.updatedAt,
-        count:
-          n.blocks?.filter((b) => b.type === "pagelink" && b.pageId === target)
-            .length ?? 0,
+        count: n.blocks?.filter((b) => b.type === "pagelink" && b.pageId === target).length ?? 0,
       }))
       .sort((a, b) => b.updatedAt - a.updatedAt);
   },
@@ -788,12 +765,8 @@ const importNoteValidator = v.object({
   kind: v.optional(v.union(v.literal("page"), v.literal("folder"))),
   color: v.optional(v.string()),
   description: v.optional(v.string()),
-  viewMode: v.optional(
-    v.union(v.literal("grid"), v.literal("list"), v.literal("table")),
-  ),
-  sortMode: v.optional(
-    v.union(v.literal("updated"), v.literal("name"), v.literal("kind")),
-  ),
+  viewMode: v.optional(v.union(v.literal("grid"), v.literal("list"), v.literal("table"))),
+  sortMode: v.optional(v.union(v.literal("updated"), v.literal("name"), v.literal("kind"))),
   defaultTemplateId: v.optional(v.string()),
   isLocked: v.optional(v.boolean()),
   status: v.optional(v.string()),
@@ -971,7 +944,12 @@ export const seedDemo = mutation({
       color: "teal",
       description: "Quick captures land here",
       folderBlocks: [
-        { id: newId(), type: "callout", text: "Drop quick ideas here via Quick Capture ⚡", calloutVariant: "tip" },
+        {
+          id: newId(),
+          type: "callout",
+          text: "Drop quick ideas here via Quick Capture ⚡",
+          calloutVariant: "tip",
+        },
         { id: newId(), type: "paragraph", text: "This collection auto-receives captured entries." },
       ],
       viewMode: "list",
@@ -995,8 +973,17 @@ export const seedDemo = mutation({
       description: "Projects and meetings",
       folderBlocks: [
         { id: newId(), type: "heading2", text: "Work collection" },
-        { id: newId(), type: "paragraph", text: "Organize project entries, meeting notes, and sprint boards." },
-        { id: newId(), type: "todo", text: "Share this collection as read-only with your team", checked: false },
+        {
+          id: newId(),
+          type: "paragraph",
+          text: "Organize project entries, meeting notes, and sprint boards.",
+        },
+        {
+          id: newId(),
+          type: "todo",
+          text: "Share this collection as read-only with your team",
+          checked: false,
+        },
       ],
       viewMode: "grid",
       sortMode: "kind",
@@ -1020,7 +1007,12 @@ export const seedDemo = mutation({
           type: "paragraph",
           text: "Organize ideas with Collections (folders), Entries (notes), and a powerful block editor — your own space, not a clone.",
         },
-        { id: newId(), type: "callout", text: "Type / to insert blocks. Try callouts, tasks, and vault links!", calloutVariant: "tip" },
+        {
+          id: newId(),
+          type: "callout",
+          text: "Type / to insert blocks. Try callouts, tasks, and vault links!",
+          calloutVariant: "tip",
+        },
         { id: newId(), type: "heading2", text: "Quick tips" },
         { id: newId(), type: "bullet", text: "Use Collections to group related entries" },
         { id: newId(), type: "bullet", text: "Hit Quick Capture (bottom-right) for fast notes" },
@@ -1044,7 +1036,11 @@ export const seedDemo = mutation({
       content: "",
       blocks: [
         { id: newId(), type: "heading2", text: "Sprint goal" },
-        { id: newId(), type: "paragraph", text: "Ship the vault redesign with folders and templates." },
+        {
+          id: newId(),
+          type: "paragraph",
+          text: "Ship the vault redesign with folders and templates.",
+        },
         { id: newId(), type: "heading2", text: "Tasks" },
         { id: newId(), type: "todo", text: "Review collections UI", checked: true },
         { id: newId(), type: "todo", text: "Test quick capture", checked: false },
@@ -1064,9 +1060,7 @@ export const seedDemo = mutation({
       ownerId: args.ownerId,
       title: "Quick idea",
       content: "Add keyboard shortcuts overlay",
-      blocks: [
-        { id: newId(), type: "paragraph", text: "Add keyboard shortcuts overlay" },
-      ],
+      blocks: [{ id: newId(), type: "paragraph", text: "Add keyboard shortcuts overlay" }],
       icon: "💡",
       parentId: inboxId,
       kind: "page",
@@ -1121,9 +1115,7 @@ export const listDailyKeys = query({
     for (const key of args.keys) {
       const note = await ctx.db
         .query("notes")
-        .withIndex("by_owner_daily", (q) =>
-          q.eq("ownerId", args.ownerId).eq("dailyKey", key),
-        )
+        .withIndex("by_owner_daily", (q) => q.eq("ownerId", args.ownerId).eq("dailyKey", key))
         .first();
       if (note && !note.trashed) found[key] = note._id;
     }

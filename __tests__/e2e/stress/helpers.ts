@@ -47,10 +47,7 @@ export function summarize(samples: LatencySample[]) {
   };
 }
 
-export function formatSummary(
-  label: string,
-  samples: LatencySample[],
-): string {
+export function formatSummary(label: string, samples: LatencySample[]): string {
   const s = summarize(samples);
   return [
     `[stress] ${label}`,
@@ -76,10 +73,7 @@ export async function mapPool<T, R>(
     }
   }
 
-  const runners = Array.from(
-    { length: Math.min(concurrency, items.length) },
-    () => run(),
-  );
+  const runners = Array.from({ length: Math.min(concurrency, items.length) }, () => run());
   await Promise.all(runners);
   return results;
 }

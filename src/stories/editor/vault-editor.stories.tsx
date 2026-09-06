@@ -24,9 +24,7 @@ function ControlledEditor({
           fn()(next);
         }}
         readOnly={readOnly}
-        linkablePages={
-          linkablePages ?? sampleNotes().filter((n) => n.kind === "page")
-        }
+        linkablePages={linkablePages ?? sampleNotes().filter((n) => n.kind === "page")}
         onNavigate={fn()}
       />
     </div>
@@ -69,12 +67,7 @@ export const Default: Story = {
 export const ReadOnly: Story = {
   render: () => (
     <div className="mx-auto max-w-2xl p-6">
-      <VaultEditor
-        blocks={sampleBlocks()}
-        onChange={fn()}
-        readOnly
-        linkablePages={[]}
-      />
+      <VaultEditor blocks={sampleBlocks()} onChange={fn()} readOnly linkablePages={[]} />
     </div>
   ),
 };

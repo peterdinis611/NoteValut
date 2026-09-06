@@ -37,7 +37,5 @@ export const Closed: Story = {
 };
 
 export const Trigger: Story = {
-  render: () => (
-    <CreateMenuTrigger onClick={fn()}>New page</CreateMenuTrigger>
-  ),
+  render: () => <CreateMenuTrigger onClick={fn()}>New page</CreateMenuTrigger>,
 };

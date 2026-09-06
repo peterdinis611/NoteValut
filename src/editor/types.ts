@@ -1,4 +1,8 @@
-import type { ReactNode, KeyboardEvent as ReactKeyboardEvent, ClipboardEvent as ReactClipboardEvent } from "react";
+import type {
+  ReactNode,
+  KeyboardEvent as ReactKeyboardEvent,
+  ClipboardEvent as ReactClipboardEvent,
+} from "react";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import type { Block, BlockType, CalloutVariant } from "@/lib/blocks";
 
@@ -76,7 +80,11 @@ export type BlockRenderProps = {
 
 export type KeyboardShortcutMap = Record<
   string,
-  (ctx: { block: Block; event: ReactKeyboardEvent<HTMLElement>; commands: EditorCommands }) => boolean
+  (ctx: {
+    block: Block;
+    event: ReactKeyboardEvent<HTMLElement>;
+    commands: EditorCommands;
+  }) => boolean
 >;
 
 export type Extension = {

@@ -1,16 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import {
-  Check,
-  Copy,
-  Eye,
-  Link2,
-  Lock,
-  Pencil,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Check, Copy, Eye, Link2, Lock, Pencil, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -81,9 +72,7 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
         permission,
         label: title ? `Share: ${title}` : undefined,
       });
-      toast.success(
-        permission === "read" ? "Viewer link created" : "Editor link created",
-      );
+      toast.success(permission === "read" ? "Viewer link created" : "Editor link created");
     } catch {
       toast.error("Couldn’t create share link");
     } finally {
@@ -195,9 +184,7 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                           ownerId,
                           sharingEnabled: e.target.checked,
                         });
-                        toast.success(
-                          e.target.checked ? "Sharing enabled" : "Sharing disabled",
-                        );
+                        toast.success(e.target.checked ? "Sharing enabled" : "Sharing disabled");
                       } catch {
                         toast.error("Couldn’t update sharing settings");
                       }
@@ -208,9 +195,7 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                 <label className="share-switch">
                   <span className="share-switch-copy">
                     <span className="share-switch-label">Prefer Viewer links</span>
-                    <span className="share-switch-hint">
-                      New links default to view-only
-                    </span>
+                    <span className="share-switch-hint">New links default to view-only</span>
                   </span>
                   <input
                     type="checkbox"
@@ -224,9 +209,7 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                         });
                         if (e.target.checked) setPermission("read");
                         toast.info(
-                          e.target.checked
-                            ? "New links default to Viewer"
-                            : "Editor links allowed",
+                          e.target.checked ? "New links default to Viewer" : "Editor links allowed",
                         );
                       } catch {
                         toast.error("Couldn’t update sharing settings");
@@ -279,9 +262,7 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
             <section className="share-list-section" aria-label="Active links">
               <div className="share-list-head">
                 <p className="share-section-label">Active links</p>
-                {relevant.length > 0 && (
-                  <span className="share-list-count">{relevant.length}</span>
-                )}
+                {relevant.length > 0 && <span className="share-list-count">{relevant.length}</span>}
               </div>
               <div className="share-list">
                 {shares === undefined ? (
@@ -336,9 +317,7 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                           type="button"
                           className="share-icon-btn"
                           title={
-                            share.permission === "read"
-                              ? "Switch to Editor"
-                              : "Switch to Viewer"
+                            share.permission === "read" ? "Switch to Editor" : "Switch to Viewer"
                           }
                           aria-label="Toggle permission"
                           onClick={() => void handleTogglePermission(share)}
@@ -367,8 +346,7 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
 
             <p className="share-hint">
               <Lock className="size-3.5 shrink-0" />
-              Recipients open the link as Viewer or Editor. Only you can create or revoke
-              links.
+              Recipients open the link as Viewer or Editor. Only you can create or revoke links.
             </p>
           </motion.div>
         </motion.div>

@@ -1,10 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { THEME_PRESETS } from "@/db/settings-collection";
-import {
-  HIGHLIGHT_COLORS,
-  LABEL_COLORS,
-  TEXT_COLORS,
-} from "@/lib/colors";
+import { HIGHLIGHT_COLORS, LABEL_COLORS, TEXT_COLORS } from "@/lib/colors";
 
 const THEME_VARS = [
   "--background",
@@ -52,10 +48,7 @@ function ColorsCanvas() {
               className={`inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs ${c.class}`}
               style={{ backgroundColor: `${c.hex}33`, color: c.hex }}
             >
-              <span
-                className="size-2.5 rounded-full"
-                style={{ backgroundColor: c.hex }}
-              />
+              <span className="size-2.5 rounded-full" style={{ backgroundColor: c.hex }} />
               {c.id}
             </span>
           ))}
@@ -112,10 +105,7 @@ function ThemeCardsCanvas() {
       </p>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Object.values(THEME_PRESETS).map((preset) => (
-          <div
-            key={preset.id}
-            className="overflow-hidden rounded-lg border border-border bg-panel"
-          >
+          <div key={preset.id} className="overflow-hidden rounded-lg border border-border bg-panel">
             <div
               className="flex h-16 items-end gap-1 p-3"
               style={{ background: preset.vars["--background"] }}

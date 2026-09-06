@@ -1,9 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useMemo,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 
 const demoUser = {
   id: "user_storybook",
@@ -28,9 +23,7 @@ export function StorybookClerkState({
   children: ReactNode;
 }) {
   const value = useMemo(() => ({ signedIn }), [signedIn]);
-  return (
-    <ClerkMockContext.Provider value={value}>{children}</ClerkMockContext.Provider>
-  );
+  return <ClerkMockContext.Provider value={value}>{children}</ClerkMockContext.Provider>;
 }
 
 function useSignedIn() {
@@ -92,10 +85,7 @@ export function SignUpButton({ children }: { mode?: string; children: ReactNode 
   return <>{children}</>;
 }
 
-export function UserButton(props: {
-  afterSignOutUrl?: string;
-  appearance?: unknown;
-}) {
+export function UserButton(props: { afterSignOutUrl?: string; appearance?: unknown }) {
   return (
     <button
       type="button"

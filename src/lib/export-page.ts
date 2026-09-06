@@ -66,10 +66,7 @@ function blockToHtml(block: Block): string {
     case "table":
       if (!block.rows?.length) return "";
       return `<table>${block.rows
-        .map(
-          (row) =>
-            `<tr>${row.map((c) => `<td>${escapeHtml(c)}</td>`).join("")}</tr>`,
-        )
+        .map((row) => `<tr>${row.map((c) => `<td>${escapeHtml(c)}</td>`).join("")}</tr>`)
         .join("")}</table>`;
     case "pagelink":
       return `<p class="link">→ ${t}</p>`;

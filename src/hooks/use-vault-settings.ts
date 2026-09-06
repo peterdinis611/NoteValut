@@ -66,11 +66,7 @@ function getServerSnapshot(): SettingsRecord {
 }
 
 export function useVaultSettings(): SettingsRecord {
-  const record = useSyncExternalStore(
-    subscribeSettings,
-    getClientSnapshot,
-    getServerSnapshot,
-  );
+  const record = useSyncExternalStore(subscribeSettings, getClientSnapshot, getServerSnapshot);
 
   useEffect(() => {
     migrateLegacyLocalStorageOnce();

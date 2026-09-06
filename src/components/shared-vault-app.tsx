@@ -71,11 +71,7 @@ export function SharedVaultApp({ token }: Props) {
             </div>
           </div>
           <div className="shared-badge">
-            {role === "editor" ? (
-              <Pencil className="size-3.5" />
-            ) : (
-              <Eye className="size-3.5" />
-            )}
+            {role === "editor" ? <Pencil className="size-3.5" /> : <Eye className="size-3.5" />}
             {roleLabel(role)}
           </div>
           <div className="shared-meta">
@@ -84,8 +80,7 @@ export function SharedVaultApp({ token }: Props) {
             </span>
             <span>·</span>
             <span>
-              {collections.length}{" "}
-              {collections.length === 1 ? "collection" : "collections"}
+              {collections.length} {collections.length === 1 ? "collection" : "collections"}
             </span>
           </div>
           <nav className="sidebar-nav note-scroll">
@@ -147,9 +142,7 @@ export function SharedVaultApp({ token }: Props) {
                   <span className="shared-preview-chip">
                     {bundle.share.scope === "vault" ? "Full vault" : "Scoped share"}
                   </span>
-                  <span className="shared-preview-chip">
-                    {pages.length} pages
-                  </span>
+                  <span className="shared-preview-chip">{pages.length} pages</span>
                 </div>
               </div>
               <p className="shared-preview-section">Recent entries</p>
@@ -162,9 +155,7 @@ export function SharedVaultApp({ token }: Props) {
                     onClick={() => setActiveId(entry._id)}
                   >
                     <span className="vault-row-icon">{entry.icon}</span>
-                    <span className="truncate font-medium">
-                      {entry.title || "Untitled"}
-                    </span>
+                    <span className="truncate font-medium">{entry.title || "Untitled"}</span>
                   </button>
                 ))}
                 {pages.length === 0 && (

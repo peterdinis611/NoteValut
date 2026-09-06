@@ -1,12 +1,7 @@
 "use client";
 
 import { Search, Star } from "lucide-react";
-import {
-  useAction,
-  usePreloadedQuery,
-  useQuery,
-  type Preloaded,
-} from "convex/react";
+import { useAction, usePreloadedQuery, useQuery, type Preloaded } from "convex/react";
 import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
 import { api } from "../../convex/_generated/api";
 import {
@@ -139,7 +134,7 @@ function GoogleFontsPickerInner({ onPick, seed }: InnerProps) {
   useEffect(() => {
     if (!pending) return;
     const opts = googleFontWeightOptions(pending.variants);
-    setWeight(opts.includes(400) ? 400 : opts[0] ?? 400);
+    setWeight(opts.includes(400) ? 400 : (opts[0] ?? 400));
   }, [pending?.family]);
 
   useEffect(() => {
@@ -269,11 +264,7 @@ function GoogleFontsPickerInner({ onPick, seed }: InnerProps) {
               void warmCatalog(true);
             }}
           >
-            {ensuring
-              ? "Retrying…"
-              : retryAfterMs
-                ? `Retry available soon`
-                : "Retry"}
+            {ensuring ? "Retrying…" : retryAfterMs ? `Retry available soon` : "Retry"}
           </button>
         </div>
       ) : null}
@@ -319,7 +310,11 @@ function GoogleFontsPickerInner({ onPick, seed }: InnerProps) {
               type="range"
               min={weightOptions[0] ?? 100}
               max={weightOptions[weightOptions.length - 1] ?? 900}
-              step={weightOptions.length > 1 ? Math.min(100, weightOptions[1]! - weightOptions[0]!) : 100}
+              step={
+                weightOptions.length > 1
+                  ? Math.min(100, weightOptions[1]! - weightOptions[0]!)
+                  : 100
+              }
               list="nv-gf-weights"
               value={weight}
               onChange={(e) => setWeight(Number(e.target.value))}
@@ -405,12 +400,7 @@ type Props = PickerProps & {
 
 export function GoogleFontsPicker({ preloaded, onPick }: Props) {
   return (
-    <SuspenseBoundary
-      label="Loading Google Fonts…"
-      hint="Preparing the catalog"
-      compact
-      size="sm"
-    >
+    <SuspenseBoundary label="Loading Google Fonts…" hint="Preparing the catalog" compact size="sm">
       {preloaded ? (
         <GoogleFontsPickerPreloaded onPick={onPick} preloaded={preloaded} />
       ) : (

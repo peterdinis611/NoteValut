@@ -38,9 +38,7 @@ export function TagsHub({ ownerId, onClose, onNavigate, initialTag = null }: Pro
   const filtered = useMemo(() => {
     if (!notes || !activeTag) return [];
     const needle = tagKey(activeTag);
-    return notes.filter(
-      (n) => !isFolder(n) && n.tags.some((t) => tagKey(t) === needle),
-    );
+    return notes.filter((n) => !isFolder(n) && n.tags.some((t) => tagKey(t) === needle));
   }, [notes, activeTag]);
 
   async function handleRename(from: string) {

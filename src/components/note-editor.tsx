@@ -1,15 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import {
-  ChevronRight,
-  Copy,
-  Eye,
-  PanelLeft,
-  Pin,
-  Share2,
-  Trash2,
-} from "lucide-react";
+import { ChevronRight, Copy, Eye, PanelLeft, Pin, Share2, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
@@ -42,11 +34,7 @@ import { useToast } from "./toast";
 import { UiTooltip } from "./ui-tooltip";
 import { VersionHistoryPanel } from "./version-history-panel";
 import { GoogleFontsPicker } from "./google-fonts-picker";
-import {
-  enqueueNotePatch,
-  isBrowserOffline,
-  queuedPatchCount,
-} from "@/lib/offline-queue";
+import { enqueueNotePatch, isBrowserOffline, queuedPatchCount } from "@/lib/offline-queue";
 import { applyNoteFont, clearNoteFont } from "@/lib/note-font";
 import { getFontHistory } from "@/lib/font-history";
 
@@ -110,7 +98,16 @@ export function NoteEditor({
       cssUrl: note.fontUrl,
     });
     return () => clearNoteFont();
-  }, [note?._id, note?.title, note?.content, note?.blocks, note?.tags, note?.fontFamily, note?.fontUrl, noteId]);
+  }, [
+    note?._id,
+    note?.title,
+    note?.content,
+    note?.blocks,
+    note?.tags,
+    note?.fontFamily,
+    note?.fontUrl,
+    noteId,
+  ]);
 
   function scheduleSave(patch: {
     title?: string;
@@ -285,8 +282,7 @@ export function NoteEditor({
     return <div className="page-empty text-muted">Not found</div>;
   }
 
-  const linkablePages =
-    allNotes?.filter((n) => n.kind !== "folder" && n._id !== noteId) ?? [];
+  const linkablePages = allNotes?.filter((n) => n.kind !== "folder" && n._id !== noteId) ?? [];
 
   const moreItems: MoreActionItem[] = [];
   if (!readOnly) {
@@ -422,7 +418,12 @@ export function NoteEditor({
         <div className="flex min-w-0 items-center gap-2">
           {sidebarCollapsed && (
             <UiTooltip label="Open sidebar">
-              <button type="button" className="topbar-btn" onClick={onToggleSidebar} aria-label="Open sidebar">
+              <button
+                type="button"
+                className="topbar-btn"
+                onClick={onToggleSidebar}
+                aria-label="Open sidebar"
+              >
                 <PanelLeft className="size-4" />
               </button>
             </UiTooltip>
@@ -441,14 +442,24 @@ export function NoteEditor({
           )}
           {canShare && (
             <UiTooltip label="Share">
-              <button type="button" className="topbar-btn" aria-label="Share" onClick={() => setShareOpen(true)}>
+              <button
+                type="button"
+                className="topbar-btn"
+                aria-label="Share"
+                onClick={() => setShareOpen(true)}
+              >
                 <Share2 className="size-4" />
               </button>
             </UiTooltip>
           )}
           {!isFolder(note) && !readOnly && (
             <UiTooltip label="Duplicate">
-              <button type="button" className="topbar-btn" aria-label="Duplicate" onClick={handleDuplicate}>
+              <button
+                type="button"
+                className="topbar-btn"
+                aria-label="Duplicate"
+                onClick={handleDuplicate}
+              >
                 <Copy className="size-4" />
               </button>
             </UiTooltip>
@@ -467,7 +478,12 @@ export function NoteEditor({
           )}
           {!readOnly && (
             <UiTooltip label="Move to bin">
-              <button type="button" className="topbar-btn text-red-400" aria-label="Move to bin" onClick={handleTrash}>
+              <button
+                type="button"
+                className="topbar-btn text-red-400"
+                aria-label="Move to bin"
+                onClick={handleTrash}
+              >
                 <Trash2 className="size-4" />
               </button>
             </UiTooltip>
@@ -492,12 +508,15 @@ export function NoteEditor({
               coverImage={note.coverImage}
               readOnly={readOnly}
               onSetCoverColor={(cover) =>
-                scheduleSave({ coverColor: cover, coverImage: cover ? null : note.coverImage ?? null })
+                scheduleSave({
+                  coverColor: cover,
+                  coverImage: cover ? null : (note.coverImage ?? null),
+                })
               }
               onSetCoverImage={(url) =>
                 scheduleSave({
                   coverImage: url,
-                  coverColor: url ? null : note.coverColor ?? null,
+                  coverColor: url ? null : (note.coverColor ?? null),
                 })
               }
               onError={(msg) => toast.error(msg)}
@@ -565,11 +584,7 @@ export function NoteEditor({
                     scheduleSave({ blocks: next });
                   }}
                 />
-                <BacklinksPanel
-                  ownerId={ownerId}
-                  noteId={noteId}
-                  onNavigate={onNavigate}
-                />
+                <BacklinksPanel ownerId={ownerId} noteId={noteId} onNavigate={onNavigate} />
               </div>
               <TableOfContents
                 blocks={blocks}
@@ -645,7 +660,11 @@ export function NoteEditor({
           <div className="note-font-panel">
             <header className="note-font-head">
               <h3>Page font</h3>
-              <button type="button" className="settings-btn settings-btn-ghost" onClick={() => setFontOpen(false)}>
+              <button
+                type="button"
+                className="settings-btn settings-btn-ghost"
+                onClick={() => setFontOpen(false)}
+              >
                 Close
               </button>
             </header>
@@ -657,9 +676,7 @@ export function NoteEditor({
                 <span className="settings-gf-chip-label">Quick pick</span>
                 <div className="settings-gf-chip-list">
                   {[...getFontHistory().favorites, ...getFontHistory().recent]
-                    .filter(
-                      (f, i, arr) => arr.findIndex((x) => x.family === f.family) === i,
-                    )
+                    .filter((f, i, arr) => arr.findIndex((x) => x.family === f.family) === i)
                     .slice(0, 10)
                     .map((f) => (
                       <button
@@ -729,11 +746,7 @@ function ChildCard({
 }) {
   return (
     <div className="page-child-card">
-      <button
-        type="button"
-        className="page-child-main"
-        onClick={() => onNavigate(child._id)}
-      >
+      <button type="button" className="page-child-main" onClick={() => onNavigate(child._id)}>
         <span className="text-xl">{child.icon}</span>
         <span className="min-w-0 flex-1 truncate text-sm font-medium">
           {child.title || "Untitled"}

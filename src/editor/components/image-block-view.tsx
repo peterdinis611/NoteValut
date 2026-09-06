@@ -48,8 +48,7 @@ export function ImageBlockView(props: BlockRenderProps) {
   const alt = caption.trim() || "Image";
   const width = clampWidth(dragWidth ?? props.block.width ?? 100);
   const align = props.block.align ?? "center";
-  const showChrome =
-    !props.readOnly && (selected || hovered || editingUrl || editingCaption);
+  const showChrome = !props.readOnly && (selected || hovered || editingUrl || editingCaption);
 
   useEffect(() => {
     setUrlDraft(props.block.url ?? "");
@@ -246,11 +245,7 @@ export function ImageBlockView(props: BlockRenderProps) {
               </div>
               <span className="nv-image-toolbar-sep" />
               <div className="nv-image-toolbar-group">
-                <Tool
-                  label="Align left"
-                  active={align === "left"}
-                  onClick={() => setAlign("left")}
-                >
+                <Tool label="Align left" active={align === "left"} onClick={() => setAlign("left")}>
                   <AlignLeft className="size-3.5" />
                 </Tool>
                 <Tool
@@ -397,7 +392,9 @@ export function ImageBlockView(props: BlockRenderProps) {
         {(editingCaption || caption.trim() || (showChrome && selected)) && (
           <div className="nv-image-caption-wrap">
             {props.readOnly ? (
-              caption.trim() ? <p className="nv-image-caption">{caption}</p> : null
+              caption.trim() ? (
+                <p className="nv-image-caption">{caption}</p>
+              ) : null
             ) : (
               <input
                 ref={captionRef}

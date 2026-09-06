@@ -10,9 +10,7 @@ export default function NotAuthorizedPage() {
       variant="not-authorized"
       title="Not authorized"
       description="You don’t have access to this vault or share link. Ask the owner for a new invite, or return home."
-      actions={[
-        { label: "Back to vault", href: "/", primary: true },
-      ]}
+      actions={[{ label: "Back to vault", href: "/", primary: true }]}
     />
   );
 }
