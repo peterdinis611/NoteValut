@@ -18,6 +18,8 @@ export const get = query({
       sharingEnabled: false,
       publicReadonly: true,
       backgroundImage: undefined as string | undefined,
+      autoDailyNote: false as boolean | undefined,
+      dailyReminderTime: undefined as string | undefined,
       updatedAt: Date.now(),
     };
   },
@@ -29,6 +31,8 @@ export const update = mutation({
     sharingEnabled: v.optional(v.boolean()),
     publicReadonly: v.optional(v.boolean()),
     backgroundImage: v.optional(v.union(v.string(), v.null())),
+    autoDailyNote: v.optional(v.boolean()),
+    dailyReminderTime: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     await requireOwner(ctx, args.ownerId);
@@ -46,6 +50,10 @@ export const update = mutation({
       if (args.backgroundImage !== undefined) {
         updates.backgroundImage = args.backgroundImage ?? undefined;
       }
+      if (args.autoDailyNote !== undefined) updates.autoDailyNote = args.autoDailyNote;
+      if (args.dailyReminderTime !== undefined) {
+        updates.dailyReminderTime = args.dailyReminderTime ?? undefined;
+      }
       await ctx.db.patch(existing._id, updates);
       return existing._id;
     }
@@ -55,6 +63,8 @@ export const update = mutation({
       sharingEnabled: args.sharingEnabled ?? false,
       publicReadonly: args.publicReadonly ?? true,
       backgroundImage: args.backgroundImage ?? undefined,
+      autoDailyNote: args.autoDailyNote ?? false,
+      dailyReminderTime: args.dailyReminderTime ?? undefined,
       updatedAt: now,
     });
   },

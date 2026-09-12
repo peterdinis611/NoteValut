@@ -48,6 +48,7 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
   const [cursor, setCursor] = useState(() => monthCursorFromKey());
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [remindTime, setRemindTime] = useState("09:00");
+  const [recurrence, setRecurrence] = useState<"none" | "daily" | "weekly">("none");
   const [busy, setBusy] = useState(false);
   const getOrCreate = useMutation(api.notes.getOrCreateDaily);
   const scheduleReminder = useMutation(api.reminders.schedule);
@@ -77,6 +78,12 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
   function selectDay(key: string) {
     setSelectedKey(key);
     setRemindTime(defaultRemindTime(key));
+    const existingRecurrence = scheduled?.[key]?.recurrence;
+    setRecurrence(
+      existingRecurrence === "daily" || existingRecurrence === "weekly"
+        ? existingRecurrence
+        : "none",
+    );
   }
 
   async function openDay(key: string, knownId?: Id<"notes">) {
@@ -115,14 +122,18 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
         remindAt,
         noteId,
         title: formatDailyTitle(selectedKey),
+        recurrence,
+      });
+      const when = new Date(remindAt).toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       });
       toast.success(
-        `Reminder set for ${new Date(remindAt).toLocaleString(undefined, {
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}`,
+        recurrence === "none"
+          ? `Reminder set for ${when}`
+          : `Reminder set for ${when} (${recurrence})`,
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn’t set reminder");
@@ -264,6 +275,10 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
+                    {selectedReminder.recurrence &&
+                    selectedReminder.recurrence !== "none"
+                      ? ` · ${selectedReminder.recurrence}`
+                      : ""}
                   </p>
                 )}
               </div>
@@ -275,6 +290,19 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
                     value={remindTime}
                     onChange={(e) => setRemindTime(e.target.value)}
                   />
+                </label>
+                <label className="calendar-remind-time">
+                  Repeat
+                  <select
+                    value={recurrence}
+                    onChange={(e) =>
+                      setRecurrence(e.target.value as "none" | "daily" | "weekly")
+                    }
+                  >
+                    <option value="none">Once</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                  </select>
                 </label>
                 <button
                   type="button"

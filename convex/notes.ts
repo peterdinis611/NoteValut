@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { assertCanAccessNote, requireOwner } from "./lib/auth";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
@@ -383,10 +383,20 @@ export const update = mutation({
     parentId: v.optional(v.union(v.id("notes"), v.null())),
     fontFamily: v.optional(v.union(v.string(), v.null())),
     fontUrl: v.optional(v.union(v.string(), v.null())),
+    /** If set and note.updatedAt is newer, reject with conflict. */
+    expectedUpdatedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { id, ...patch } = args;
+    const { id, expectedUpdatedAt, ...patch } = args;
     const existing = await assertCanAccessNote(ctx, id);
+    if (
+      expectedUpdatedAt !== undefined &&
+      existing.updatedAt > expectedUpdatedAt + 50
+    ) {
+      throw new Error(
+        `CONFLICT:${existing.updatedAt}:${existing.title || "Untitled"}`,
+      );
+    }
     if (existing.isLocked && patch.isLocked !== false) {
       const allowed = ["isLocked", "pinned"];
       const keys = Object.keys(patch).filter((k) => patch[k as keyof typeof patch] !== undefined);
@@ -1130,56 +1140,83 @@ export const getOrCreateDaily = mutation({
   },
   handler: async (ctx, args) => {
     await requireOwner(ctx, args.ownerId);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(args.dailyKey)) {
-      throw new Error("Invalid daily key");
-    }
-
-    const existing = await ctx.db
-      .query("notes")
-      .withIndex("by_owner_daily", (q) =>
-        q.eq("ownerId", args.ownerId).eq("dailyKey", args.dailyKey),
-      )
-      .first();
-
-    if (existing && !existing.trashed) return existing._id;
-
-    if (existing?.trashed) {
-      await ctx.db.patch(existing._id, {
-        trashed: false,
-        trashedAt: undefined,
-        archived: false,
-        updatedAt: Date.now(),
-      });
-      return existing._id;
-    }
-
-    const now = Date.now();
-    return await ctx.db.insert("notes", {
-      ownerId: args.ownerId,
-      title: formatDailyTitleServer(args.dailyKey),
-      content: "",
-      blocks: [
-        { id: newId(), type: "heading2", text: "Focus" },
-        { id: newId(), type: "todo", text: "", checked: false },
-        { id: newId(), type: "todo", text: "", checked: false },
-        { id: newId(), type: "heading2", text: "Log" },
-        { id: newId(), type: "paragraph", text: "" },
-        { id: newId(), type: "heading2", text: "Reflection" },
-        {
-          id: newId(),
-          type: "callout",
-          text: "One thing I learned…",
-          calloutVariant: "tip",
-        },
-      ],
-      icon: "☀️",
-      kind: "page",
-      pinned: false,
-      archived: false,
-      trashed: false,
-      tags: ["daily"],
-      dailyKey: args.dailyKey,
-      updatedAt: now,
-    });
+    return await createDailyNote(ctx, args.ownerId, args.dailyKey);
   },
 });
+
+/** Used by reminder fire (no Clerk identity on scheduler). */
+export const getOrCreateDailyInternal = internalMutation({
+  args: {
+    ownerId: v.string(),
+    dailyKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await createDailyNote(ctx, args.ownerId, args.dailyKey);
+  },
+});
+
+async function createDailyNote(
+  ctx: { db: MutationCtx["db"] },
+  ownerId: string,
+  dailyKey: string,
+) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dailyKey)) {
+    throw new Error("Invalid daily key");
+  }
+
+  const existing = await ctx.db
+    .query("notes")
+    .withIndex("by_owner_daily", (q) => q.eq("ownerId", ownerId).eq("dailyKey", dailyKey))
+    .first();
+
+  if (existing && !existing.trashed) return existing._id;
+
+  if (existing?.trashed) {
+    await ctx.db.patch(existing._id, {
+      trashed: false,
+      trashedAt: undefined,
+      archived: false,
+      updatedAt: Date.now(),
+    });
+    return existing._id;
+  }
+
+  const now = Date.now();
+  const blocks = [
+    { id: newId(), type: "heading2" as const, text: "Focus" },
+    { id: newId(), type: "todo" as const, text: "", checked: false },
+    { id: newId(), type: "todo" as const, text: "", checked: false },
+    { id: newId(), type: "heading2" as const, text: "Log" },
+    { id: newId(), type: "paragraph" as const, text: "" },
+    { id: newId(), type: "heading2" as const, text: "Reflection" },
+    {
+      id: newId(),
+      type: "callout" as const,
+      text: "One thing I learned…",
+      calloutVariant: "tip" as const,
+    },
+  ];
+  const title = formatDailyTitleServer(dailyKey);
+  const searchText = buildNoteSearchText({
+    title,
+    content: "",
+    tags: ["daily"],
+    blocks,
+  });
+
+  return await ctx.db.insert("notes", {
+    ownerId,
+    title,
+    content: "",
+    blocks,
+    icon: "☀️",
+    kind: "page",
+    pinned: false,
+    archived: false,
+    trashed: false,
+    tags: ["daily"],
+    dailyKey,
+    searchText,
+    updatedAt: now,
+  });
+}

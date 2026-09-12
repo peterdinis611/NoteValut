@@ -21,7 +21,8 @@ export type BlockType =
   | "video"
   | "link"
   | "pdf"
-  | "file";
+  | "file"
+  | "canvas";
 
 export type CalloutVariant = "info" | "tip" | "warning";
 

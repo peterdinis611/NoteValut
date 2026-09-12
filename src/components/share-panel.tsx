@@ -28,12 +28,15 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
   const createShare = useMutation(api.shares.create);
   const updateShare = useMutation(api.shares.update);
   const removeShare = useMutation(api.shares.remove);
+  const revokeAll = useMutation(api.shares.revokeAll);
   const updateSettings = useMutation(api.vaultSettings.update);
 
   const [permission, setPermission] = useState<"read" | "write">("read");
   const [copied, setCopied] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [expiresInDays, setExpiresInDays] = useState<"" | "1" | "7" | "30">("");
+  const [password, setPassword] = useState("");
 
   useEffect(() => setMounted(true), []);
 
@@ -65,18 +68,43 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
   async function handleCreate() {
     setBusy(true);
     try {
+      const expiresAt =
+        expiresInDays === ""
+          ? undefined
+          : Date.now() + Number(expiresInDays) * 24 * 60 * 60 * 1000;
       await createShare({
         ownerId,
         scope,
         noteId,
         permission,
         label: title ? `Share: ${title}` : undefined,
+        expiresAt,
+        password: password.trim() || undefined,
       });
+      setPassword("");
+      setExpiresInDays("");
       toast.success(permission === "read" ? "Viewer link created" : "Editor link created");
     } catch {
       toast.error("Couldn’t create share link");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleRevokeAll() {
+    try {
+      const result = await revokeAll({
+        ownerId,
+        noteId: scope === "vault" ? undefined : noteId,
+        hardDelete: false,
+      });
+      toast.success(
+        result.count === 0
+          ? "No links to revoke"
+          : `Revoked ${result.count} link${result.count === 1 ? "" : "s"}`,
+      );
+    } catch {
+      toast.error("Couldn’t revoke links");
     }
   }
 
@@ -248,6 +276,32 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                   </span>
                 </button>
               </div>
+              <div className="share-extra-fields">
+                <label className="share-field">
+                  <span>Expires</span>
+                  <select
+                    value={expiresInDays}
+                    onChange={(e) =>
+                      setExpiresInDays(e.target.value as "" | "1" | "7" | "30")
+                    }
+                  >
+                    <option value="">Never</option>
+                    <option value="1">In 1 day</option>
+                    <option value="7">In 7 days</option>
+                    <option value="30">In 30 days</option>
+                  </select>
+                </label>
+                <label className="share-field">
+                  <span>Password (optional)</span>
+                  <input
+                    type="password"
+                    value={password}
+                    placeholder="Leave empty for open link"
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                </label>
+              </div>
               <button
                 type="button"
                 className="share-create-btn"
@@ -262,7 +316,20 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
             <section className="share-list-section" aria-label="Active links">
               <div className="share-list-head">
                 <p className="share-section-label">Active links</p>
-                {relevant.length > 0 && <span className="share-list-count">{relevant.length}</span>}
+                <div className="share-list-head-actions">
+                  {relevant.length > 0 && (
+                    <span className="share-list-count">{relevant.length}</span>
+                  )}
+                  {relevant.length > 0 && (
+                    <button
+                      type="button"
+                      className="share-revoke-all"
+                      onClick={() => void handleRevokeAll()}
+                    >
+                      Revoke all
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="share-list">
                 {shares === undefined ? (
@@ -295,6 +362,19 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                               <Pencil className="size-3" />
                             )}
                             {permissionLabel(share.permission)}
+                          </span>
+                          {share.passwordHash ? (
+                            <span title="Password protected">
+                              <Lock className="size-3 inline" /> Password
+                            </span>
+                          ) : null}
+                          {share.expiresAt ? (
+                            <span>
+                              Exp {new Date(share.expiresAt).toLocaleDateString()}
+                            </span>
+                          ) : null}
+                          <span>
+                            {share.viewCount ?? 0} view{(share.viewCount ?? 0) === 1 ? "" : "s"}
                           </span>
                           {!share.enabled && <span>Disabled</span>}
                         </p>

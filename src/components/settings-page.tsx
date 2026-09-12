@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import {
   MAX_FONT_BYTES,
@@ -63,6 +63,8 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
   const templates = useCustomTemplates();
   const importVault = useMutation(api.notes.importVault);
   const reindexSearch = useMutation(api.notes.reindexSearch);
+  const vaultRemote = useQuery(api.vaultSettings.get, ownerId ? { ownerId } : "skip");
+  const updateVaultRemote = useMutation(api.vaultSettings.update);
   const fileRef = useRef<HTMLInputElement>(null);
   const fontFileRef = useRef<HTMLInputElement>(null);
   const themePackRef = useRef<HTMLInputElement>(null);
@@ -637,6 +639,35 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
           </div>
         </div>
         <PushNotificationSettings ownerId={ownerId} />
+        <label className="share-switch" style={{ marginTop: "0.85rem" }}>
+          <span className="share-switch-copy">
+            <span className="share-switch-label">Auto-create today’s daily note</span>
+            <span className="share-switch-hint">
+              Creates Focus / Log / Reflection when you open the vault
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={Boolean(vaultRemote?.autoDailyNote)}
+            disabled={vaultRemote === undefined}
+            onChange={(e) => {
+              void updateVaultRemote({
+                ownerId,
+                autoDailyNote: e.target.checked,
+              }).then(
+                () =>
+                  toast.success(
+                    e.target.checked
+                      ? "Daily notes will auto-create"
+                      : "Auto daily notes off",
+                  ),
+                () => toast.error("Couldn’t update setting"),
+              );
+            }}
+          />
+          <span className="share-switch-track" aria-hidden />
+        </label>
       </section>
 
       <section className="settings-section">

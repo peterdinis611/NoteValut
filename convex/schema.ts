@@ -65,6 +65,10 @@ export default defineSchema({
     publicReadonly: v.boolean(),
     /** Optional full-bleed background on vault home */
     backgroundImage: v.optional(v.string()),
+    /** Auto-open/create today’s daily note on vault load */
+    autoDailyNote: v.optional(v.boolean()),
+    /** Default daily reminder time "HH:mm" local — used with recurrence */
+    dailyReminderTime: v.optional(v.string()),
     updatedAt: v.number(),
   }).index("by_owner", ["ownerId"]),
 
@@ -77,6 +81,12 @@ export default defineSchema({
     label: v.string(),
     enabled: v.boolean(),
     createdAt: v.number(),
+    /** Optional expiry (ms epoch). */
+    expiresAt: v.optional(v.number()),
+    /** SHA-256 hex of `token:password` when password-protected. */
+    passwordHash: v.optional(v.string()),
+    viewCount: v.optional(v.number()),
+    lastViewedAt: v.optional(v.number()),
   })
     .index("by_token", ["token"])
     .index("by_owner", ["ownerId"]),
@@ -97,6 +107,10 @@ export default defineSchema({
     jobId: v.optional(v.id("_scheduled_functions")),
     createdAt: v.number(),
     firedAt: v.optional(v.number()),
+    /** Recurrence: none | daily | weekly */
+    recurrence: v.optional(
+      v.union(v.literal("none"), v.literal("daily"), v.literal("weekly")),
+    ),
   })
     .index("by_owner_status", ["ownerId", "status"])
     .index("by_owner_daily", ["ownerId", "dailyKey"])

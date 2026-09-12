@@ -42,6 +42,11 @@ export function getFontHistory(): FontHistoryStore {
   return read();
 }
 
+/** Stable snapshot for SSR (`useSyncExternalStore` getServerSnapshot). */
+export function getServerFontHistory(): FontHistoryStore {
+  return EMPTY;
+}
+
 export function rememberRecentFont(ref: FontRef) {
   const store = read();
   const nextRecent = [

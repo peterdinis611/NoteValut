@@ -1,8 +1,8 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Eye, FileText, FolderOpen, Lock, Pencil } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { VaultAccessProvider } from "@/context/vault-access";
@@ -18,14 +18,26 @@ type Props = {
 };
 
 export function SharedVaultApp({ token }: Props) {
-  const bundle = useQuery(api.shares.getSharedVault, { token });
+  const [password, setPassword] = useState("");
+  const [submittedPassword, setSubmittedPassword] = useState<string | undefined>();
+  const bundle = useQuery(api.shares.getSharedVault, {
+    token,
+    password: submittedPassword,
+  });
+  const recordView = useMutation(api.shares.recordView);
   const [activeId, setActiveId] = useState<Id<"notes"> | null>(null);
+  const [viewRecorded, setViewRecorded] = useState(false);
+
+  useEffect(() => {
+    if (!bundle || !("notes" in bundle) || viewRecorded) return;
+    void recordView({ token }).finally(() => setViewRecorded(true));
+  }, [bundle, token, recordView, viewRecorded]);
 
   const rootItems = useMemo(() => {
-    if (!bundle?.notes) return [];
+    if (!bundle || !("notes" in bundle) || !bundle.notes) return [];
     const ids = new Set(bundle.notes.map((n) => n._id));
     return bundle.notes.filter((n) => !n.parentId || !ids.has(n.parentId));
-  }, [bundle?.notes]);
+  }, [bundle]);
 
   if (bundle === undefined) {
     return (
@@ -44,6 +56,56 @@ export function SharedVaultApp({ token }: Props) {
         variant="not-authorized"
         title="Not authorized"
         description="This share link is invalid, expired, or has been revoked. Ask the owner for a new invite."
+        actions={[{ label: "Back to NoteVault", href: "/", primary: true }]}
+      />
+    );
+  }
+
+  if ("expired" in bundle && bundle.expired) {
+    return (
+      <LottieStatus
+        variant="not-authorized"
+        title="Link expired"
+        description={`“${bundle.label}” is no longer available. Ask the owner for a new link.`}
+        actions={[{ label: "Back to NoteVault", href: "/", primary: true }]}
+      />
+    );
+  }
+
+  if ("locked" in bundle && bundle.locked) {
+    return (
+      <div className="share-lock">
+        <Lock className="size-8 text-accent" />
+        <h1>Password required</h1>
+        <p>{bundle.label}</p>
+        <form
+          className="share-lock-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setSubmittedPassword(password);
+          }}
+        >
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter share password"
+            autoFocus
+          />
+          <button type="submit" className="settings-btn">
+            Unlock
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  if (!("share" in bundle) || !("notes" in bundle) || !("ownerId" in bundle)) {
+    return (
+      <LottieStatus
+        variant="not-authorized"
+        title="Not authorized"
+        description="This share link is invalid or has been revoked."
         actions={[{ label: "Back to NoteVault", href: "/", primary: true }]}
       />
     );

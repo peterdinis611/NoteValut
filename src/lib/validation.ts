@@ -24,6 +24,7 @@ export const BlockTypeSchema = v.picklist([
   "link",
   "pdf",
   "file",
+  "canvas",
 ]);
 
 export const CalloutVariantSchema = v.picklist(["info", "tip", "warning"]);

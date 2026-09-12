@@ -147,7 +147,7 @@ export function NoteEditor({
       };
 
       if (isBrowserOffline()) {
-        enqueueNotePatch(noteId, ownerId, payload);
+        enqueueNotePatch(noteId, ownerId, payload, note.updatedAt);
         setSaveState("queued");
         toast.success(
           queuedPatchCount() === 1
@@ -161,10 +161,29 @@ export function NoteEditor({
         await updateNote({
           id: noteId,
           ...payload,
+          expectedUpdatedAt: note.updatedAt,
         });
         setSaveState("saved");
-      } catch {
-        enqueueNotePatch(noteId, ownerId, payload);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "";
+        if (msg.includes("CONFLICT:")) {
+          const { pushConflict, parseConflictError } = await import("@/lib/offline-queue");
+          const conflict = parseConflictError(msg);
+          if (conflict) {
+            pushConflict({
+              noteId,
+              ownerId,
+              title: conflict.title,
+              serverUpdatedAt: conflict.serverUpdatedAt,
+              localPatch: payload,
+              baseUpdatedAt: note.updatedAt,
+            });
+            toast.error("Conflict — choose a version");
+            setSaveState("saved");
+            return;
+          }
+        }
+        enqueueNotePatch(noteId, ownerId, payload, note.updatedAt);
         setSaveState("queued");
         toast.error("Save failed — queued for retry");
       }

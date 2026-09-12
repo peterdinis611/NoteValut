@@ -15,6 +15,14 @@ function formatReminderTitle(dailyKey: string) {
   })}`;
 }
 
+function localDailyKey(ms: number) {
+  const d = new Date(ms);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 /** Schedule (or reschedule) a reminder for a calendar day. */
 export const schedule = mutation({
   args: {
@@ -23,6 +31,9 @@ export const schedule = mutation({
     remindAt: v.number(),
     noteId: v.optional(v.id("notes")),
     title: v.optional(v.string()),
+    recurrence: v.optional(
+      v.union(v.literal("none"), v.literal("daily"), v.literal("weekly")),
+    ),
   },
   handler: async (ctx, args) => {
     await requireOwner(ctx, args.ownerId);
@@ -63,6 +74,7 @@ export const schedule = mutation({
       remindAt: args.remindAt,
       status: "scheduled",
       createdAt: now,
+      recurrence: args.recurrence ?? "none",
     });
 
     const jobId = await ctx.scheduler.runAt(args.remindAt, internal.reminders.fire, { reminderId });
@@ -126,7 +138,10 @@ export const listScheduledForKeys = query({
   },
   handler: async (ctx, args) => {
     await requireOwner(ctx, args.ownerId);
-    const found: Record<string, { id: string; remindAt: number; title: string }> = {};
+    const found: Record<
+      string,
+      { id: string; remindAt: number; title: string; recurrence?: string }
+    > = {};
     for (const key of args.keys) {
       const rows = await ctx.db
         .query("reminders")
@@ -140,6 +155,7 @@ export const listScheduledForKeys = query({
           id: scheduled._id,
           remindAt: scheduled.remindAt,
           title: scheduled.title,
+          recurrence: scheduled.recurrence ?? "none",
         };
       }
     }
@@ -156,12 +172,46 @@ export const fire = internalMutation({
       status: "fired",
       firedAt: Date.now(),
     });
+
+    // Ensure the daily note exists when the reminder fires.
+    let noteId = row.noteId;
+    if (!noteId && /^\d{4}-\d{2}-\d{2}$/.test(row.dailyKey)) {
+      noteId = await ctx.runMutation(internal.notes.getOrCreateDailyInternal, {
+        ownerId: row.ownerId,
+        dailyKey: row.dailyKey,
+      });
+      await ctx.db.patch(args.reminderId, { noteId });
+    }
+
     await ctx.scheduler.runAfter(0, internal.pushActions.sendReminderPush, {
       ownerId: row.ownerId,
       title: "NoteVault reminder",
       body: row.title,
-      noteId: row.noteId ? String(row.noteId) : undefined,
+      noteId: noteId ? String(noteId) : undefined,
       reminderId: String(args.reminderId),
     });
+
+    const recurrence = row.recurrence ?? "none";
+    if (recurrence === "daily" || recurrence === "weekly") {
+      const dayMs = 24 * 60 * 60 * 1000;
+      const delta = recurrence === "daily" ? dayMs : 7 * dayMs;
+      let nextAt = row.remindAt + delta;
+      while (nextAt <= Date.now()) nextAt += delta;
+      const nextKey = localDailyKey(nextAt);
+      const nextId = await ctx.db.insert("reminders", {
+        ownerId: row.ownerId,
+        dailyKey: nextKey,
+        noteId: undefined,
+        title: formatReminderTitle(nextKey),
+        remindAt: nextAt,
+        status: "scheduled",
+        createdAt: Date.now(),
+        recurrence,
+      });
+      const jobId = await ctx.scheduler.runAt(nextAt, internal.reminders.fire, {
+        reminderId: nextId,
+      });
+      await ctx.db.patch(nextId, { jobId });
+    }
   },
 });

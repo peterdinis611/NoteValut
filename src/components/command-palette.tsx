@@ -6,6 +6,7 @@ import {
   Archive,
   CalendarClock,
   CalendarDays,
+  Clock,
   Download,
   FolderOpen,
   Hash,
@@ -23,12 +24,25 @@ import {
   Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { isFolder } from "@/lib/item-kinds";
-import { searchNotes } from "@/lib/search";
+import { searchNotes, type NoteSearchHit } from "@/lib/search";
+import {
+  highlightMatches,
+  noteMatchesFilters,
+  parseSearchFilters,
+} from "@/lib/search-highlight";
+import {
+  getRecentSearches,
+  getServerRecentSearches,
+  rememberSearch,
+  subscribeRecentSearches,
+} from "@/lib/cmd-recent";
 import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
+import { snippetAround } from "@/lib/block-search";
+import { blocksToSearchText } from "@/lib/block-search";
 
 export type CommandAction = {
   id: string;
@@ -49,6 +63,27 @@ type Props = {
   ownerId?: string;
 };
 
+function Highlighted({ text, query }: { text: string; query: string }) {
+  const parts = highlightMatches(text, query);
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.hit ? (
+          <mark key={i} className="cmd-mark">
+            {p.text}
+          </mark>
+        ) : (
+          <span key={i}>{p.text}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+function useRecentSearches() {
+  return useSyncExternalStore(subscribeRecentSearches, getRecentSearches, getServerRecentSearches);
+}
+
 export function CommandPalette({
   open,
   onClose,
@@ -62,15 +97,18 @@ export function CommandPalette({
   const [debouncedQuery] = useDebouncedValue(query, { wait: 80 });
   const [index, setIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const recent = useRecentSearches();
 
   const q = debouncedQuery.trim();
+  const filters = useMemo(() => parseSearchFilters(q), [q]);
   const qLower = q.toLowerCase();
-  const tagQuery = qLower.startsWith("#") ? qLower.slice(1).trim() : qLower;
+  const tagQuery = qLower.startsWith("#") ? qLower.slice(1).trim() : filters.tags[0] ?? "";
+  const searchBare = filters.bareQuery || (q.startsWith("#") ? "" : q);
 
   const serverHits = useQuery(
     api.notes.search,
-    open && ownerId && q.length >= 2 && !q.startsWith("#")
-      ? { ownerId, query: q, limit: 12 }
+    open && ownerId && searchBare.length >= 2 && !q.startsWith("#")
+      ? { ownerId, query: searchBare, limit: 24 }
       : "skip",
   );
   const tagRows = useQuery(api.notes.listTags, open && ownerId ? { ownerId } : "skip");
@@ -85,50 +123,77 @@ export function CommandPalette({
     return () => window.clearTimeout(t);
   }, [open]);
 
-  const noteHits = useMemo(() => {
+  const noteHits: NoteSearchHit[] = useMemo(() => {
     if (!notes || q.startsWith("#")) return [];
-    const pool = notes.filter((n) => !isFolder(n));
-    if (!q) return pool.slice(0, 8);
-    if (q.length >= 2 && serverHits !== undefined) {
-      if (serverHits.length > 0) return serverHits;
+    const pool = notes.filter((n) => !isFolder(n) && noteMatchesFilters(n, filters));
+    if (!searchBare && !filters.tags.length && !filters.after && !filters.before) {
+      return pool.slice(0, 8);
     }
-    return searchNotes(pool, q).slice(0, 12);
-  }, [notes, q, serverHits]);
+    let hits: NoteSearchHit[] = [];
+    if (searchBare.length >= 2 && serverHits !== undefined && serverHits.length > 0) {
+      hits = serverHits
+        .filter((n) => noteMatchesFilters(n, filters))
+        .map((n) => {
+          const body = [n.content, blocksToSearchText(n.blocks)].filter(Boolean).join("\n");
+          return {
+            ...n,
+            snippet: snippetAround(body, searchBare) || snippetAround(n.title || "", searchBare),
+          };
+        });
+    } else if (searchBare) {
+      hits = searchNotes(pool, searchBare).slice(0, 12);
+    } else {
+      hits = pool.slice(0, 12);
+    }
+    return hits.slice(0, 12);
+  }, [notes, q, serverHits, filters, searchBare]);
 
   const actionHits = useMemo(() => {
-    if (!qLower || q.startsWith("#")) {
-      return q.startsWith("#") ? [] : q ? actions.filter(matchAction(qLower)) : actions;
+    if (!qLower || q.startsWith("#") || filters.tags.length || filters.after || filters.before) {
+      return q.startsWith("#") || filters.tags.length ? [] : q ? actions.filter(matchAction(qLower)) : actions;
     }
     return actions.filter(matchAction(qLower));
-  }, [actions, q, qLower]);
+  }, [actions, q, qLower, filters.tags.length, filters.after, filters.before]);
 
   const tagHits = useMemo(() => {
     if (!tagRows?.length || !onOpenTag) return [];
-    const showAll = !q || q.startsWith("#") || qLower.includes("tag");
+    const showAll = !q || q.startsWith("#") || qLower.includes("tag") || filters.tags.length > 0;
     if (!showAll && tagQuery.length < 1) return [];
     const filtered = tagRows.filter((t) => {
       if (!tagQuery) return q.startsWith("#") || !q;
       return t.tag.toLowerCase().includes(tagQuery) || t.key.includes(tagQuery);
     });
     return filtered.slice(0, q.startsWith("#") ? 16 : 6);
-  }, [tagRows, tagQuery, q, qLower, onOpenTag]);
+  }, [tagRows, tagQuery, q, qLower, onOpenTag, filters.tags.length]);
 
   type Row =
+    | { kind: "recent"; q: string }
     | { kind: "action"; action: CommandAction }
     | { kind: "tag"; tag: string; count: number }
-    | { kind: "note"; note: Doc<"notes"> };
+    | { kind: "note"; note: NoteSearchHit };
+
+  const showRecent = open && !q && recent.length > 0;
 
   const rows: Row[] = useMemo(() => {
     const list: Row[] = [];
+    if (showRecent) {
+      for (const r of recent) list.push({ kind: "recent", q: r.q });
+    }
     for (const action of actionHits) list.push({ kind: "action", action });
     for (const t of tagHits) list.push({ kind: "tag", tag: t.tag, count: t.count });
     for (const note of noteHits) list.push({ kind: "note", note });
     return list;
-  }, [actionHits, tagHits, noteHits]);
+  }, [actionHits, tagHits, noteHits, showRecent, recent]);
 
   useEffect(() => {
     setIndex(0);
   }, [debouncedQuery, open]);
+
+  function commitNavigate(noteId: Id<"notes">) {
+    if (q.trim().length >= 2) rememberSearch(q.trim());
+    onNavigate(noteId);
+    onClose();
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -150,17 +215,27 @@ export function CommandPalette({
         e.preventDefault();
         const row = rows[index];
         if (!row) return;
-        if (row.kind === "action") row.action.run();
-        else if (row.kind === "tag") onOpenTag?.(row.tag);
-        else onNavigate(row.note._id);
-        onClose();
+        if (row.kind === "recent") {
+          setQuery(row.q);
+          return;
+        }
+        if (row.kind === "action") {
+          row.action.run();
+          onClose();
+        } else if (row.kind === "tag") {
+          onOpenTag?.(row.tag);
+          onClose();
+        } else {
+          commitNavigate(row.note._id);
+        }
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, rows, index, onClose, onNavigate, onOpenTag]);
+  }, [open, rows, index, onClose, onNavigate, onOpenTag, q]);
 
-  const ftsPending = q.length >= 2 && !q.startsWith("#") && serverHits === undefined;
+  const ftsPending = searchBare.length >= 2 && !q.startsWith("#") && serverHits === undefined;
+  const highlightQ = searchBare || tagQuery;
 
   return (
     <AnimatePresence>
@@ -188,108 +263,151 @@ export function CommandPalette({
               <input
                 ref={inputRef}
                 className="cmd-input"
-                placeholder="Search notes, #tags, or run a command…"
+                placeholder="Search · #tag · tag:work after:2026-01-01 · commands…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
               <kbd className="cmd-kbd">esc</kbd>
             </div>
             <p className="cmd-hint">
-              Type to search · <span>#tag</span> for tags · ↑↓ enter · ⌘K
-              {ftsPending ? " · indexing…" : ""}
+              Filters: <span>tag:</span> <span>after:</span> <span>before:</span> · ↑↓ enter · ⌘K
+              {ftsPending ? " · searching…" : ""}
             </p>
+
+            {(filters.tags.length > 0 || filters.after || filters.before) && (
+              <div className="cmd-filters">
+                {filters.tags.map((t) => (
+                  <span key={t} className="cmd-filter-chip">
+                    tag:{t}
+                  </span>
+                ))}
+                {filters.after ? (
+                  <span className="cmd-filter-chip">after:{filters.after}</span>
+                ) : null}
+                {filters.before ? (
+                  <span className="cmd-filter-chip">before:{filters.before}</span>
+                ) : null}
+              </div>
+            )}
 
             <div className="cmd-list note-scroll">
               {rows.length === 0 ? (
                 <p className="cmd-empty">No matches</p>
               ) : (
-                <>
-                  {rows.map((row, i) => {
-                    if (row.kind === "action") {
-                      const showSection = i === 0;
-                      return (
-                        <div key={`a-${row.action.id}`}>
-                          {showSection && <p className="cmd-section">Commands</p>}
-                          <button
-                            type="button"
-                            className={`cmd-row ${i === index ? "cmd-row-active" : ""}`}
-                            onMouseEnter={() => setIndex(i)}
-                            onClick={() => {
-                              row.action.run();
-                              onClose();
-                            }}
-                          >
-                            <span className="cmd-row-icon">{row.action.icon}</span>
-                            <span className="min-w-0 flex-1 text-left">
-                              <span className="block truncate text-sm">{row.action.label}</span>
-                              {row.action.hint && (
-                                <span className="block truncate text-xs text-muted">
-                                  {row.action.hint}
-                                </span>
-                              )}
-                            </span>
-                          </button>
-                        </div>
-                      );
-                    }
-                    if (row.kind === "tag") {
-                      const showSection =
-                        i === actionHits.length || (actionHits.length === 0 && i === 0);
-                      return (
-                        <div key={`t-${row.tag}`}>
-                          {showSection && <p className="cmd-section">Tags</p>}
-                          <button
-                            type="button"
-                            className={`cmd-row ${i === index ? "cmd-row-active" : ""}`}
-                            onMouseEnter={() => setIndex(i)}
-                            onClick={() => {
-                              onOpenTag?.(row.tag);
-                              onClose();
-                            }}
-                          >
-                            <span className="cmd-row-icon">
-                              <Hash className="size-3.5" />
-                            </span>
-                            <span className="min-w-0 flex-1 text-left">
-                              <span className="block truncate text-sm">#{row.tag}</span>
-                              <span className="block truncate text-xs text-muted">
-                                {row.count} {row.count === 1 ? "note" : "notes"}
-                              </span>
-                            </span>
-                          </button>
-                        </div>
-                      );
-                    }
-                    const noteStart = actionHits.length + tagHits.length;
-                    const showSection = i === noteStart;
+                rows.map((row, i) => {
+                  if (row.kind === "recent") {
+                    const showSection = i === 0;
                     return (
-                      <div key={`n-${row.note._id}`}>
-                        {showSection && <p className="cmd-section">Notes</p>}
+                      <div key={`r-${row.q}-${i}`}>
+                        {showSection && <p className="cmd-section">Recent searches</p>}
+                        <button
+                          type="button"
+                          className={`cmd-row ${i === index ? "cmd-row-active" : ""}`}
+                          onMouseEnter={() => setIndex(i)}
+                          onClick={() => setQuery(row.q)}
+                        >
+                          <span className="cmd-row-icon">
+                            <Clock className="size-3.5" />
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-left text-sm">{row.q}</span>
+                        </button>
+                      </div>
+                    );
+                  }
+                  if (row.kind === "action") {
+                    const showSection = i === (showRecent ? recent.length : 0);
+                    return (
+                      <div key={`a-${row.action.id}`}>
+                        {showSection && <p className="cmd-section">Commands</p>}
                         <button
                           type="button"
                           className={`cmd-row ${i === index ? "cmd-row-active" : ""}`}
                           onMouseEnter={() => setIndex(i)}
                           onClick={() => {
-                            onNavigate(row.note._id);
+                            row.action.run();
                             onClose();
                           }}
                         >
-                          <span className="cmd-row-icon text-base">{row.note.icon}</span>
+                          <span className="cmd-row-icon">{row.action.icon}</span>
                           <span className="min-w-0 flex-1 text-left">
                             <span className="block truncate text-sm">
-                              {row.note.title || "Untitled"}
+                              <Highlighted text={row.action.label} query={highlightQ} />
                             </span>
-                            {row.note.tags.length > 0 && (
+                            {row.action.hint && (
                               <span className="block truncate text-xs text-muted">
-                                {row.note.tags.map((t) => `#${t}`).join(" ")}
+                                {row.action.hint}
                               </span>
                             )}
                           </span>
                         </button>
                       </div>
                     );
-                  })}
-                </>
+                  }
+                  if (row.kind === "tag") {
+                    const showSection =
+                      i === (showRecent ? recent.length : 0) + actionHits.length ||
+                      ((showRecent ? recent.length : 0) + actionHits.length === 0 && i === 0);
+                    return (
+                      <div key={`t-${row.tag}`}>
+                        {showSection && <p className="cmd-section">Tags</p>}
+                        <button
+                          type="button"
+                          className={`cmd-row ${i === index ? "cmd-row-active" : ""}`}
+                          onMouseEnter={() => setIndex(i)}
+                          onClick={() => {
+                            onOpenTag?.(row.tag);
+                            onClose();
+                          }}
+                        >
+                          <span className="cmd-row-icon">
+                            <Hash className="size-3.5" />
+                          </span>
+                          <span className="min-w-0 flex-1 text-left">
+                            <span className="block truncate text-sm">
+                              #<Highlighted text={row.tag} query={highlightQ} />
+                            </span>
+                            <span className="block truncate text-xs text-muted">
+                              {row.count} {row.count === 1 ? "note" : "notes"}
+                            </span>
+                          </span>
+                        </button>
+                      </div>
+                    );
+                  }
+                  const noteStart =
+                    (showRecent ? recent.length : 0) + actionHits.length + tagHits.length;
+                  const showSection = i === noteStart;
+                  return (
+                    <div key={`n-${row.note._id}`}>
+                      {showSection && <p className="cmd-section">Notes</p>}
+                      <button
+                        type="button"
+                        className={`cmd-row ${i === index ? "cmd-row-active" : ""}`}
+                        onMouseEnter={() => setIndex(i)}
+                        onClick={() => commitNavigate(row.note._id)}
+                      >
+                        <span className="cmd-row-icon text-base">{row.note.icon}</span>
+                        <span className="min-w-0 flex-1 text-left">
+                          <span className="block truncate text-sm">
+                            <Highlighted
+                              text={row.note.title || "Untitled"}
+                              query={highlightQ}
+                            />
+                          </span>
+                          {row.note.snippet ? (
+                            <span className="block truncate text-xs text-muted cmd-snippet">
+                              <Highlighted text={row.note.snippet} query={highlightQ} />
+                            </span>
+                          ) : row.note.tags.length > 0 ? (
+                            <span className="block truncate text-xs text-muted">
+                              {row.note.tags.map((t) => `#${t}`).join(" ")}
+                            </span>
+                          ) : null}
+                        </span>
+                      </button>
+                    </div>
+                  );
+                })
               )}
             </div>
           </motion.div>

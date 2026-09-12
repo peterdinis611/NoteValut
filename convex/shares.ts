@@ -12,6 +12,16 @@ function isActive(item: { archived: boolean; trashed?: boolean }) {
   return !item.archived && !item.trashed;
 }
 
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function hashSharePassword(token: string, password: string) {
+  return sha256Hex(`${token}:${password}`);
+}
+
 async function collectDescendants(ctx: QueryCtx, rootId: Id<"notes">): Promise<Doc<"notes">[]> {
   const result: Doc<"notes">[] = [];
   const queue = [rootId];
@@ -52,6 +62,8 @@ export const create = mutation({
     noteId: v.optional(v.id("notes")),
     permission: v.union(v.literal("read"), v.literal("write")),
     label: v.optional(v.string()),
+    expiresAt: v.optional(v.union(v.number(), v.null())),
+    password: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireOwner(ctx, args.ownerId);
@@ -65,15 +77,24 @@ export const create = mutation({
     }
 
     const now = Date.now();
+    const token = newToken();
+    const passwordHash =
+      args.password && args.password.trim()
+        ? await hashSharePassword(token, args.password.trim())
+        : undefined;
+
     return await ctx.db.insert("shares", {
       ownerId: args.ownerId,
-      token: newToken(),
+      token,
       scope: args.scope,
       noteId: args.noteId,
       permission: args.permission,
       label: args.label ?? defaultLabel(args.scope),
       enabled: true,
       createdAt: now,
+      expiresAt: args.expiresAt ?? undefined,
+      passwordHash,
+      viewCount: 0,
     });
   },
 });
@@ -85,6 +106,8 @@ export const update = mutation({
     permission: v.optional(v.union(v.literal("read"), v.literal("write"))),
     enabled: v.optional(v.boolean()),
     label: v.optional(v.string()),
+    expiresAt: v.optional(v.union(v.number(), v.null())),
+    password: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     await requireOwner(ctx, args.ownerId);
@@ -95,6 +118,13 @@ export const update = mutation({
     if (args.permission !== undefined) updates.permission = args.permission;
     if (args.enabled !== undefined) updates.enabled = args.enabled;
     if (args.label !== undefined) updates.label = args.label;
+    if (args.expiresAt !== undefined) updates.expiresAt = args.expiresAt ?? undefined;
+    if (args.password !== undefined) {
+      updates.passwordHash =
+        args.password && args.password.trim()
+          ? await hashSharePassword(share.token, args.password.trim())
+          : undefined;
+    }
 
     await ctx.db.patch(args.id, updates);
     return args.id;
@@ -111,8 +141,56 @@ export const remove = mutation({
   },
 });
 
-export const getSharedVault = query({
+/** Disable or delete every share for this owner (optionally scoped to a note). */
+export const revokeAll = mutation({
+  args: {
+    ownerId: v.string(),
+    noteId: v.optional(v.id("notes")),
+    hardDelete: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const all = await ctx.db
+      .query("shares")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+
+    let count = 0;
+    for (const share of all) {
+      if (args.noteId) {
+        if (share.scope === "vault") continue;
+        if (share.noteId !== args.noteId) continue;
+      }
+      if (args.hardDelete) await ctx.db.delete(share._id);
+      else await ctx.db.patch(share._id, { enabled: false });
+      count += 1;
+    }
+    return { count };
+  },
+});
+
+export const recordView = mutation({
   args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const share = await ctx.db
+      .query("shares")
+      .withIndex("by_token", (q) => q.eq("token", args.token))
+      .first();
+    if (!share || !share.enabled) return null;
+    if (share.expiresAt && share.expiresAt < Date.now()) return null;
+    await ctx.db.patch(share._id, {
+      viewCount: (share.viewCount ?? 0) + 1,
+      lastViewedAt: Date.now(),
+    });
+    return { viewCount: (share.viewCount ?? 0) + 1 };
+  },
+});
+
+export const getSharedVault = query({
+  args: {
+    token: v.string(),
+    password: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     const share = await ctx.db
       .query("shares")
@@ -120,6 +198,22 @@ export const getSharedVault = query({
       .first();
 
     if (!share || !share.enabled) return null;
+    if (share.expiresAt && share.expiresAt < Date.now()) {
+      return { expired: true as const, label: share.label };
+    }
+
+    if (share.passwordHash) {
+      const ok =
+        args.password &&
+        (await hashSharePassword(share.token, args.password)) === share.passwordHash;
+      if (!ok) {
+        return {
+          locked: true as const,
+          label: share.label,
+          token: share.token,
+        };
+      }
+    }
 
     const settings = await ctx.db
       .query("vaultSettings")
@@ -151,6 +245,10 @@ export const getSharedVault = query({
         role,
         label: share.label,
         noteId: share.noteId,
+        expiresAt: share.expiresAt,
+        viewCount: share.viewCount ?? 0,
+        lastViewedAt: share.lastViewedAt,
+        passwordProtected: Boolean(share.passwordHash),
       },
       ownerId: share.ownerId,
       role,

@@ -11,6 +11,7 @@ import {
 } from "@/lib/google-fonts";
 import {
   getFontHistory,
+  getServerFontHistory,
   isFavoriteFont,
   rememberRecentFont,
   subscribeFontHistory,
@@ -44,10 +45,7 @@ const CATEGORIES = [
 ] as const;
 
 function useFontHistory() {
-  return useSyncExternalStore(subscribeFontHistory, getFontHistory, () => ({
-    recent: [],
-    favorites: [],
-  }));
+  return useSyncExternalStore(subscribeFontHistory, getFontHistory, getServerFontHistory);
 }
 
 function GoogleFontsPickerInner({ onPick, seed }: InnerProps) {

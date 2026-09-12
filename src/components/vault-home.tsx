@@ -15,7 +15,7 @@ import {
   Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { countOpenTasks, countOverdueTasks } from "@/lib/blocks";
@@ -61,6 +61,7 @@ export function VaultHome({
   const bgFileRef = useRef<HTMLInputElement>(null);
   const { uploadFile } = useVaultUpload();
   const updateSettings = useMutation(api.vaultSettings.update);
+  const getOrCreateDaily = useMutation(api.notes.getOrCreateDaily);
   const customTemplates = useCustomTemplates();
   const templates = useMemo(
     () => [...customTemplates, ...PAGE_TEMPLATES.filter((t) => t.id !== "blank")],
@@ -70,6 +71,16 @@ export function VaultHome({
   const notes = useQuery(api.notes.list, ownerId ? { ownerId } : "skip");
   const vaultSettings = useQuery(api.vaultSettings.get, ownerId ? { ownerId } : "skip");
   const backgroundImage = vaultSettings?.backgroundImage;
+  const autoDailyDone = useRef(false);
+
+  useEffect(() => {
+    if (!vaultSettings?.autoDailyNote || autoDailyDone.current) return;
+    autoDailyDone.current = true;
+    const dailyKey = new Date().toISOString().slice(0, 10);
+    void getOrCreateDaily({ ownerId, dailyKey }).catch(() => {
+      autoDailyDone.current = false;
+    });
+  }, [vaultSettings?.autoDailyNote, ownerId, getOrCreateDaily]);
 
   async function uploadBackground(file: File | null) {
     if (!file) return;
