@@ -1,10 +1,9 @@
 "use client";
 
 import { FileText, Search } from "lucide-react";
-import { motion } from "motion/react";
 import { useEffect, useRef } from "react";
 import type { Doc } from "../../../convex/_generated/dataModel";
-import { dropdownVariants, easeOutSoft } from "@/lib/motion";
+import { useAnimeEnter } from "@/lib/anime-ui";
 
 type Props = {
   pages: Doc<"notes">[];
@@ -15,6 +14,7 @@ type Props = {
 };
 
 export function EditorMentionMenu({ pages, query, selectedIndex, onHoverIndex, onSelect }: Props) {
+  const enterRef = useAnimeEnter<HTMLDivElement>("dropdown");
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,15 +25,7 @@ export function EditorMentionMenu({ pages, query, selectedIndex, onHoverIndex, o
   }, [selectedIndex]);
 
   return (
-    <motion.div
-      className="nv-mention-menu"
-      variants={dropdownVariants}
-      initial="hidden"
-      animate="visible"
-      transition={easeOutSoft}
-      role="listbox"
-      aria-label="Link to page"
-    >
+    <div ref={enterRef} className="nv-mention-menu" role="listbox" aria-label="Link to page">
       <div className="nv-mention-head">
         <Search className="size-3.5 opacity-50" />
         <span>Link to page{query ? ` · ${query}` : ""}</span>
@@ -65,6 +57,6 @@ export function EditorMentionMenu({ pages, query, selectedIndex, onHoverIndex, o
         )}
       </div>
       <p className="nv-mention-hint">↑↓ navigate · Enter link · Esc cancel</p>
-    </motion.div>
+    </div>
   );
 }

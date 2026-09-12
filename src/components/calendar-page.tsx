@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { Bell, CalendarDays, ChevronLeft, ChevronRight, Sun, X } from "lucide-react";
-import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -18,7 +17,7 @@ import {
   shiftMonth,
   toDailyKey,
 } from "@/lib/daily";
-import { easeOutSoft, fadeUpVariants } from "@/lib/motion";
+import { useAnimeEnter } from "@/lib/anime-ui";
 import { useToast } from "./toast";
 
 type Props = {
@@ -50,6 +49,7 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
   const [remindTime, setRemindTime] = useState("09:00");
   const [recurrence, setRecurrence] = useState<"none" | "daily" | "weekly">("none");
   const [busy, setBusy] = useState(false);
+  const enterRef = useAnimeEnter<HTMLDivElement>("page");
   const getOrCreate = useMutation(api.notes.getOrCreateDaily);
   const scheduleReminder = useMutation(api.reminders.schedule);
   const cancelReminder = useMutation(api.reminders.cancel);
@@ -162,20 +162,16 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
   const selectedReminder = selectedKey ? scheduled?.[selectedKey] : undefined;
 
   return (
-    <motion.div
-      className="calendar-page note-scroll"
-      initial="hidden"
-      animate="visible"
-      variants={fadeUpVariants}
-      transition={easeOutSoft}
-    >
+    <div ref={enterRef} className="calendar-page note-scroll">
       <header className="settings-header">
         <div>
           <p className="settings-kicker">
             <CalendarDays className="size-3.5" />
             Daily
           </p>
-          <h1 className="settings-title">Calendar</h1>
+          <h1 className="settings-title">
+            Daily <em>calendar</em>
+          </h1>
           <p className="settings-subtitle">
             Select a day to open its note or set a reminder (notifies while the app is open)
           </p>
@@ -388,6 +384,6 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
           )}
         </aside>
       </div>
-    </motion.div>
+    </div>
   );
 }

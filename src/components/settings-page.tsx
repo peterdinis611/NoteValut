@@ -15,7 +15,6 @@ import {
   Type,
   X,
 } from "lucide-react";
-import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -36,7 +35,7 @@ import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { useVaultSettings } from "@/hooks/use-vault-settings";
 import { importMarkdownFiles } from "@/lib/import-notes";
 import { startVaultTour } from "@/lib/onboarding";
-import { easeOutSoft, fadeUpVariants } from "@/lib/motion";
+import { useAnimeEnter } from "@/lib/anime-ui";
 import { listDefaultTemplates } from "@/lib/templates";
 import { parseVaultBackupFile } from "@/lib/vault-backup";
 import { applyThemePack, downloadThemePack, parseThemePack } from "@/lib/theme-pack";
@@ -79,6 +78,7 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
   const [importSource, setImportSource] = useState<"markdown" | "obsidian" | "notion">("markdown");
   const [preview, setPreview] = useState<PreviewableTemplate | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const enterRef = useAnimeEnter<HTMLDivElement>("page");
 
   useEffect(() => {
     setCssDraft(settings.customCss);
@@ -215,20 +215,16 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
   }
 
   return (
-    <motion.div
-      className="settings-page note-scroll"
-      initial="hidden"
-      animate="visible"
-      variants={fadeUpVariants}
-      transition={easeOutSoft}
-    >
+    <div ref={enterRef} className="settings-page note-scroll">
       <header className="settings-header">
         <div>
           <p className="settings-kicker">
             <Settings2 className="size-3.5" />
             Workspace
           </p>
-          <h1 className="settings-title">Settings</h1>
+          <h1 className="settings-title">
+            Vault <em>settings</em>
+          </h1>
           <p className="settings-subtitle">Themes, fonts, custom CSS, and vault preferences</p>
         </div>
         <button
@@ -356,7 +352,7 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
               onClick={() => {
                 clearCustomTheme();
                 setCssDraft("");
-                toast.success("Reset to Phosphor");
+                toast.success("Reset to Folio");
               }}
             >
               <RotateCcw className="size-3.5" />
@@ -377,7 +373,7 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
           <textarea
             className="settings-css-editor"
             spellCheck={false}
-            placeholder={`:root {\n  --accent: #c8f542;\n  --background: #0a1210;\n}`}
+            placeholder={`:root {\n  --accent: #e8611a;\n  --background: #fbf8f2;\n}`}
             value={cssDraft}
             onChange={(e) => setCssDraft(e.target.value)}
             rows={10}
@@ -836,6 +832,6 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
         onClose={() => setCreateOpen(false)}
         onSaved={(name) => toast.success(`Template “${name}” created`)}
       />
-    </motion.div>
+    </div>
   );
 }

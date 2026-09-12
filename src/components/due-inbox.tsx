@@ -2,12 +2,11 @@
 
 import { useQuery } from "convex/react";
 import { CalendarClock, CheckCircle2, Inbox, X } from "lucide-react";
-import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { collectDueTasks, formatDueLabel, groupDueTasks, type DueBucket } from "@/lib/due-tasks";
-import { easeOutSoft, fadeUpVariants } from "@/lib/motion";
+import { useAnimeEnter } from "@/lib/anime-ui";
 
 type Props = {
   ownerId: string;
@@ -25,6 +24,7 @@ const TABS: { id: DueBucket | "all"; label: string }[] = [
 export function DueInbox({ ownerId, onClose, onNavigate }: Props) {
   const notes = useQuery(api.notes.list, ownerId ? { ownerId } : "skip");
   const [tab, setTab] = useState<DueBucket | "all">("all");
+  const enterRef = useAnimeEnter<HTMLDivElement>("page");
 
   const hits = useMemo(() => collectDueTasks(notes), [notes]);
   const groups = useMemo(() => groupDueTasks(hits), [hits]);
@@ -44,20 +44,16 @@ export function DueInbox({ ownerId, onClose, onNavigate }: Props) {
   };
 
   return (
-    <motion.div
-      className="due-inbox note-scroll"
-      initial="hidden"
-      animate="visible"
-      variants={fadeUpVariants}
-      transition={easeOutSoft}
-    >
+    <div ref={enterRef} className="due-inbox note-scroll">
       <header className="settings-header">
         <div>
           <p className="settings-kicker">
             <Inbox className="size-3.5" />
             Tasks
           </p>
-          <h1 className="settings-title">Due inbox</h1>
+          <h1 className="settings-title">
+            Due <em>inbox</em>
+          </h1>
           <p className="settings-subtitle">
             Open todos with due dates across your vault — overdue, today, and upcoming.
           </p>
@@ -134,6 +130,6 @@ export function DueInbox({ ownerId, onClose, onNavigate }: Props) {
           ))}
         </ul>
       )}
-    </motion.div>
+    </div>
   );
 }

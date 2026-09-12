@@ -2,13 +2,12 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { Check, Copy, Eye, Link2, Lock, Pencil, Trash2, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { roleDescription } from "@/lib/ability";
-import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
+import { AnimePresence } from "@/lib/anime-ui";
 import { permissionLabel, shareUrl, type ShareScope } from "@/lib/share";
 import { useToast } from "./toast";
 
@@ -144,29 +143,15 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
   if (!mounted) return null;
 
   return createPortal(
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="share-overlay"
-          onClick={onClose}
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={easeQuick}
+    <AnimePresence show={open} kind="overlay">
+      <div className="share-overlay" onClick={onClose}>
+        <div
+          className="share-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="share-panel-title"
+          onClick={(e) => e.stopPropagation()}
         >
-          <motion.div
-            className="share-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="share-panel-title"
-            onClick={(e) => e.stopPropagation()}
-            variants={modalVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={easeOutSoft}
-          >
             <header className="share-panel-header">
               <div className="share-panel-heading">
                 <span className="share-panel-icon" aria-hidden>
@@ -428,10 +413,9 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
               <Lock className="size-3.5 shrink-0" />
               Recipients open the link as Viewer or Editor. Only you can create or revoke links.
             </p>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>,
+        </div>
+      </div>
+    </AnimePresence>,
     document.body,
   );
 }

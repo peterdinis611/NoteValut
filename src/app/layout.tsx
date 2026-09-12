@@ -1,10 +1,11 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, Sora, Young_Serif } from "next/font/google";
+import { Calistoga, Fraunces, IBM_Plex_Mono, Sora, Young_Serif } from "next/font/google";
 import { ConvexClientProvider } from "@/components/providers";
 import { PwaRegister } from "@/components/pwa-register";
 import { clerkAppearance } from "@/lib/clerk-appearance";
 import "./globals.css";
+import "./folio-pages.css";
 
 const sora = Sora({
   variable: "--font-body",
@@ -24,6 +25,21 @@ const youngSerif = Young_Serif({
   weight: "400",
 });
 
+const landDisplay = Calistoga({
+  variable: "--font-land-display",
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+});
+
+const landScript = Fraunces({
+  variable: "--font-land-script",
+  subsets: ["latin"],
+  weight: ["600"],
+  style: ["italic"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "NoteVault — Notes powered by Convex",
   description: "Your personal knowledge vault — collections, entries, and real-time sync",
@@ -41,8 +57,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a1210",
-  colorScheme: "dark",
+  themeColor: "#fbf8f2",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
@@ -53,7 +69,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${sora.variable} ${plexMono.variable} ${youngSerif.variable} h-full dark`}
+      className={`${sora.variable} ${plexMono.variable} ${youngSerif.variable} ${landDisplay.variable} ${landScript.variable} h-full`}
     >
       <body className="min-h-full font-sans nv-atmosphere">
         <ClerkProvider appearance={clerkAppearance}>

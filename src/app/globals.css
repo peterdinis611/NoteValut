@@ -1,22 +1,24 @@
 @import "tailwindcss";
 @import "highlight.js/styles/atom-one-dark.css";
 
-/* NoteVault theme — Phosphor Archive */
+/* NoteVault theme — Folio (paper, ink, brew) */
 :root {
-  --background: #0a1210;
-  --foreground: rgba(232, 244, 236, 0.94);
-  --sidebar: #0e1714;
-  --panel: #15201c;
-  --hover: rgba(200, 245, 66, 0.06);
-  --hover-strong: rgba(200, 245, 66, 0.12);
-  --border: rgba(170, 210, 185, 0.12);
-  --muted: rgba(156, 184, 168, 0.62);
-  --accent: #c8f542;
-  --accent-soft: rgba(200, 245, 66, 0.14);
-  --accent-bright: color-mix(in srgb, var(--accent) 72%, #fff);
-  --accent-ink: #0a1210;
-  --topbar: #0a1210;
-  --grid-line: rgba(200, 245, 66, 0.045);
+  --background: #fbf8f2;
+  --foreground: #171412;
+  --sidebar: #f3ead8;
+  --panel: #fffaf3;
+  --hover: rgba(23, 20, 18, 0.055);
+  --hover-strong: rgba(232, 97, 26, 0.12);
+  --border: rgba(23, 20, 18, 0.12);
+  --muted: #6d6458;
+  --accent: #e8611a;
+  --accent-soft: rgba(232, 97, 26, 0.14);
+  --accent-bright: #f07a38;
+  --accent-ink: #fffaf2;
+  --topbar: #fbf8f2;
+  --grid-line: rgba(23, 20, 18, 0.05);
+  --lilac: #cbb6ee;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -45,7 +47,7 @@ body {
   color: var(--accent-ink);
 }
 
-/* Cartographer grain + phosphor wash */
+/* Paper grain + faint folio grid */
 .nv-atmosphere {
   position: relative;
   isolation: isolate;
@@ -56,8 +58,8 @@ body {
   position: fixed;
   inset: 0;
   z-index: 9998;
-  opacity: 0.35;
-  mix-blend-mode: overlay;
+  opacity: 0.18;
+  mix-blend-mode: multiply;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
 }
 .nv-atmosphere::after {
@@ -67,11 +69,11 @@ body {
   inset: 0;
   z-index: 0;
   background:
-    linear-gradient(rgba(200, 245, 66, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(200, 245, 66, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(23, 20, 18, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 20, 18, 0.035) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 20%, transparent 75%);
-  opacity: 0.55;
+  opacity: 0.4;
 }
 
 @keyframes nv-rise {
@@ -253,7 +255,7 @@ body {
   transition: background 0.15s ease;
 }
 .sidebar-workspace:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
 }
 
 .sidebar-mark {
@@ -263,14 +265,14 @@ body {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 0.4rem;
-  background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 32%, transparent), color-mix(in srgb, var(--accent) 8%, transparent));
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
-  color: var(--accent-bright);
+  border-radius: 0.35rem 0.55rem 0.35rem 0.35rem;
+  background: var(--lilac);
+  border: 1.6px solid var(--foreground);
+  color: var(--foreground);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  box-shadow: 3px 3px 0 var(--foreground);
 }
 
 .sidebar-brand {
@@ -279,11 +281,11 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--font-display), ui-serif, Georgia, serif;
+  font-family: var(--font-land-display), "Calistoga", "Young Serif", serif;
   font-size: 1.05rem;
   font-weight: 400;
   letter-spacing: -0.03em;
-  color: color-mix(in srgb, var(--foreground) 96%, var(--accent));
+  color: var(--foreground);
   text-align: left;
   animation: nv-shear-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -292,11 +294,11 @@ body {
   width: 0.85rem;
   height: 0.85rem;
   flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.28);
+  color: color-mix(in srgb, var(--foreground) 28%, transparent);
   transition: color 0.15s ease, transform 0.15s ease;
 }
 .sidebar-workspace:hover .sidebar-workspace-chevron {
-  color: rgba(255, 255, 255, 0.5);
+  color: color-mix(in srgb, var(--foreground) 50%, transparent);
 }
 
 .sidebar-workspace-icon {
@@ -306,7 +308,7 @@ body {
 .sidebar-icon-btn {
   border-radius: 0.4rem;
   padding: 0.35rem;
-  color: rgba(255, 255, 255, 0.38);
+  color: color-mix(in srgb, var(--foreground) 38%, transparent);
   transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
   opacity: 0;
 }
@@ -315,8 +317,8 @@ body {
   opacity: 1;
 }
 .sidebar-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.9);
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  color: color-mix(in srgb, var(--foreground) 90%, transparent);
 }
 
 @media (hover: none) {
@@ -340,14 +342,14 @@ body {
   width: 0.85rem;
   height: 0.85rem;
   transform: translateY(-50%);
-  color: rgba(255, 255, 255, 0.32);
+  color: color-mix(in srgb, var(--foreground) 32%, transparent);
   transition: color 0.15s ease;
 }
 
 .sidebar-search {
   width: 100%;
   border-radius: 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid color-mix(in srgb, var(--foreground) 6%, transparent);
   background: rgba(0, 0, 0, 0.22);
   padding: 0.42rem 0.6rem 0.42rem 2rem;
   font-size: 0.8125rem;
@@ -356,11 +358,11 @@ body {
   transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .sidebar-search::placeholder {
-  color: rgba(255, 255, 255, 0.32);
+  color: color-mix(in srgb, var(--foreground) 32%, transparent);
 }
 .sidebar-search:hover {
   background: rgba(0, 0, 0, 0.28);
-  border-color: rgba(255, 255, 255, 0.09);
+  border-color: color-mix(in srgb, var(--foreground) 9%, transparent);
 }
 .sidebar-search:focus {
   background: rgba(0, 0, 0, 0.32);
@@ -410,8 +412,8 @@ body {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.08) 20%,
-    rgba(255, 255, 255, 0.08) 80%,
+    color-mix(in srgb, var(--foreground) 8%, transparent) 20%,
+    color-mix(in srgb, var(--foreground) 8%, transparent) 80%,
     transparent
   );
 }
@@ -430,7 +432,7 @@ body {
   padding: 0.28rem 0.55rem;
   font-size: 0.84rem;
   font-weight: 450;
-  color: rgba(255, 255, 255, 0.68);
+  color: color-mix(in srgb, var(--foreground) 68%, transparent);
   text-align: left;
   transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
 }
@@ -438,15 +440,15 @@ body {
   flex-shrink: 0;
   width: 1rem;
   height: 1rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: color-mix(in srgb, var(--foreground) 40%, transparent);
   transition: color 0.14s ease;
 }
 .sidebar-link:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.94);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  color: color-mix(in srgb, var(--foreground) 94%, transparent);
 }
 .sidebar-link:hover svg {
-  color: rgba(255, 255, 255, 0.72);
+  color: color-mix(in srgb, var(--foreground) 72%, transparent);
 }
 .sidebar-link-active {
   background: linear-gradient(
@@ -454,7 +456,7 @@ body {
     color-mix(in srgb, var(--accent) 16%, transparent),
     color-mix(in srgb, var(--accent) 6%, transparent) 70%
   ) !important;
-  color: rgba(255, 255, 255, 0.96);
+  color: color-mix(in srgb, var(--foreground) 96%, transparent);
   box-shadow: inset 2px 0 0 var(--accent);
 }
 .sidebar-link-active svg {
@@ -462,14 +464,14 @@ body {
 }
 
 .sidebar-link-create {
-  color: rgba(255, 255, 255, 0.55);
+  color: color-mix(in srgb, var(--foreground) 55%, transparent);
 }
 .sidebar-link-create svg {
   color: color-mix(in srgb, var(--accent) 75%, transparent);
 }
 .sidebar-link-create:hover {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
-  color: rgba(255, 255, 255, 0.92);
+  color: color-mix(in srgb, var(--foreground) 92%, transparent);
 }
 .sidebar-link-create:hover svg {
   color: var(--accent);
@@ -490,13 +492,13 @@ body {
   overflow-y: auto;
   padding: 0.2rem 0.55rem 0.85rem;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 12%, transparent) transparent;
 }
 .sidebar-nav::-webkit-scrollbar {
   width: 4px;
 }
 .sidebar-nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--foreground) 12%, transparent);
   border-radius: 999px;
 }
 
@@ -508,12 +510,12 @@ body {
   border-radius: 0.45rem;
   padding: 0.28rem 0.55rem;
   font-size: 0.84rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: color-mix(in srgb, var(--foreground) 55%, transparent);
   transition: background 0.14s ease, color 0.14s ease;
 }
 .sidebar-new-page:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.9);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  color: color-mix(in srgb, var(--foreground) 90%, transparent);
 }
 
 .sidebar-section {
@@ -540,7 +542,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.34);
+  color: color-mix(in srgb, var(--foreground) 34%, transparent);
 }
 
 .sidebar-section-action {
@@ -549,7 +551,7 @@ body {
   width: 1.4rem;
   height: 1.4rem;
   border-radius: 0.35rem;
-  color: rgba(255, 255, 255, 0.38);
+  color: color-mix(in srgb, var(--foreground) 38%, transparent);
   opacity: 0;
   transition: opacity 0.14s ease, background 0.14s ease, color 0.14s ease;
 }
@@ -578,46 +580,46 @@ body {
   border: none;
   padding: 0.28rem 0.5rem;
   font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.42);
+  color: color-mix(in srgb, var(--foreground) 42%, transparent);
   transition: background 0.14s ease, color 0.14s ease;
 }
 .sidebar-inline-cta:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.85);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  color: color-mix(in srgb, var(--foreground) 85%, transparent);
 }
 
 .sidebar-empty-hint {
   padding: 0.45rem 0.5rem;
   font-size: 0.75rem;
   line-height: 1.45;
-  color: rgba(255, 255, 255, 0.34);
+  color: color-mix(in srgb, var(--foreground) 34%, transparent);
 }
 
 .sidebar-empty {
   padding: 0.35rem 0.5rem;
   font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: color-mix(in srgb, var(--foreground) 40%, transparent);
 }
 
 .sidebar-empty-state {
   margin: 0.2rem 0.1rem;
   padding: 0.75rem 0.65rem;
   border-radius: 0.55rem;
-  border: 1px dashed rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed color-mix(in srgb, var(--foreground) 8%, transparent);
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
 }
 
 .sidebar-empty-title {
   font-size: 0.8125rem;
   font-weight: 550;
-  color: rgba(255, 255, 255, 0.78);
+  color: color-mix(in srgb, var(--foreground) 78%, transparent);
   margin-bottom: 0.2rem;
 }
 
 .sidebar-empty-copy {
   font-size: 0.75rem;
   line-height: 1.45;
-  color: rgba(255, 255, 255, 0.4);
+  color: color-mix(in srgb, var(--foreground) 40%, transparent);
   margin-bottom: 0.55rem;
 }
 
@@ -653,7 +655,7 @@ body {
   transition: background 0.14s ease;
 }
 .sidebar-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
 }
 .sidebar-item-active {
   background: linear-gradient(
@@ -673,7 +675,7 @@ body {
   padding: 0.28rem 0.4rem 0.28rem 0.2rem;
   font-size: 0.84rem;
   font-weight: 450;
-  color: rgba(255, 255, 255, 0.82);
+  color: color-mix(in srgb, var(--foreground) 82%, transparent);
   text-align: left;
 }
 
@@ -681,7 +683,7 @@ body {
   width: 1rem;
   height: 1rem;
   flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.38);
+  color: color-mix(in srgb, var(--foreground) 38%, transparent);
 }
 
 .sidebar-item-emoji {
@@ -706,12 +708,12 @@ body {
 .sidebar-action-btn {
   border-radius: 0.3rem;
   padding: 0.22rem;
-  color: rgba(255, 255, 255, 0.38);
+  color: color-mix(in srgb, var(--foreground) 38%, transparent);
   transition: background 0.12s ease, color 0.12s ease;
 }
 .sidebar-action-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: color-mix(in srgb, var(--foreground) 92%, transparent);
 }
 
 .sidebar-tree {
@@ -743,7 +745,7 @@ body {
   box-shadow: none;
 }
 .sidebar-tree-row:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
 }
 .sidebar-tree-row:has(.sidebar-item-active),
 .sidebar-tree-row:has(.sidebar-item-selected) {
@@ -758,20 +760,20 @@ body {
 .sidebar-tree-toggle {
   border-radius: 0.3rem;
   padding: 0.18rem;
-  color: rgba(255, 255, 255, 0.32);
+  color: color-mix(in srgb, var(--foreground) 32%, transparent);
   flex-shrink: 0;
   transition: background 0.12s ease, color 0.12s ease;
 }
 .sidebar-tree-toggle:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.78);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: color-mix(in srgb, var(--foreground) 78%, transparent);
 }
 
 .sidebar-tree-add {
   border-radius: 0.3rem;
   padding: 0.18rem;
   margin-right: 0.2rem;
-  color: rgba(255, 255, 255, 0.38);
+  color: color-mix(in srgb, var(--foreground) 38%, transparent);
   opacity: 0;
   transition: opacity 0.14s ease, background 0.12s ease, color 0.12s ease;
 }
@@ -784,7 +786,7 @@ body {
 }
 
 .sidebar-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 6%, transparent);
   padding: 0.45rem 0.55rem 0.65rem;
   background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.18));
 }
@@ -846,9 +848,9 @@ body {
 }
 .auth-btn {
   border-radius: 0.35rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
   background: transparent;
-  color: rgba(255, 255, 255, 0.85);
+  color: color-mix(in srgb, var(--foreground) 85%, transparent);
   padding: 0.28rem 0.55rem;
   font-size: 0.75rem;
   font-weight: 500;
@@ -856,130 +858,266 @@ body {
   cursor: pointer;
 }
 .auth-btn:hover {
-  background: rgba(255, 255, 255, 0.055);
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
 }
 .auth-btn-primary {
   border-color: transparent;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: color-mix(in srgb, var(--foreground) 92%, transparent);
 }
 .auth-btn-primary:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+
+.nv-atmosphere:has(.clerk-auth-page)::after,
+.nv-atmosphere:has(.nv-land-root)::after {
+  opacity: 0.12;
 }
 
 .clerk-auth-page {
   position: fixed;
   inset: 0;
   z-index: 40;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
   overflow: auto;
-  background:
-    radial-gradient(ellipse 90% 55% at 50% -15%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 55%),
-    radial-gradient(ellipse 50% 40% at 100% 100%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 50%),
-    radial-gradient(ellipse 40% 35% at 0% 80%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 45%),
-    var(--background);
+  color: var(--foreground);
+  background: var(--background);
+  color-scheme: light;
 }
-.clerk-auth-shell {
-  display: flex;
-  width: min(26rem, 100%);
-  flex-direction: column;
-  align-items: stretch;
-  gap: 1.35rem;
+
+.auth-gate {
+  position: relative;
+  display: grid;
+  min-height: 100%;
+  min-height: 100dvh;
+  padding: 1.75rem 1.35rem 2rem;
+  gap: 1.5rem;
 }
-.clerk-auth-shell > * {
-  animation: nv-rise 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.clerk-auth-shell > *:nth-child(1) {
-  animation-delay: 0.05s;
-}
-.clerk-auth-shell > *:nth-child(2) {
-  animation-delay: 0.16s;
-}
-.clerk-auth-shell > *:nth-child(3) {
-  animation-delay: 0.28s;
-}
-.clerk-auth-brand {
-  display: flex;
+
+.auth-gate-logo {
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  margin-bottom: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-size: 1.12rem;
+  color: var(--foreground);
+  width: fit-content;
 }
-.clerk-auth-brand-copy {
+
+.auth-gate-logo-mark {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 0.35rem 0.55rem 0.35rem 0.35rem;
+  background: var(--lilac);
+  border: 1.6px solid var(--foreground);
+  box-shadow: 3px 3px 0 var(--foreground);
+}
+
+.auth-gate-specimen {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
-  min-width: 0;
+  justify-content: flex-end;
+  padding: 0.4rem 0 0.5rem;
 }
+
+.auth-gate-specimen .nv-land-sack {
+  margin-top: 1.6rem;
+}
+
+.auth-gate-kicker {
+  margin: 0;
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--accent);
+  animation: nv-shear-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.auth-gate-title {
+  margin: 0.45rem 0 0;
+  font-family: var(--font-land-display), "Calistoga", "Young Serif", serif;
+  font-size: clamp(3.2rem, 12vw, 5.6rem);
+  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: var(--foreground);
+  animation: nv-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both;
+}
+
+.auth-gate-title em {
+  display: block;
+  font-family: var(--font-land-script), "Fraunces", serif;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.auth-gate-lede {
+  margin: 1.15rem 0 0;
+  max-width: 28ch;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--muted);
+  animation: nv-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.14s both;
+}
+
+.auth-gate-desk {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: stretch;
+  animation: nv-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both;
+}
+
+.auth-gate-plate {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 1.15rem 1.3rem;
+  background: #fff;
+  border: 1.6px solid var(--foreground);
+  box-shadow: 5px 5px 0 var(--foreground);
+}
+
+.clerk-auth-brand {
+  display: none;
+}
+
 .clerk-auth-product {
   margin: 0;
-  font-family: var(--font-display), ui-serif, Georgia, serif;
-  font-size: 1.85rem;
-  font-weight: 400;
-  letter-spacing: -0.035em;
-  line-height: 1.1;
-  color: color-mix(in srgb, var(--foreground) 98%, var(--accent));
+  font-family: var(--font-land-display), "Calistoga", serif;
+  font-size: 1.5rem;
+  letter-spacing: -0.03em;
 }
+
 .clerk-auth-tagline {
-  margin: 0;
+  margin: 0.15rem 0 0;
   font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.48);
+  color: var(--muted);
 }
-.clerk-auth-mark {
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  flex-shrink: 0;
-  border-radius: 0.35rem;
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--accent) 34%, transparent),
-    color-mix(in srgb, var(--accent) 8%, transparent)
-  );
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-  color: var(--accent);
-  font-size: 1.05rem;
-  font-weight: 700;
-  animation: nv-mark-pulse 3.2s ease-in-out infinite;
-}
+
 .clerk-root-box {
   width: 100% !important;
-  margin: 0 auto !important;
+  margin: 0 !important;
 }
+
 .clerk-card {
   width: 100% !important;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  padding: 0 !important;
 }
+
+.auth-gate-plate [class*="cl-card"],
+.auth-gate-plate [class*="cl-cardBox"] {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+.clerk-logo-box,
+.clerk-header-subtitle {
+  display: none !important;
+}
+
+.clerk-header-title {
+  font-family: var(--font-land-display), "Calistoga", serif !important;
+  font-size: 1.55rem !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.035em !important;
+  color: var(--foreground) !important;
+}
+
 .clerk-primary-btn {
-  background: var(--accent) !important;
-  color: var(--accent-ink) !important;
-  font-weight: 600 !important;
+  background: var(--foreground) !important;
+  color: var(--background) !important;
+  font-weight: 650 !important;
+  border-radius: 0.35rem !important;
+  box-shadow: none !important;
 }
+
 .clerk-primary-btn:hover {
-  background: color-mix(in srgb, var(--accent) 82%, #fff) !important;
+  background: color-mix(in srgb, var(--foreground) 88%, var(--accent)) !important;
 }
+
 .clerk-footer-link {
   color: var(--accent) !important;
 }
+
 .clerk-social-btn {
-  border-color: rgba(255, 255, 255, 0.1) !important;
+  border: 1.4px solid var(--foreground) !important;
+  background: var(--background) !important;
+  border-radius: 0.35rem !important;
+  color: var(--foreground) !important;
 }
+
+.clerk-footer {
+  margin-top: 0.5rem !important;
+}
+
 .clerk-auth-hint {
   margin: 0;
-  text-align: center;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.72rem;
+  color: var(--muted);
 }
+
 .clerk-auth-hint-link {
   color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
 .clerk-auth-hint-link:hover {
   color: var(--accent-bright);
+}
+
+@media (min-width: 920px) {
+  .auth-gate {
+    grid-template-columns: minmax(0, 1fr) minmax(24rem, 28rem);
+    align-items: stretch;
+    padding: 2.5rem 3.25rem 2.5rem;
+    column-gap: 5vw;
+  }
+
+  .auth-gate-specimen {
+    justify-content: center;
+    padding: 2rem 1rem 2rem 0.5rem;
+  }
+
+  .auth-gate-title {
+    font-size: clamp(4.4rem, 8vw, 6.4rem);
+    max-width: none;
+  }
+
+  .auth-gate-lede {
+    font-size: 1.12rem;
+    max-width: 22ch;
+  }
+
+  .auth-gate-desk {
+    align-items: center;
+    padding: 2rem 0;
+  }
+
+  .auth-gate-plate {
+    padding: 1.7rem 1.55rem 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-gate-kicker,
+  .auth-gate-title,
+  .auth-gate-lede,
+  .auth-gate-desk {
+    animation: none;
+  }
 }
 
 .sidebar-tool {
@@ -1090,7 +1228,7 @@ body {
   z-index: 55;
   width: 15.5rem;
   border-radius: 0.65rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
   background: color-mix(in srgb, var(--panel) 96%, #000);
   padding: 0.35rem;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
@@ -1145,9 +1283,9 @@ body {
   z-index: 60;
   padding: 0.28rem 0.5rem;
   border-radius: 0.35rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
   background: color-mix(in srgb, var(--panel) 94%, #000);
-  color: rgba(255, 255, 255, 0.88);
+  color: color-mix(in srgb, var(--foreground) 88%, transparent);
   font-size: 0.6875rem;
   font-weight: 500;
   line-height: 1.2;
@@ -1382,7 +1520,7 @@ body {
   padding: 0.65rem 0.7rem;
   border-radius: 0.65rem;
   background: color-mix(in srgb, var(--panel) 96%, #000);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
   box-shadow: 0 12px 32px rgb(0 0 0 / 0.4);
 }
 
@@ -1589,7 +1727,7 @@ body {
   width: 22rem;
   max-width: calc(100vw - 2rem);
   border-radius: 0.65rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
   background: color-mix(in srgb, var(--panel) 96%, #000);
   padding: 0.7rem;
   box-shadow: 0 12px 36px rgb(0 0 0 / 0.5);
@@ -1652,7 +1790,7 @@ body {
   margin-bottom: 0.3rem;
   font-size: 0.6875rem;
   font-weight: 550;
-  color: rgba(255, 255, 255, 0.42);
+  color: color-mix(in srgb, var(--foreground) 42%, transparent);
 }
 .icon-picker-grid {
   display: grid;
@@ -2079,7 +2217,7 @@ body {
   font-family: var(--font-mono);
   font-size: 0.875rem;
   line-height: 1.6;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
   border-radius: 0.375rem;
   padding: 0.75rem 1rem;
   margin: 0.25rem 0;
@@ -2199,13 +2337,12 @@ body {
 
 .vault-home-title {
   margin-bottom: 0.75rem;
-  font-family: var(--font-display), "Iowan Old Style", "Palatino Linotype", serif;
+  font-family: var(--font-land-display), "Calistoga", "Young Serif", serif;
   font-size: clamp(3rem, 7vw, 4.25rem);
   font-weight: 400;
   letter-spacing: -0.045em;
   line-height: 0.95;
-  color: color-mix(in srgb, var(--foreground) 96%, var(--accent));
-  text-shadow: 0 0 40px color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--foreground);
 }
 
 .vault-home-subtitle {
@@ -2228,16 +2365,16 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  border-radius: 0.5rem;
-  background: var(--accent);
-  color: var(--accent-ink);
+  border-radius: 0.35rem;
+  background: var(--foreground);
+  color: var(--background);
   padding: 0.55rem 1.1rem;
   font-size: 0.875rem;
-  font-weight: 600;
-  transition: opacity 0.15s;
+  font-weight: 650;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.vault-btn-primary:hover { opacity: 0.9; }
-.vault-btn-primary:disabled { opacity: 0.5; }
+.vault-btn-primary:hover { transform: translateY(-2px); }
+.vault-btn-primary:disabled { opacity: 0.5; transform: none; }
 
 .vault-btn-secondary {
   display: inline-flex;
@@ -2276,7 +2413,7 @@ body {
   width: 3px;
   height: 3px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.25);
+  background: color-mix(in srgb, var(--foreground) 25%, transparent);
 }
 
 .vault-home-body {
@@ -2590,7 +2727,7 @@ body {
   transition: outline 0.12s, transform 0.12s;
 }
 .color-dot:hover { transform: scale(1.12); }
-.color-dot-active { outline-color: rgba(255, 255, 255, 0.55); }
+.color-dot-active { outline-color: color-mix(in srgb, var(--foreground) 55%, transparent); }
 
 .entry-label-colors {
   display: flex;
@@ -2634,14 +2771,14 @@ body {
   overflow-y: auto;
   margin-bottom: 0.35rem;
   padding-bottom: 0.35rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 6%, transparent);
 }
 
 .sidebar-bin-title {
   padding: 0.15rem 0.45rem 0.35rem;
   font-size: 0.75rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.4);
+  color: color-mix(in srgb, var(--foreground) 40%, transparent);
 }
 
 .sidebar-bin-item {
@@ -2652,7 +2789,7 @@ body {
   padding: 0.25rem 0.4rem;
   border-radius: 0.3rem;
 }
-.sidebar-bin-item:hover { background: rgba(255, 255, 255, 0.055); }
+.sidebar-bin-item:hover { background: color-mix(in srgb, var(--foreground) 6%, transparent); }
 
 .sidebar-bin-label {
   display: flex;
@@ -2666,10 +2803,10 @@ body {
 .sidebar-bin-restore {
   flex-shrink: 0;
   font-size: 0.6875rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: color-mix(in srgb, var(--foreground) 55%, transparent);
   opacity: 0.9;
 }
-.sidebar-bin-restore:hover { color: rgba(255, 255, 255, 0.95); }
+.sidebar-bin-restore:hover { color: color-mix(in srgb, var(--foreground) 95%, transparent); }
 
 .sidebar-empty-bin {
   width: 100%;
@@ -2692,7 +2829,7 @@ body {
   width: auto;
   min-width: 0;
   border-radius: 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
   background: color-mix(in srgb, var(--panel) 94%, #0b1220);
   padding: 0.35rem;
   box-shadow: 0 12px 36px rgb(0 0 0 / 0.5);
@@ -2712,7 +2849,7 @@ body {
 
 .create-menu-divider {
   margin-top: 0.25rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 6%, transparent);
   padding-top: 0.55rem;
 }
 
@@ -2793,9 +2930,9 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
   background: color-mix(in srgb, var(--panel) 88%, #000);
-  color: rgba(255, 255, 255, 0.8);
+  color: color-mix(in srgb, var(--foreground) 80%, transparent);
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
   transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
@@ -3282,7 +3419,7 @@ body {
   transition: transform 0.15s;
 }
 .share-switch input:checked + .share-switch-track {
-  background: color-mix(in srgb, var(--accent) 55%, #0a1210);
+  background: color-mix(in srgb, var(--accent) 55%, var(--foreground));
   border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 .share-switch input:checked + .share-switch-track::after {
@@ -3590,10 +3727,10 @@ body {
   transition: background 0.14s ease, box-shadow 0.14s ease;
 }
 .nv-row:hover {
-  background: rgba(255, 255, 255, 0.015);
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
 }
 .nv-row-focused {
-  background: color-mix(in srgb, var(--accent) 4%, rgba(255, 255, 255, 0.02));
+  background: color-mix(in srgb, var(--accent) 4%, color-mix(in srgb, var(--foreground) 2%, transparent));
   box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
 }
 .nv-row-pinned:not(.nv-row-focused) {
@@ -3706,11 +3843,11 @@ body {
   letter-spacing: -0.01em;
 }
 .nv-input::placeholder {
-  color: rgba(255, 255, 255, 0.34);
+  color: color-mix(in srgb, var(--foreground) 34%, transparent);
   font-weight: 450;
 }
 .nv-row-empty .nv-input::placeholder {
-  color: rgba(255, 255, 255, 0.42);
+  color: color-mix(in srgb, var(--foreground) 42%, transparent);
   font-size: 1.05rem;
 }
 .nv-h1 {
@@ -3739,7 +3876,7 @@ body {
   font-weight: 600;
   line-height: 1.4;
   padding: 0.25rem 0 0.08rem;
-  color: rgba(255, 255, 255, 0.92);
+  color: color-mix(in srgb, var(--foreground) 92%, transparent);
 }
 .nv-h5 {
   font-size: 0.92rem;
@@ -3747,14 +3884,14 @@ body {
   letter-spacing: 0.01em;
   line-height: 1.4;
   padding: 0.2rem 0 0.06rem;
-  color: rgba(255, 255, 255, 0.78);
+  color: color-mix(in srgb, var(--foreground) 78%, transparent);
 }
 .nv-h6 {
   font-size: 0.85rem;
   font-weight: 600;
   line-height: 1.4;
   padding: 0.15rem 0 0.05rem;
-  color: rgba(255, 255, 255, 0.65);
+  color: color-mix(in srgb, var(--foreground) 65%, transparent);
 }
 .nv-paragraph { padding: 0.12rem 0; }
 
@@ -3784,7 +3921,7 @@ body {
   border-left: 3px solid color-mix(in srgb, var(--accent) 70%, transparent);
   padding: 0.35rem 0 0.35rem 0.9rem;
   margin: 0.2rem 0;
-  color: rgba(255, 255, 255, 0.78);
+  color: color-mix(in srgb, var(--foreground) 78%, transparent);
   font-style: italic;
   background: linear-gradient(
     90deg,
@@ -3799,7 +3936,7 @@ body {
   border: 1px solid var(--border);
   background: rgba(0, 0, 0, 0.28);
   padding: 0.75rem 0.85rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--foreground) 3%, transparent);
 }
 .nv-code {
   font-family: var(--font-mono), ui-monospace, monospace;
@@ -3874,9 +4011,9 @@ body {
   padding: 0.2rem 0.45rem;
   border-radius: 0.35rem;
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  background: rgba(255, 255, 255, 0.02);
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
   font-size: 0.6875rem;
-  color: rgba(255, 255, 255, 0.38);
+  color: color-mix(in srgb, var(--foreground) 38%, transparent);
   letter-spacing: 0.01em;
 }
 .nv-hint-chip kbd {
@@ -3908,7 +4045,7 @@ body {
   display: flex;
   flex-direction: column;
   border-radius: 0.85rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
   background: color-mix(in srgb, var(--sidebar) 92%, #000);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.4),
@@ -3922,7 +4059,7 @@ body {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.7rem 0.85rem 0.65rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 7%, transparent);
 }
 
 .nv-slash-head-left {
@@ -3964,7 +4101,7 @@ body {
   flex-shrink: 0;
   font-size: 0.625rem;
   letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.35);
+  color: color-mix(in srgb, var(--foreground) 35%, transparent);
 }
 
 .nv-slash-body {
@@ -3975,7 +4112,7 @@ body {
 .nv-slash-group + .nv-slash-group {
   margin-top: 0.45rem;
   padding-top: 0.4rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 5%, transparent);
 }
 
 .nv-slash-group-label {
@@ -3984,7 +4121,7 @@ body {
   font-weight: 650;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.34);
+  color: color-mix(in srgb, var(--foreground) 34%, transparent);
 }
 
 .nv-slash-stack {
@@ -4005,7 +4142,7 @@ body {
   transition: background 0.12s, border-color 0.12s, transform 0.12s;
 }
 .nv-slash-item:hover {
-  background: rgba(255, 255, 255, 0.045);
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
 }
 .nv-slash-item-active {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
@@ -4020,8 +4157,8 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
 }
 .nv-slash-tone-basic { color: #cbd5e1; }
 .nv-slash-tone-headings { color: #fcd34d; background: rgba(252, 211, 77, 0.08); }
@@ -4082,19 +4219,19 @@ body {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.5rem 0.85rem 0.6rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 6%, transparent);
   font-size: 0.625rem;
-  color: rgba(255, 255, 255, 0.32);
+  color: color-mix(in srgb, var(--foreground) 32%, transparent);
 }
 
 .nv-custom {
   border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
   background:
     linear-gradient(165deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%),
-    rgba(255, 255, 255, 0.02);
+    color-mix(in srgb, var(--foreground) 2%, transparent);
   overflow: hidden;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--foreground) 4%, transparent) inset;
   margin: 0.25rem 0;
 }
 .nv-custom-head {
@@ -4103,7 +4240,7 @@ body {
   gap: 0.55rem;
   padding: 0.55rem 0.75rem;
   background: rgba(0, 0, 0, 0.14);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 6%, transparent);
 }
 .nv-custom-badge {
   display: grid;
@@ -4163,12 +4300,12 @@ body {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.42);
+  color: color-mix(in srgb, var(--foreground) 42%, transparent);
 }
 .nv-custom-name {
   width: 100%;
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
   background: transparent;
   padding: 0.2rem 0 0.45rem;
   font-size: 1.05rem;
@@ -4178,7 +4315,7 @@ body {
   outline: none;
 }
 .nv-custom-name::placeholder {
-  color: rgba(255, 255, 255, 0.28);
+  color: color-mix(in srgb, var(--foreground) 28%, transparent);
   font-weight: 500;
 }
 .nv-custom-name:focus {
@@ -4208,7 +4345,7 @@ body {
   gap: 0.3rem;
   border-radius: 0.4rem;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
   padding: 0.22rem 0.5rem;
   font-size: 0.6875rem;
   font-weight: 550;
@@ -4226,10 +4363,10 @@ body {
   align-items: center;
   gap: 0.4rem;
   border-radius: 0.4rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
   padding: 0.28rem 0.45rem;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.72);
+  color: color-mix(in srgb, var(--foreground) 72%, transparent);
 }
 .nv-custom-file-chip button {
   display: grid;
@@ -4286,7 +4423,7 @@ body {
   margin: 0 0 0.4rem;
   padding: 0.4rem 0.5rem;
   border-radius: 0.6rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
   background: color-mix(in srgb, var(--panel) 92%, #000);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(10px);
@@ -4306,7 +4443,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
+  color: color-mix(in srgb, var(--foreground) 45%, transparent);
 }
 .nv-toolbar-swatches {
   display: flex;
@@ -4318,7 +4455,7 @@ body {
   width: 1.05rem;
   height: 1.05rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
   outline: 2px solid transparent;
   outline-offset: 1px;
   transition: transform 0.12s, outline-color 0.12s;
@@ -4330,13 +4467,13 @@ body {
   transform: scale(1.12);
 }
 .nv-toolbar-swatch-active {
-  outline-color: rgba(255, 255, 255, 0.55);
+  outline-color: color-mix(in srgb, var(--foreground) 55%, transparent);
 }
 .nv-toolbar-swatch-default {
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.7);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
   font-size: 0.625rem;
   font-weight: 700;
   line-height: 1;
@@ -4369,7 +4506,7 @@ body {
   gap: 0.5rem;
   padding: 0.4rem 0.55rem;
   border-bottom: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
   border-radius: 0.65rem 0.65rem 0 0;
 }
 .nv-code-toolbar-spacer {
@@ -4594,7 +4731,7 @@ body {
 .nv-toggle {
   border-radius: 0.5rem;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.02);
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
   overflow: hidden;
 }
 
@@ -4616,7 +4753,7 @@ body {
 }
 .nv-toggle-content {
   font-size: 0.9375rem;
-  color: rgba(255, 255, 255, 0.75);
+  color: color-mix(in srgb, var(--foreground) 75%, transparent);
 }
 
 .nv-image {
@@ -5064,7 +5201,7 @@ body {
   vertical-align: top;
 }
 .nv-table tr:first-child td {
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
 }
 .nv-table-cell {
   width: 100%;
@@ -5077,7 +5214,7 @@ body {
   outline: none;
 }
 .nv-table-cell::placeholder {
-  color: rgba(255, 255, 255, 0.28);
+  color: color-mix(in srgb, var(--foreground) 28%, transparent);
 }
 .nv-table-actions {
   display: flex;
@@ -5298,7 +5435,7 @@ body {
   color: #c4a1ff;
 }
 .nv-video-badge-tiktok {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
   color: #f0f0f0;
 }
 .nv-video-badge-dailymotion {
@@ -5433,7 +5570,7 @@ body {
   flex-shrink: 0;
   font-size: 0.625rem;
   font-variant-numeric: tabular-nums;
-  color: rgba(255, 255, 255, 0.7);
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
 }
 .nv-video-status {
   display: flex;
@@ -5854,14 +5991,14 @@ body {
   padding: 0.75rem 0.9rem;
   border-radius: 0.55rem;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
   text-decoration: none;
   color: inherit;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .nv-weblink-card:hover {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
 }
 .nv-weblink-icon {
   display: grid;
@@ -6031,7 +6168,7 @@ body {
   padding: 0.9rem 1rem;
   border-radius: 0.55rem;
   border: 1px dashed var(--border);
-  background: rgba(255, 255, 255, 0.02);
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
 }
 .nv-file-empty-icon {
   display: grid;
@@ -6064,7 +6201,7 @@ body {
   padding: 0.7rem 0.85rem;
   border-radius: 0.55rem;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
 }
 .nv-file-icon {
   display: grid;
@@ -6934,7 +7071,7 @@ body {
   padding: 0.15rem 0.45rem;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
   font-size: 0.65rem;
   color: var(--muted);
 }
@@ -8883,8 +9020,8 @@ body {
   margin: 0 0 0.55rem;
   padding: 0.4rem 0.45rem;
   border-radius: 0.4rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -8899,7 +9036,7 @@ body {
 .sidebar-bulk-count {
   font-size: 0.6875rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.45);
+  color: color-mix(in srgb, var(--foreground) 45%, transparent);
   padding: 0 0.1rem;
 }
 
@@ -8913,8 +9050,8 @@ body {
 .sidebar-bulk-tag button {
   border-radius: 0.3rem;
   border: none;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.78);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  color: color-mix(in srgb, var(--foreground) 78%, transparent);
   font-size: 0.7rem;
   padding: 0.22rem 0.45rem;
   cursor: pointer;
@@ -8922,11 +9059,11 @@ body {
 }
 .sidebar-bulk-actions button:hover,
 .sidebar-bulk-tag button:hover {
-  background: rgba(255, 255, 255, 0.09);
-  color: rgba(255, 255, 255, 0.95);
+  background: color-mix(in srgb, var(--foreground) 9%, transparent);
+  color: color-mix(in srgb, var(--foreground) 95%, transparent);
 }
 .sidebar-bulk-clear {
-  color: rgba(255, 255, 255, 0.45) !important;
+  color: color-mix(in srgb, var(--foreground) 45%, transparent) !important;
 }
 
 .sidebar-bulk-tag {
@@ -8938,14 +9075,14 @@ body {
   flex: 1;
   min-width: 0;
   border-radius: 0.3rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
   background: rgba(0, 0, 0, 0.2);
   color: var(--foreground);
   font-size: 0.75rem;
   padding: 0.22rem 0.45rem;
 }
 .sidebar-bulk-tag input::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+  color: color-mix(in srgb, var(--foreground) 35%, transparent);
 }
 
 .sidebar-tree-grip {
@@ -8955,7 +9092,7 @@ body {
   height: 1.35rem;
   flex-shrink: 0;
   border-radius: 0.25rem;
-  color: rgba(255, 255, 255, 0.28);
+  color: color-mix(in srgb, var(--foreground) 28%, transparent);
   cursor: grab;
   opacity: 0;
   transition: opacity 0.12s, background 0.12s, color 0.12s;
@@ -8965,8 +9102,8 @@ body {
   opacity: 1;
 }
 .sidebar-tree-grip:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.75);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: color-mix(in srgb, var(--foreground) 75%, transparent);
 }
 .sidebar-tree-grip:active {
   cursor: grabbing;
@@ -8995,11 +9132,11 @@ body {
   max-width: 14rem;
   padding: 0.35rem 0.55rem;
   border-radius: 0.35rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
   background: color-mix(in srgb, var(--panel) 92%, #000);
   box-shadow: 0 10px 28px rgb(0 0 0 / 0.45);
   font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: color-mix(in srgb, var(--foreground) 90%, transparent);
   pointer-events: none;
 }
 
@@ -9019,7 +9156,7 @@ body {
 }
 
 .sidebar-item-selected {
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
 }
 
 .sidebar-item-copy {
@@ -9031,7 +9168,7 @@ body {
 
 .sidebar-item-snippet {
   font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: color-mix(in srgb, var(--foreground) 40%, transparent);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -9352,7 +9489,7 @@ body {
   gap: 0.55rem;
 }
 
-/* driver.js — Phosphor Archive */
+/* driver.js — Folio tour */
 .notevault-driver-popover.driver-popover {
   background:
     linear-gradient(
@@ -9360,7 +9497,7 @@ body {
       color-mix(in srgb, var(--accent) 16%, transparent),
       transparent 48%
     ),
-    color-mix(in srgb, var(--panel) 94%, #050908);
+    color-mix(in srgb, var(--panel) 96%, var(--background));
   color: var(--foreground);
   border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
   border-radius: 0.55rem;

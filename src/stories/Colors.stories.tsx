@@ -8,10 +8,13 @@ const THEME_VARS = [
   "--sidebar",
   "--panel",
   "--hover",
+  "--hover-strong",
   "--border",
   "--muted",
   "--accent",
   "--accent-soft",
+  "--accent-ink",
+  "--lilac",
   "--topbar",
 ] as const;
 
@@ -19,7 +22,13 @@ function ColorsCanvas() {
   return (
     <div className="space-y-10 p-6">
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Theme CSS variables</h2>
+        <p className="mb-1 text-[0.68rem] uppercase tracking-[0.28em] text-accent">Folio</p>
+        <h2
+          className="mb-3 text-2xl"
+          style={{ fontFamily: "var(--font-land-display), Calistoga, Georgia, serif" }}
+        >
+          Theme CSS variables
+        </h2>
         <p className="mb-4 text-sm text-muted">
           Switch presets with the Theme toolbar. Swatches read live computed values.
         </p>
@@ -27,10 +36,10 @@ function ColorsCanvas() {
           {THEME_VARS.map((name) => (
             <div
               key={name}
-              className="flex items-center gap-3 rounded-lg border border-border bg-panel p-3"
+              className="flex items-center gap-3 border border-foreground bg-panel p-3 shadow-[3px_3px_0_var(--foreground)]"
             >
               <span
-                className="size-10 shrink-0 rounded-md border border-border"
+                className="size-10 shrink-0 border border-foreground"
                 style={{ background: `var(${name})` }}
               />
               <code className="text-xs">{name}</code>
@@ -40,7 +49,12 @@ function ColorsCanvas() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Label colors</h2>
+        <h2
+          className="mb-3 text-2xl"
+          style={{ fontFamily: "var(--font-land-display), Calistoga, Georgia, serif" }}
+        >
+          Label colors
+        </h2>
         <div className="flex flex-wrap gap-2">
           {LABEL_COLORS.map((c) => (
             <span
@@ -56,7 +70,12 @@ function ColorsCanvas() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Text colors</h2>
+        <h2
+          className="mb-3 text-2xl"
+          style={{ fontFamily: "var(--font-land-display), Calistoga, Georgia, serif" }}
+        >
+          Text colors
+        </h2>
         <div className="flex flex-wrap gap-3">
           {TEXT_COLORS.filter((c) => c.hex).map((c) => (
             <span key={c.id} className="text-sm" style={{ color: c.hex }}>
@@ -67,7 +86,12 @@ function ColorsCanvas() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Highlight colors</h2>
+        <h2
+          className="mb-3 text-2xl"
+          style={{ fontFamily: "var(--font-land-display), Calistoga, Georgia, serif" }}
+        >
+          Highlight colors
+        </h2>
         <div className="flex flex-wrap gap-2">
           {HIGHLIGHT_COLORS.filter((c) => c.hex).map((c) => (
             <span
@@ -99,27 +123,35 @@ export const Palette: Story = {
 function ThemeCardsCanvas() {
   return (
     <div className="space-y-4 p-6">
-      <h2 className="text-lg font-semibold">Theme presets</h2>
+      <h2
+        className="text-2xl"
+        style={{ fontFamily: "var(--font-land-display), Calistoga, Georgia, serif" }}
+      >
+        Theme presets
+      </h2>
       <p className="text-sm text-muted">
-        Swatches from <code>THEME_PRESETS</code> in settings-collection.
+        Swatches from <code>THEME_PRESETS</code>. Folio is the default; Phosphor lives under forest.
       </p>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Object.values(THEME_PRESETS).map((preset) => (
-          <div key={preset.id} className="overflow-hidden rounded-lg border border-border bg-panel">
+          <div
+            key={preset.id}
+            className="overflow-hidden border border-foreground bg-panel shadow-[4px_4px_0_var(--foreground)]"
+          >
             <div
               className="flex h-16 items-end gap-1 p-3"
               style={{ background: preset.vars["--background"] }}
             >
               <span
-                className="size-8 rounded-md border border-white/10"
+                className="size-8 border border-foreground"
                 style={{ background: preset.swatch }}
               />
               <span
-                className="size-8 rounded-md border border-white/10"
+                className="size-8 border border-foreground"
                 style={{ background: preset.vars["--panel"] }}
               />
               <span
-                className="size-8 rounded-md border border-white/10"
+                className="size-8 border border-foreground"
                 style={{ background: preset.vars["--sidebar"] }}
               />
             </div>

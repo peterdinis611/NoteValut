@@ -52,21 +52,23 @@ export const THEME_PRESETS: Record<
 > = {
   default: {
     id: "default",
-    label: "Phosphor",
-    description: "Abyssal teal with acid lime",
-    swatch: "#c8f542",
+    label: "Folio",
+    description: "Cream paper, ink, and brew orange",
+    swatch: "#e8611a",
     vars: {
-      "--background": "#0a1210",
-      "--foreground": "rgba(232, 244, 236, 0.94)",
-      "--sidebar": "#0e1714",
-      "--panel": "#15201c",
-      "--hover": "rgba(200, 245, 66, 0.06)",
-      "--hover-strong": "rgba(200, 245, 66, 0.12)",
-      "--border": "rgba(170, 210, 185, 0.12)",
-      "--muted": "rgba(156, 184, 168, 0.62)",
-      "--accent": "#c8f542",
-      "--accent-soft": "rgba(200, 245, 66, 0.14)",
-      "--topbar": "#0a1210",
+      "--background": "#fbf8f2",
+      "--foreground": "#171412",
+      "--sidebar": "#f3ead8",
+      "--panel": "#fffaf3",
+      "--hover": "rgba(23, 20, 18, 0.055)",
+      "--hover-strong": "rgba(232, 97, 26, 0.12)",
+      "--border": "rgba(23, 20, 18, 0.12)",
+      "--muted": "#6d6458",
+      "--accent": "#e8611a",
+      "--accent-soft": "rgba(232, 97, 26, 0.14)",
+      "--accent-ink": "#fffaf2",
+      "--topbar": "#fbf8f2",
+      "--lilac": "#cbb6ee",
     },
   },
   ocean: {
@@ -128,21 +130,21 @@ export const THEME_PRESETS: Record<
   },
   forest: {
     id: "forest",
-    label: "Olive",
-    description: "Quiet moss and leaf",
-    swatch: "#8faf6e",
+    label: "Phosphor",
+    description: "Abyssal teal with acid lime",
+    swatch: "#c8f542",
     vars: {
-      "--background": "#121510",
-      "--foreground": "rgba(240, 246, 232, 0.92)",
-      "--sidebar": "#171b14",
-      "--panel": "#22281c",
-      "--hover": "rgba(180, 200, 150, 0.07)",
-      "--hover-strong": "rgba(180, 200, 150, 0.13)",
-      "--border": "rgba(170, 190, 140, 0.11)",
-      "--muted": "rgba(170, 185, 150, 0.55)",
-      "--accent": "#8faf6e",
-      "--accent-soft": "rgba(143, 175, 110, 0.15)",
-      "--topbar": "#121510",
+      "--background": "#0a1210",
+      "--foreground": "rgba(232, 244, 236, 0.94)",
+      "--sidebar": "#0e1714",
+      "--panel": "#15201c",
+      "--hover": "rgba(200, 245, 66, 0.06)",
+      "--hover-strong": "rgba(200, 245, 66, 0.12)",
+      "--border": "rgba(170, 210, 185, 0.12)",
+      "--muted": "rgba(156, 184, 168, 0.62)",
+      "--accent": "#c8f542",
+      "--accent-soft": "rgba(200, 245, 66, 0.14)",
+      "--topbar": "#0a1210",
     },
   },
   slate: {
@@ -342,11 +344,22 @@ export function applyTheme(settings?: SettingsRecord) {
     root.style.setProperty(key, value);
   }
   const accent = preset.vars["--accent"];
-  const background = preset.vars["--background"] ?? "#0a1210";
+  const background = preset.vars["--background"] ?? "#fbf8f2";
   if (accent) {
     root.style.setProperty("--accent-bright", `color-mix(in srgb, ${accent} 72%, #fff)`);
-    root.style.setProperty("--accent-ink", background);
+    root.style.setProperty("--accent-ink", preset.vars["--accent-ink"] ?? background);
   }
+
+  const hex = background.replace("#", "");
+  let isLight = true;
+  if (hex.length >= 6) {
+    const r = parseInt(hex.slice(0, 2), 16) / 255;
+    const g = parseInt(hex.slice(2, 4), 16) / 255;
+    const b = parseInt(hex.slice(4, 6), 16) / 255;
+    isLight = 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45;
+  }
+  root.style.colorScheme = isLight ? "light" : "dark";
+  root.classList.toggle("dark", !isLight);
 
   let styleEl = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
   const css = s.themeId === "custom" ? s.customCss.trim() : "";

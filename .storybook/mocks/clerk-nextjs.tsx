@@ -89,26 +89,58 @@ export function UserButton(props: { afterSignOutUrl?: string; appearance?: unkno
   return (
     <button
       type="button"
-      className="rounded-full border border-border bg-panel px-3 py-1 text-xs text-muted"
+      className="grid size-8 place-items-center rounded-full border border-foreground bg-foreground text-[0.7rem] font-bold text-background"
       title={props.afterSignOutUrl}
     >
-      {demoUser.firstName}
+      {demoUser.firstName?.[0] ?? "N"}
     </button>
   );
 }
 
 export function SignIn() {
   return (
-    <div className="rounded-xl border border-border bg-panel p-6 text-sm text-muted">
-      Clerk SignIn (mocked)
+    <div className="flex flex-col gap-3">
+      <p
+        className="clerk-header-title m-0"
+        style={{ fontFamily: "var(--font-land-display), Calistoga, Georgia, serif" }}
+      >
+        Sign in to NoteVault
+      </p>
+      <button type="button" className="clerk-social-btn h-10 w-full">
+        Continue with Google
+      </button>
+      <input
+        className="h-10 w-full border border-foreground bg-background px-3 text-sm"
+        placeholder="Enter your email address"
+        aria-label="Email address"
+      />
+      <button type="button" className="clerk-primary-btn h-10 w-full">
+        Continue
+      </button>
     </div>
   );
 }
 
 export function SignUp() {
   return (
-    <div className="rounded-xl border border-border bg-panel p-6 text-sm text-muted">
-      Clerk SignUp (mocked)
+    <div className="flex flex-col gap-3">
+      <p
+        className="clerk-header-title m-0"
+        style={{ fontFamily: "var(--font-land-display), Calistoga, Georgia, serif" }}
+      >
+        Create your vault
+      </p>
+      <button type="button" className="clerk-social-btn h-10 w-full">
+        Continue with Google
+      </button>
+      <input
+        className="h-10 w-full border border-foreground bg-background px-3 text-sm"
+        placeholder="Enter your email address"
+        aria-label="Email address"
+      />
+      <button type="button" className="clerk-primary-btn h-10 w-full">
+        Continue
+      </button>
     </div>
   );
 }

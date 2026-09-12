@@ -27,7 +27,7 @@ function CanvasBoard(props: BlockRenderProps) {
   const drawing = useRef(false);
   const current = useRef<Stroke | null>(null);
   const strokes = useRef<Stroke[]>(parseStrokes(props.block.text));
-  const color = "#c8f542";
+  const color = "#e8611a";
 
   function redraw() {
     const canvas = canvasRef.current;

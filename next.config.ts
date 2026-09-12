@@ -24,7 +24,6 @@ const nextConfig: NextConfig = {
     "@tailwindcss/oxide-win32-arm64-msvc",
   ],
   transpilePackages: [
-    "motion",
     "@embedpdf/core",
     "@embedpdf/engines",
     "@embedpdf/plugin-document-manager",
@@ -34,7 +33,7 @@ const nextConfig: NextConfig = {
     "@embedpdf/plugin-zoom",
   ],
   experimental: {
-    optimizePackageImports: ["lucide-react", "motion"],
+    optimizePackageImports: ["lucide-react"],
   },
 };
 

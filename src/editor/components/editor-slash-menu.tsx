@@ -29,9 +29,8 @@ import {
   Table2,
   type LucideIcon,
 } from "lucide-react";
-import { motion } from "motion/react";
 import { useEffect, useRef } from "react";
-import { dropdownVariants, easeOutSoft } from "@/lib/motion";
+import { useAnimeEnter } from "@/lib/anime-ui";
 import type { SlashCommandDef } from "../types";
 
 const ICONS: Record<string, LucideIcon> = {
@@ -77,6 +76,7 @@ export function EditorSlashMenu({
   onSelect,
   onHoverIndex,
 }: Props) {
+  const enterRef = useAnimeEnter<HTMLDivElement>("dropdown");
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -87,14 +87,7 @@ export function EditorSlashMenu({
   const groups = groupCommands(commands);
 
   return (
-    <motion.div
-      className="nv-slash"
-      role="listbox"
-      variants={dropdownVariants}
-      initial="hidden"
-      animate="visible"
-      transition={easeOutSoft}
-    >
+    <div ref={enterRef} className="nv-slash" role="listbox">
       <header className="nv-slash-head">
         <div className="nv-slash-head-left">
           <span className="nv-slash-brand">Insert</span>
@@ -157,7 +150,7 @@ export function EditorSlashMenu({
         <span>Esc closes</span>
         <span>Custom blocks live under Yours</span>
       </footer>
-    </motion.div>
+    </div>
   );
 }
 

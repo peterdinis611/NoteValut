@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { LottieStatus, errorStatusDetails } from "@/components/lottie-status";
 
+import "./globals.css";
+import "./folio-pages.css";
+
 type Props = {
   error: Error & { digest?: string };
   reset: () => void;
@@ -26,8 +29,8 @@ export default function GlobalError({ error, reset }: Props) {
   const details = useMemo(() => errorStatusDetails(error, extras), [error, extras]);
 
   return (
-    <html lang="en" className="h-full dark">
-      <body className="min-h-full bg-[#0a1210] font-sans text-[rgba(232,244,236,0.94)]">
+    <html lang="en" className="h-full">
+      <body className="min-h-full bg-[#fbf8f2] font-sans text-[#171412]">
         <LottieStatus
           variant="error"
           title="NoteVault crashed"

@@ -1,7 +1,6 @@
 "use client";
 
 import { Check, ChevronsUpDown, Search, Sparkles } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import {
   useEffect,
   useLayoutEffect,
@@ -12,7 +11,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { CODE_LANGUAGES, POPULAR_PICKER_IDS, type LanguageOption } from "@/lib/highlight";
-import { dropdownVariants, easeOutSoft } from "@/lib/motion";
+import { AnimePresence } from "@/lib/anime-ui";
 
 type Props = {
   value: string;
@@ -162,26 +161,19 @@ export function CodeLanguagePicker({ value, disabled, detected, onChange, onFocu
 
   const displayLabel = value === "auto" && detected ? `Auto · ${detected}` : current.label;
 
-  const menu =
-    open && pos ? (
-      <motion.div
-        key="code-lang-menu"
+  const menu = (
+      <div
         ref={menuRef}
         className="nv-code-lang-menu"
         role="listbox"
         aria-label="Code language"
-        variants={dropdownVariants}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-        transition={easeOutSoft}
         style={{
           position: "fixed",
-          top: pos.top,
-          left: pos.left,
-          width: pos.width,
-          transform: pos.openUp ? "translateY(-100%)" : undefined,
-          transformOrigin: pos.openUp ? "bottom left" : "top left",
+          top: pos?.top,
+          left: pos?.left,
+          width: pos?.width,
+          transform: pos?.openUp ? "translateY(-100%)" : undefined,
+          transformOrigin: pos?.openUp ? "bottom left" : "top left",
         }}
       >
         <div className="nv-code-lang-search">
@@ -248,8 +240,8 @@ export function CodeLanguagePicker({ value, disabled, detected, onChange, onFocu
             </>
           )}
         </div>
-      </motion.div>
-    ) : null;
+      </div>
+    );
 
   return (
     <div className="nv-code-lang-picker" ref={rootRef}>
@@ -270,7 +262,13 @@ export function CodeLanguagePicker({ value, disabled, detected, onChange, onFocu
         <ChevronsUpDown className="size-3 opacity-50" />
       </button>
 
-      {mounted && createPortal(<AnimatePresence>{menu}</AnimatePresence>, document.body)}
+      {mounted &&
+        createPortal(
+          <AnimePresence show={open} kind="dropdown">
+            {menu}
+          </AnimePresence>,
+          document.body,
+        )}
     </div>
   );
 }

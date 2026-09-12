@@ -2,12 +2,11 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { FolderOpen, Home, Search, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { AnimePresence } from "@/lib/anime-ui";
 import { isFolder } from "@/lib/item-kinds";
-import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
 import { useToast } from "./toast";
 
 type Props = {
@@ -86,26 +85,15 @@ export function MoveDialog({
   }
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="share-overlay"
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={easeQuick}
-          onClick={onClose}
+    <AnimePresence show={open} kind="overlay">
+      <div className="share-overlay" onClick={onClose}>
+        <div
+          className="move-dialog"
+          role="dialog"
+          aria-modal
+          aria-labelledby="move-dialog-title"
+          onClick={(e) => e.stopPropagation()}
         >
-          <motion.div
-            className="move-dialog"
-            role="dialog"
-            aria-modal
-            aria-labelledby="move-dialog-title"
-            variants={modalVariants}
-            transition={easeOutSoft}
-            onClick={(e) => e.stopPropagation()}
-          >
             <div className="share-panel-header">
               <div>
                 <h2 id="move-dialog-title" className="text-base font-semibold">
@@ -155,9 +143,8 @@ export function MoveDialog({
               ))}
               {collections.length === 0 && <p className="move-empty">No collections match</p>}
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </div>
+      </div>
+    </AnimePresence>
   );
 }

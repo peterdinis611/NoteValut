@@ -75,27 +75,35 @@ export function SharedVaultApp({ token }: Props) {
   if ("locked" in bundle && bundle.locked) {
     return (
       <div className="share-lock">
-        <Lock className="size-8 text-accent" />
-        <h1>Password required</h1>
-        <p>{bundle.label}</p>
-        <form
-          className="share-lock-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setSubmittedPassword(password);
-          }}
-        >
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter share password"
-            autoFocus
-          />
-          <button type="submit" className="settings-btn">
-            Unlock
-          </button>
-        </form>
+        <div className="share-lock-plate">
+          <a href="/" className="status-logo">
+            <span className="status-logo-mark" aria-hidden />
+            NoteVault
+          </a>
+          <p className="auth-gate-kicker">Shared vault</p>
+          <h1>
+            Password <em>required</em>
+          </h1>
+          <p>{bundle.label}</p>
+          <form
+            className="share-lock-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setSubmittedPassword(password);
+            }}
+          >
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter share password"
+              autoFocus
+            />
+            <button type="submit" className="nv-folio-btn">
+              Unlock
+            </button>
+          </form>
+        </div>
       </div>
     );
   }
@@ -190,7 +198,9 @@ export function SharedVaultApp({ token }: Props) {
                   <Lock className="size-3" />
                   Public share preview
                 </p>
-                <h1 className="vault-home-title">{bundle.share.label}</h1>
+                <h1 className="vault-home-title">
+                  {bundle.share.label || "Shared"} <em>folio</em>
+                </h1>
                 <p className="vault-home-subtitle">
                   {role === "viewer"
                     ? "You have viewer access. Browse entries and collections — editing is locked."

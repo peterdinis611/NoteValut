@@ -4,8 +4,8 @@
   "description": "Your personal knowledge vault — collections, entries, and real-time sync",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a1210",
-  "theme_color": "#0a1210",
+  "background_color": "#fbf8f2",
+  "theme_color": "#fbf8f2",
   "orientation": "any",
   "icons": [
     {

@@ -11,10 +11,9 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { easeOutSoft, overlayVariants } from "@/lib/motion";
+import { AnimePresence } from "@/lib/anime-ui";
 import { resolveVideoSource, type VideoSource } from "@/lib/video";
 
 type Props = {
@@ -248,32 +247,20 @@ export function VideoViewerOverlay({
   if (!mounted) return null;
 
   return createPortal(
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="nv-video-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-label={title || "Video viewer"}
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={{ duration: 0.18 }}
-        >
-          <button
-            type="button"
-            className="nv-video-overlay-backdrop"
-            aria-label="Close video viewer"
-            onClick={onClose}
-          />
-          <motion.div
-            className="nv-video-overlay-panel"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            transition={easeOutSoft}
-          >
+    <AnimePresence show={open} kind="overlay">
+      <div
+        className="nv-video-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title || "Video viewer"}
+      >
+        <button
+          type="button"
+          className="nv-video-overlay-backdrop"
+          aria-label="Close video viewer"
+          onClick={onClose}
+        />
+        <div className="nv-video-overlay-panel">
             <button
               type="button"
               className="nv-video-overlay-close"
@@ -283,10 +270,9 @@ export function VideoViewerOverlay({
               <X className="size-4" />
             </button>
             <VideoViewer src={src} title={title} fullscreen onToggleFullscreen={onClose} />
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>,
+        </div>
+      </div>
+    </AnimePresence>,
     document.body,
   );
 }

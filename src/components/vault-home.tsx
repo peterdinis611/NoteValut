@@ -14,8 +14,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { motion } from "motion/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { countOpenTasks, countOverdueTasks } from "@/lib/blocks";
@@ -24,7 +23,7 @@ import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { useVaultUpload } from "@/hooks/use-vault-upload";
 import { formatRelativeTime } from "@/lib/format";
 import { isFolder } from "@/lib/item-kinds";
-import { easeOutSoft, fadeUpVariants, staggerContainer, staggerItem } from "@/lib/motion";
+import { playFolioPageMotion } from "@/lib/folio-page-motion";
 import { PAGE_TEMPLATES } from "@/lib/templates";
 import { DailyCalendar } from "./daily-calendar";
 import { SharePanel } from "./share-panel";
@@ -59,6 +58,7 @@ export function VaultHome({
   const [shareOpen, setShareOpen] = useState(false);
   const [bgUploading, setBgUploading] = useState(false);
   const bgFileRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const { uploadFile } = useVaultUpload();
   const updateSettings = useMutation(api.vaultSettings.update);
   const getOrCreateDaily = useMutation(api.notes.getOrCreateDaily);
@@ -81,6 +81,12 @@ export function VaultHome({
       autoDailyDone.current = false;
     });
   }, [vaultSettings?.autoDailyNote, ownerId, getOrCreateDaily]);
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    return playFolioPageMotion(root);
+  }, []);
 
   async function uploadBackground(file: File | null) {
     if (!file) return;
@@ -129,11 +135,9 @@ export function VaultHome({
   );
 
   return (
-    <motion.div
+    <div
+      ref={rootRef}
       className={`vault-home note-scroll ${backgroundImage ? "vault-home-has-bg" : ""}`}
-      initial="hidden"
-      animate="visible"
-      variants={staggerContainer}
       style={
         backgroundImage
           ? ({ "--vault-bg-image": `url(${backgroundImage})` } as React.CSSProperties)
@@ -143,7 +147,7 @@ export function VaultHome({
       <div className="vault-home-glow" aria-hidden />
       {backgroundImage && <div className="vault-home-bg" aria-hidden />}
 
-      <motion.header className="vault-home-hero" variants={fadeUpVariants} transition={easeOutSoft}>
+      <header className="vault-home-hero nv-folio-await">
         <div className="vault-home-bg-actions">
           <input
             ref={bgFileRef}
@@ -185,25 +189,25 @@ export function VaultHome({
           )}
         </div>
         <p className="vault-home-kicker" data-tour="vault-home">
-          Your knowledge vault
+          Today’s desk
         </p>
-        <h1 className="vault-home-title">NoteVault</h1>
+        <h1 className="vault-home-title">
+          Your Daily <em>Pages</em>
+        </h1>
         <p className="vault-home-subtitle">
-          Capture ideas and organize them into collections — your workspace, your structure.
+          Handwritten thinking, made from pages you actually keep — not another dump of tabs.
         </p>
 
         <div className="vault-home-actions">
-          <motion.button
+          <button
             type="button"
             className="vault-btn-primary"
             data-tour="new-entry"
             onClick={() => onCreateEntry()}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
           >
             <Plus className="size-4" />
             New entry
-          </motion.button>
+          </button>
           <button type="button" className="vault-link-btn" onClick={onCreateCollection}>
             <FolderOpen className="size-3.5" />
             Collection
@@ -241,9 +245,9 @@ export function VaultHome({
             )}
           </p>
         )}
-      </motion.header>
+      </header>
 
-      <motion.div variants={fadeUpVariants} transition={easeOutSoft}>
+      <div className="nv-folio-await">
         <div className="vault-calendar-block" data-tour="daily-notes">
           <DailyCalendar ownerId={ownerId} onOpenNote={onNavigate} />
           {onOpenCalendar && (
@@ -254,25 +258,21 @@ export function VaultHome({
             </button>
           )}
         </div>
-      </motion.div>
+      </div>
 
       <div className="vault-home-body">
-        <motion.section
-          className="vault-section"
-          variants={fadeUpVariants}
-          transition={easeOutSoft}
-        >
+        <section className="vault-section nv-folio-await">
           <div className="vault-section-head">
             <h2 className="vault-section-title">Continue</h2>
           </div>
           {recent.length === 0 ? (
             <p className="vault-empty">No entries yet — start with a blank page or a template.</p>
           ) : (
-            <motion.ul className="vault-row-list" variants={staggerContainer}>
+            <ul className="vault-row-list">
               {recent.map((entry) => {
                 const tasks = countOpenTasks(entry.blocks);
                 return (
-                  <motion.li key={entry._id} variants={staggerItem}>
+                  <li key={entry._id}>
                     <button
                       type="button"
                       className="vault-row"
@@ -290,19 +290,15 @@ export function VaultHome({
                       <span className="vault-row-meta">{formatRelativeTime(entry.updatedAt)}</span>
                       <ArrowRight className="vault-row-arrow size-3.5" />
                     </button>
-                  </motion.li>
+                  </li>
                 );
               })}
-            </motion.ul>
+            </ul>
           )}
-        </motion.section>
+        </section>
 
         {dueTasks.length > 0 && (
-          <motion.section
-            className="vault-section"
-            variants={fadeUpVariants}
-            transition={easeOutSoft}
-          >
+          <section className="vault-section nv-folio-await">
             <div className="vault-section-head">
               <h2 className="vault-section-title">
                 <CalendarClock className="inline size-4 mr-1.5 opacity-70" />
@@ -342,15 +338,11 @@ export function VaultHome({
                 </li>
               ))}
             </ul>
-          </motion.section>
+          </section>
         )}
 
         {openTaskEntries.length > 0 && (
-          <motion.section
-            className="vault-section"
-            variants={fadeUpVariants}
-            transition={easeOutSoft}
-          >
+          <section className="vault-section nv-folio-await">
             <div className="vault-section-head">
               <h2 className="vault-section-title">Needs attention</h2>
             </div>
@@ -374,14 +366,10 @@ export function VaultHome({
                 );
               })}
             </ul>
-          </motion.section>
+          </section>
         )}
 
-        <motion.section
-          className="vault-section"
-          variants={fadeUpVariants}
-          transition={easeOutSoft}
-        >
+        <section className="vault-section nv-folio-await">
           <div className="vault-section-head">
             <h2 className="vault-section-title">Start from</h2>
           </div>
@@ -398,7 +386,7 @@ export function VaultHome({
               </button>
             ))}
           </div>
-        </motion.section>
+        </section>
       </div>
 
       <SharePanel
@@ -408,6 +396,6 @@ export function VaultHome({
         scope="vault"
         title="NoteVault"
       />
-    </motion.div>
+    </div>
   );
 }

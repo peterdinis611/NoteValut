@@ -7,9 +7,9 @@ const STEPS: DriveStep[] = [
   {
     element: "[data-tour='vault-home']",
     popover: {
-      title: "Your vault, lit",
+      title: "Your daily pages",
       description:
-        "NoteVault is a personal knowledge archive — pages, collections, and daily notes under one phosphor glow.",
+        "This is the desk — pages, collections, and dailies on cream paper, ink, and brew orange.",
       side: "bottom",
       align: "center",
     },
@@ -141,7 +141,7 @@ export function startVaultTour(options?: TourOptions) {
       if (title && !title.querySelector(".nv-tour-kicker")) {
         const kicker = document.createElement("p");
         kicker.className = "nv-tour-kicker";
-        kicker.textContent = "Phosphor tour";
+        kicker.textContent = "Folio tour";
         title.prepend(kicker);
       }
     },

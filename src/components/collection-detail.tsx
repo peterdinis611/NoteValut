@@ -13,15 +13,14 @@ import {
   Table2,
   Trash2,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
+import { useAnimeEnter } from "@/lib/anime-ui";
 import { type Block, blocksToPlainText, defaultBlocks, migrateContentToBlocks } from "@/lib/blocks";
 import { getLabelColor, LABEL_COLORS } from "@/lib/colors";
 import { formatRelativeTime } from "@/lib/format";
 import { isFolder } from "@/lib/item-kinds";
-import { easeQuick, pageVariants } from "@/lib/motion";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { PAGE_TEMPLATES } from "@/lib/templates";
 import { useVaultAccess } from "@/context/vault-access";
@@ -63,6 +62,7 @@ export function CollectionDetail({
   const templateOptions = useMemo(() => [...customTemplates, ...PAGE_TEMPLATES], [customTemplates]);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
+  const panelRef = useAnimeEnter<HTMLDivElement>("page", tab);
 
   const readOnly = globalReadOnly || !canUpdate || !!folder.isLocked;
   const label = getLabelColor(folder.color);
@@ -193,17 +193,9 @@ export function CollectionDetail({
         </div>
       </div>
 
-      <AnimatePresence mode="wait">
+      <div ref={panelRef} key={tab}>
         {tab === "overview" && (
-          <motion.div
-            key="overview"
-            className="collection-panel"
-            variants={pageVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={easeQuick}
-          >
+          <div className="collection-panel">
             <section className="collection-section">
               <h3 className="collection-section-title">Collection notes</h3>
               <p className="collection-section-desc">
@@ -234,19 +226,11 @@ export function CollectionDetail({
                 ))}
               </div>
             </section>
-          </motion.div>
+          </div>
         )}
 
         {tab === "contents" && (
-          <motion.div
-            key="contents"
-            className="collection-panel"
-            variants={pageVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={easeQuick}
-          >
+          <div className="collection-panel">
             {!readOnly && (
               <div className="collection-view-toolbar">
                 <button
@@ -356,19 +340,11 @@ export function CollectionDetail({
                 ))}
               </div>
             )}
-          </motion.div>
+          </div>
         )}
 
         {tab === "settings" && (
-          <motion.div
-            key="settings"
-            className="collection-panel"
-            variants={pageVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={easeQuick}
-          >
+          <div className="collection-panel">
             <SettingRow label="Sort contents by">
               <select
                 className="share-select"
@@ -433,9 +409,9 @@ export function CollectionDetail({
                 </button>
               </SettingRow>
             )}
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </div>
 
       <SharePanel
         ownerId={ownerId}

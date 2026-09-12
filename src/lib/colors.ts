@@ -17,7 +17,7 @@ export const LABEL_COLORS = [
 
 export type LabelColorId = (typeof LABEL_COLORS)[number]["id"];
 
-/** Soft text accents for editor blocks (readable on dark navy). */
+/** Editor block text accents. */
 export const TEXT_COLORS = [
   { id: "default", label: "Default", hex: "" },
   { id: "white", label: "White", hex: "#f8fafc" },

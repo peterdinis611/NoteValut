@@ -2,13 +2,12 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { X, Zap } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { AnimePresence } from "@/lib/anime-ui";
 import { createBlock } from "@/lib/blocks";
 import { normalizeTags } from "@/lib/tags";
-import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
 import { useToast } from "./toast";
 
 type Props = {
@@ -60,26 +59,9 @@ export function QuickCapture({ ownerId, open, onClose, onCreated }: Props) {
   }
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="quick-capture-overlay"
-          onClick={onClose}
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={easeQuick}
-        >
-          <motion.div
-            className="quick-capture-modal"
-            onClick={(e) => e.stopPropagation()}
-            variants={modalVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={easeOutSoft}
-          >
+    <AnimePresence show={open} kind="overlay">
+      <div className="quick-capture-overlay" onClick={onClose}>
+        <div className="quick-capture-modal" onClick={(e) => e.stopPropagation()}>
             <div className="quick-capture-header">
               <div className="flex items-center gap-2 font-medium">
                 <Zap className="size-4 text-accent" />
@@ -119,25 +101,16 @@ export function QuickCapture({ ownerId, open, onClose, onCreated }: Props) {
                 {saving ? "Saving…" : "Save entry"}
               </button>
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </div>
+      </div>
+    </AnimePresence>
   );
 }
 
 export function QuickCaptureFab({ onClick }: { onClick: () => void }) {
   return (
-    <motion.button
-      type="button"
-      className="quick-capture-fab"
-      onClick={onClick}
-      aria-label="Quick capture"
-      whileHover={{ scale: 1.08 }}
-      whileTap={{ scale: 0.92 }}
-      transition={easeOutSoft}
-    >
+    <button type="button" className="quick-capture-fab" onClick={onClick} aria-label="Quick capture">
       <Zap className="size-5" />
-    </motion.button>
+    </button>
   );
 }

@@ -1,20 +1,20 @@
 "use client";
 
 import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
   closestCenter,
+  DndContext,
+  type DragEndEvent,
+  type DragMoveEvent,
+  DragOverlay,
+  type DragStartEvent,
+  PointerSensor,
   useDraggable,
   useDroppable,
   useSensor,
   useSensors,
-  type DragEndEvent,
-  type DragMoveEvent,
-  type DragStartEvent,
 } from "@dnd-kit/core";
-import { useMutation, useQuery } from "convex/react";
 import { useDebouncedValue } from "@tanstack/react-pacer";
+import { useMutation, useQuery } from "convex/react";
 import {
   Archive,
   CalendarDays,
@@ -37,25 +37,18 @@ import {
   Trash2,
   Zap,
 } from "lucide-react";
-import { motion } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
-import { api } from "../../convex/_generated/api";
-import type { Doc, Id } from "../../convex/_generated/dataModel";
+import { type Ref, useEffect, useMemo, useState } from "react";
 import { toDailyKey } from "@/lib/daily";
 import { isFolder } from "@/lib/item-kinds";
-import {
-  SIDEBAR_WIDTH,
-  sidebarDrawerVariants,
-  sidebarPanelVariants,
-  sidebarSlotVariants,
-  sidebarSpring,
-} from "@/lib/motion";
+import { SIDEBAR_WIDTH } from "@/lib/motion";
 import { searchNotes } from "@/lib/search";
+import { api } from "../../convex/_generated/api";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
+import { AuthControls } from "./auth-controls";
 import { ConnectionStatus } from "./connection-status";
 import { CreateMenu } from "./create-menu";
 import { MoveDialog } from "./move-dialog";
 import { SharePanel } from "./share-panel";
-import { AuthControls } from "./auth-controls";
 import { useToast } from "./toast";
 import { VirtualList } from "./virtual-list";
 
@@ -104,6 +97,7 @@ type Props = {
   onQuickCapture: () => void;
   /** Increment to open the vault share panel (e.g. from ⌘K). */
   openShareSignal?: number;
+  slotRef?: Ref<HTMLDivElement>;
 };
 
 export function Sidebar({
@@ -125,6 +119,7 @@ export function Sidebar({
   onCreateCollection,
   onQuickCapture,
   openShareSignal = 0,
+  slotRef,
 }: Props) {
   const toast = useToast();
   const [search, setSearch] = useState("");
@@ -440,22 +435,10 @@ export function Sidebar({
   ];
 
   return (
-    <motion.div
-      className={mobile ? "sidebar-slot sidebar-slot-mobile" : "sidebar-slot"}
-      variants={mobile ? sidebarDrawerVariants : sidebarSlotVariants}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      transition={sidebarSpring}
-    >
-      <motion.aside
+    <div ref={slotRef} className={mobile ? "sidebar-slot sidebar-slot-mobile" : "sidebar-slot"}>
+      <aside
         className="sidebar"
         data-tour="sidebar"
-        variants={mobile ? undefined : sidebarPanelVariants}
-        initial={mobile ? false : "hidden"}
-        animate={mobile ? undefined : "visible"}
-        exit={mobile ? undefined : "exit"}
-        transition={sidebarSpring}
         style={mobile ? undefined : { width: SIDEBAR_WIDTH }}
       >
         <div className="sidebar-header">
@@ -942,8 +925,8 @@ export function Sidebar({
           ownerId={ownerId}
           noteIds={[...selectedIds] as Id<"notes">[]}
         />
-      </motion.aside>
-    </motion.div>
+      </aside>
+    </div>
   );
 }
 

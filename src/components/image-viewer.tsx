@@ -10,7 +10,6 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import {
   useCallback,
   useEffect,
@@ -21,7 +20,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { easeOutSoft, overlayVariants } from "@/lib/motion";
+import { AnimePresence } from "@/lib/anime-ui";
 
 export type ImageViewerItem = {
   src: string;
@@ -169,19 +168,13 @@ export function ImageViewer({ open, onClose, images, index = 0, onIndexChange }:
   if (!mounted) return null;
 
   return createPortal(
-    <AnimatePresence>
-      {open && current && (
-        <motion.div
-          className="image-viewer"
-          role="dialog"
-          aria-modal="true"
-          aria-label={current.alt || "Image viewer"}
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={{ duration: 0.18 }}
-        >
+    <AnimePresence show={open && !!current} kind="overlay">
+      <div
+        className="image-viewer"
+        role="dialog"
+        aria-modal="true"
+        aria-label={current?.alt || "Image viewer"}
+      >
           <button
             type="button"
             className="image-viewer-backdrop"
@@ -191,7 +184,7 @@ export function ImageViewer({ open, onClose, images, index = 0, onIndexChange }:
 
           <header className="image-viewer-bar">
             <div className="image-viewer-meta">
-              <p className="image-viewer-caption">{current.alt?.trim() || "Image"}</p>
+              <p className="image-viewer-caption">{current?.alt?.trim() || "Image"}</p>
               {hasGallery && (
                 <span className="image-viewer-count">
                   {active + 1} / {images.length}
@@ -220,7 +213,7 @@ export function ImageViewer({ open, onClose, images, index = 0, onIndexChange }:
               </ToolBtn>
               <a
                 className="image-viewer-tool"
-                href={current.src}
+                href={current?.src}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Open original"
@@ -246,15 +239,12 @@ export function ImageViewer({ open, onClose, images, index = 0, onIndexChange }:
             onPointerCancel={onPointerUp}
             onDoubleClick={onDoubleClick}
           >
-            <motion.img
-              key={current.src}
-              src={current.src}
-              alt={current.alt || "Image"}
+            <img
+              key={current?.src}
+              src={current?.src}
+              alt={current?.alt || "Image"}
               className="image-viewer-img"
               draggable={false}
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={easeOutSoft}
               style={{
                 transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
               }}
@@ -286,9 +276,8 @@ export function ImageViewer({ open, onClose, images, index = 0, onIndexChange }:
             Scroll to zoom · drag to pan · Esc to close
             {hasGallery ? " · ← → to browse" : ""}
           </p>
-        </motion.div>
-      )}
-    </AnimatePresence>,
+      </div>
+    </AnimePresence>,
     document.body,
   );
 }

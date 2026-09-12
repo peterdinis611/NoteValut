@@ -23,7 +23,6 @@ import {
   Upload,
   Zap,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
@@ -40,7 +39,7 @@ import {
   rememberSearch,
   subscribeRecentSearches,
 } from "@/lib/cmd-recent";
-import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
+import { AnimePresence } from "@/lib/anime-ui";
 import { snippetAround } from "@/lib/block-search";
 import { blocksToSearchText } from "@/lib/block-search";
 
@@ -238,26 +237,15 @@ export function CommandPalette({
   const highlightQ = searchBare || tagQuery;
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="cmd-overlay"
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={easeQuick}
-          onClick={onClose}
+    <AnimePresence show={open} kind="overlay">
+      <div className="cmd-overlay" onClick={onClose}>
+        <div
+          className="cmd-palette"
+          role="dialog"
+          aria-modal
+          aria-label="Command palette"
+          onClick={(e) => e.stopPropagation()}
         >
-          <motion.div
-            className="cmd-palette"
-            role="dialog"
-            aria-modal
-            aria-label="Command palette"
-            variants={modalVariants}
-            transition={easeOutSoft}
-            onClick={(e) => e.stopPropagation()}
-          >
             <div className="cmd-input-row">
               <Search className="size-4 text-muted" />
               <input
@@ -410,10 +398,9 @@ export function CommandPalette({
                 })
               )}
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </div>
+      </div>
+    </AnimePresence>
   );
 }
 

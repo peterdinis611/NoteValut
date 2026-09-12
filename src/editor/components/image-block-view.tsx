@@ -11,7 +11,6 @@ import {
   Link2,
   Trash2,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import {
   useEffect,
   useRef,
@@ -22,7 +21,7 @@ import {
 import { ImageViewer } from "@/components/image-viewer";
 import { MediaUploadButton } from "@/components/media-upload-button";
 import { useToast } from "@/components/toast";
-import { easeOutSoft, dropdownVariants } from "@/lib/motion";
+import { AnimePresence } from "@/lib/anime-ui";
 import type { BlockRenderProps } from "../types";
 
 const MIN_WIDTH = 25;
@@ -224,15 +223,9 @@ export function ImageBlockView(props: BlockRenderProps) {
         className={`nv-image-shell ${showChrome ? "nv-image-shell-active" : ""} ${selected ? "nv-image-shell-selected" : ""}`}
         style={{ width: `${width}%` }}
       >
-        <AnimatePresence>
-          {showChrome && (
-            <motion.div
+        <AnimePresence show={showChrome} kind="dropdown">
+            <div
               className="nv-image-toolbar"
-              variants={dropdownVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              transition={easeOutSoft}
               onMouseDown={(e) => e.preventDefault()}
             >
               <div className="nv-image-toolbar-group">
@@ -297,19 +290,11 @@ export function ImageBlockView(props: BlockRenderProps) {
               >
                 <Trash2 className="size-3.5" />
               </Tool>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+        </AnimePresence>
 
-        <AnimatePresence>
-          {editingUrl && !props.readOnly && (
-            <motion.div
-              className="nv-image-url-bar nv-image-url-bar-overlay"
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.15 }}
-            >
+        <AnimePresence show={editingUrl && !props.readOnly} kind="dropdown">
+            <div className="nv-image-url-bar nv-image-url-bar-overlay">
               <Link2 className="size-3.5 shrink-0 opacity-50" />
               <input
                 ref={urlRef}
@@ -337,9 +322,8 @@ export function ImageBlockView(props: BlockRenderProps) {
               >
                 Save
               </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+        </AnimePresence>
 
         <button
           type="button"

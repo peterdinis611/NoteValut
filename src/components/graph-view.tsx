@@ -1,12 +1,11 @@
 "use client";
 
 import { Network, Search, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
+import { AnimePresence } from "@/lib/anime-ui";
 import { isFolder } from "@/lib/item-kinds";
-import { easeOutSoft, modalVariants, overlayVariants } from "@/lib/motion";
 
 type Node = {
   id: string;
@@ -197,31 +196,16 @@ export function GraphView({ open, onClose, notes, onNavigate }: Props) {
   const byId = new Map(nodes.map((n) => [n.id, n]));
 
   return createPortal(
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="graph-overlay"
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-        >
-          <button type="button" className="graph-backdrop" aria-label="Close" onClick={onClose} />
-          <motion.div
-            className="graph-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Page graph"
-            variants={modalVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={easeOutSoft}
-          >
+    <AnimePresence show={open} kind="overlay">
+      <div className="graph-overlay">
+        <button type="button" className="graph-backdrop" aria-label="Close" onClick={onClose} />
+        <div className="graph-panel" role="dialog" aria-modal="true" aria-label="Page graph">
             <header className="graph-head">
               <div className="graph-title-row">
                 <Network className="size-4 text-accent" />
-                <h2 className="graph-title">Page graph</h2>
+                <h2 className="graph-title">
+                  Page <em>graph</em>
+                </h2>
               </div>
               <button type="button" className="graph-close" aria-label="Close" onClick={onClose}>
                 <X className="size-4" />
@@ -298,10 +282,9 @@ export function GraphView({ open, onClose, notes, onNavigate }: Props) {
                 </svg>
               )}
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>,
+        </div>
+      </div>
+    </AnimePresence>,
     document.body,
   );
 }

@@ -1,14 +1,13 @@
 "use client";
 
 import { Expand, FileText, Link2, Trash2, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MediaUploadButton } from "@/components/media-upload-button";
 import { PdfViewer } from "@/components/pdf-viewer";
 import { useToast } from "@/components/toast";
 import { useVaultUpload } from "@/hooks/use-vault-upload";
-import { easeOutSoft, overlayVariants } from "@/lib/motion";
+import { AnimePresence } from "@/lib/anime-ui";
 import type { BlockRenderProps } from "../types";
 
 export function PdfBlockView(props: BlockRenderProps) {
@@ -221,14 +220,8 @@ export function PdfBlockView(props: BlockRenderProps) {
         </div>
       )}
 
-      <AnimatePresence>
-        {editingUrl && !props.readOnly && (
-          <motion.div
-            className="nv-pdf-url-bar"
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-          >
+      <AnimePresence show={editingUrl && !props.readOnly} kind="dropdown">
+          <div className="nv-pdf-url-bar">
             <Link2 className="size-3.5 shrink-0 opacity-50" />
             <input
               ref={urlRef}
@@ -267,9 +260,8 @@ export function PdfBlockView(props: BlockRenderProps) {
               }}
               onError={(msg) => toast.error(msg)}
             />
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+      </AnimePresence>
 
       <PdfViewer
         src={url}
@@ -280,18 +272,12 @@ export function PdfBlockView(props: BlockRenderProps) {
 
       {mounted &&
         createPortal(
-          <AnimatePresence>
-            {fullscreen && (
-              <motion.div
+          <AnimePresence show={fullscreen} kind="overlay">
+              <div
                 className="nv-pdf-overlay"
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}
-                variants={overlayVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                transition={{ duration: 0.18 }}
               >
                 <button
                   type="button"
@@ -299,13 +285,8 @@ export function PdfBlockView(props: BlockRenderProps) {
                   aria-label="Close PDF viewer"
                   onClick={() => setFullscreen(false)}
                 />
-                <motion.div
-                  className="nv-pdf-overlay-panel"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  transition={easeOutSoft}
-                >
+                <AnimePresence show={fullscreen} kind="modal">
+                  <div className="nv-pdf-overlay-panel">
                   <button
                     type="button"
                     className="nv-pdf-overlay-close"
@@ -320,10 +301,10 @@ export function PdfBlockView(props: BlockRenderProps) {
                     fullscreen
                     onToggleFullscreen={() => setFullscreen(false)}
                   />
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>,
+                  </div>
+                </AnimePresence>
+              </div>
+          </AnimePresence>,
           document.body,
         )}
     </div>

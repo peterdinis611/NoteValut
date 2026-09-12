@@ -1,11 +1,10 @@
 "use client";
 
 import { FileText, FolderOpen, Trash2 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef } from "react";
 import { removeCustomTemplate } from "@/db/templates-collection";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
-import { dropdownVariants, easeOutSoft } from "@/lib/motion";
+import { AnimePresence } from "@/lib/anime-ui";
 import { PAGE_TEMPLATES } from "@/lib/templates";
 
 type Props = {
@@ -33,17 +32,8 @@ export function CreateMenu({ open, onClose, onCreateEntry, onCreateCollection }:
   }, [open, onClose]);
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          ref={ref}
-          className="create-menu"
-          variants={dropdownVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={easeOutSoft}
-        >
+    <AnimePresence show={open} kind="dropdown">
+      <div ref={ref} className="create-menu">
           <p className="create-menu-label">Create new</p>
           <button
             type="button"
@@ -116,9 +106,8 @@ export function CreateMenu({ open, onClose, onCreateEntry, onCreateCollection }:
               </span>
             </button>
           ))}
-        </motion.div>
-      )}
-    </AnimatePresence>
+      </div>
+    </AnimePresence>
   );
 }
 

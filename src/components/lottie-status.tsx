@@ -2,14 +2,13 @@
 
 import Lottie from "lottie-react";
 import { ChevronDown, Copy, Check, Home, RefreshCw } from "lucide-react";
-import { motion } from "motion/react";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import errorAnimation from "@/assets/lottie/error.json";
 import loadingAnimation from "@/assets/lottie/loading.json";
 import notAuthorizedAnimation from "@/assets/lottie/not-authorized.json";
 import notFoundAnimation from "@/assets/lottie/not-found.json";
-import { easeOutSoft } from "@/lib/motion";
+import { playFolioPageMotion } from "@/lib/folio-page-motion";
 
 export type StatusVariant = "loading" | "error" | "not-found" | "not-authorized";
 
@@ -49,6 +48,17 @@ type Props = {
   children?: ReactNode;
   compact?: boolean;
 };
+
+function FolioHeading({ text }: { text: string }) {
+  const parts = text.trim().split(/\s+/);
+  if (parts.length < 2) return <>{text}</>;
+  const last = parts.pop() as string;
+  return (
+    <>
+      {parts.join(" ")} <em>{last}</em>
+    </>
+  );
+}
 
 function actionIcon(label: string) {
   const key = label.toLowerCase();
@@ -94,6 +104,7 @@ export function LottieStatus({
   children,
   compact = false,
 }: Props) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const loop = variant === "loading" || variant === "not-found" || variant === "not-authorized";
   const hasDetail =
     Boolean(detail?.trim()) || Boolean(detailRows?.length) || Boolean(detailStack?.trim());
@@ -107,15 +118,24 @@ export function LottieStatus({
     .filter(Boolean)
     .join("\n");
 
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    return playFolioPageMotion(root);
+  }, []);
+
   return (
-    <div className={`status-page status-page-${variant} ${compact ? "status-page-compact" : ""}`}>
-      <div className="status-glow" aria-hidden />
-      <motion.div
-        className="status-shell"
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={easeOutSoft}
-      >
+    <div
+      ref={rootRef}
+      className={`status-page status-page-${variant} ${compact ? "status-page-compact" : ""}`}
+    >
+      <div className="status-shell nv-folio-await">
+        {compact ? null : (
+          <Link href="/" className="status-logo">
+            <span className="status-logo-mark" aria-hidden />
+            NoteVault
+          </Link>
+        )}
         <div className={`status-lottie status-lottie-${variant}`}>
           <Lottie
             animationData={ANIMATIONS[variant]}
@@ -124,8 +144,10 @@ export function LottieStatus({
             style={{ width: "100%", height: "100%" }}
           />
         </div>
-        <p className="status-kicker">NoteVault</p>
-        <h1 className="status-title">{title}</h1>
+        <p className="status-kicker">{compact ? "NoteVault" : variant.replace("-", " ")}</p>
+        <h1 className="status-title">
+          <FolioHeading text={title} />
+        </h1>
         <p className="status-description">{description}</p>
 
         {detailPreview ? (
@@ -195,7 +217,7 @@ export function LottieStatus({
             })}
           </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }
