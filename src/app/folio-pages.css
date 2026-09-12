@@ -28,6 +28,14 @@
   box-shadow: var(--folio-shadow-sm);
 }
 
+.quick-capture-fab {
+  border: var(--folio-border);
+  border-radius: var(--folio-radius);
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--folio-shadow);
+}
+
 .sidebar-search {
   border-radius: var(--folio-radius);
   border: 1.4px solid color-mix(in srgb, var(--foreground) 28%, transparent);

@@ -68,7 +68,7 @@ const PRESETS: Record<AnimeKind, { enter: Record<string, unknown>; exit: Record<
   },
 };
 
-export function playAnime(el: Element, kind: AnimeKind, dir: "enter" | "exit") {
+export function playAnime(el: Element, kind: AnimeKind, dir: "enter" | "exit"): Promise<void> {
   if (reducedMotion()) {
     if (el instanceof HTMLElement) {
       el.style.opacity = dir === "exit" ? "0" : "1";
@@ -76,7 +76,15 @@ export function playAnime(el: Element, kind: AnimeKind, dir: "enter" | "exit") {
     }
     return Promise.resolve();
   }
-  return animate(el, PRESETS[kind][dir]);
+  const anim = animate(el, PRESETS[kind][dir]);
+  return new Promise((resolve) => {
+    const done = () => resolve();
+    if (anim && typeof (anim as { then?: unknown }).then === "function") {
+      void Promise.resolve(anim as PromiseLike<unknown>).then(done, done);
+      return;
+    }
+    window.setTimeout(done, Number(PRESETS[kind][dir].duration) || 280);
+  });
 }
 
 function assignRef<T>(ref: Ref<T> | undefined, value: T | null) {
@@ -124,7 +132,7 @@ export function useAnimePresence<T extends HTMLElement = HTMLElement>(
       return;
     }
     let alive = true;
-    void Promise.resolve(playAnime(el, kind, "exit")).finally(() => {
+    void playAnime(el, kind, "exit").then(() => {
       if (alive && !showRef.current) setMounted(false);
     });
     return () => {

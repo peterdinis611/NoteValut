@@ -66,6 +66,7 @@ export const THEME_PRESETS: Record<
       "--muted": "#6d6458",
       "--accent": "#e8611a",
       "--accent-soft": "rgba(232, 97, 26, 0.14)",
+      "--accent-bright": "#e8611a",
       "--accent-ink": "#fffaf2",
       "--topbar": "#fbf8f2",
       "--lilac": "#cbb6ee",
@@ -87,7 +88,10 @@ export const THEME_PRESETS: Record<
       "--muted": "rgba(150, 180, 205, 0.58)",
       "--accent": "#5eb0e0",
       "--accent-soft": "rgba(94, 176, 224, 0.14)",
+      "--accent-bright": "#7ec8ee",
+      "--accent-ink": "#0c1218",
       "--topbar": "#0c1218",
+      "--lilac": "#8eb4d4",
     },
   },
   violet: {
@@ -106,7 +110,10 @@ export const THEME_PRESETS: Record<
       "--muted": "rgba(200, 170, 190, 0.55)",
       "--accent": "#c48ab8",
       "--accent-soft": "rgba(196, 138, 184, 0.15)",
+      "--accent-bright": "#d4a4c8",
+      "--accent-ink": "#151218",
       "--topbar": "#151218",
+      "--lilac": "#cbb6ee",
     },
   },
   rose: {
@@ -125,7 +132,10 @@ export const THEME_PRESETS: Record<
       "--muted": "rgba(210, 165, 145, 0.55)",
       "--accent": "#d4846a",
       "--accent-soft": "rgba(212, 132, 106, 0.15)",
+      "--accent-bright": "#e49a82",
+      "--accent-ink": "#161210",
       "--topbar": "#161210",
+      "--lilac": "#e0c4b0",
     },
   },
   forest: {
@@ -144,7 +154,10 @@ export const THEME_PRESETS: Record<
       "--muted": "rgba(156, 184, 168, 0.62)",
       "--accent": "#c8f542",
       "--accent-soft": "rgba(200, 245, 66, 0.14)",
+      "--accent-bright": "#c8f542",
+      "--accent-ink": "#0a1210",
       "--topbar": "#0a1210",
+      "--lilac": "#8fb89a",
     },
   },
   slate: {
@@ -163,7 +176,10 @@ export const THEME_PRESETS: Record<
       "--muted": "rgba(155, 165, 180, 0.58)",
       "--accent": "#9aa3b2",
       "--accent-soft": "rgba(154, 163, 178, 0.14)",
+      "--accent-bright": "#b4bcc8",
+      "--accent-ink": "#12141a",
       "--topbar": "#12141a",
+      "--lilac": "#a8b0c0",
     },
   },
 };
@@ -171,6 +187,8 @@ export const THEME_PRESETS: Record<
 const STYLE_ID = "nv-custom-theme-css";
 const FONT_STYLE_ID = "nv-custom-font-css";
 const FONT_LINK_ID = "nv-custom-font-link";
+/** One-shot: previous house look was Phosphor (`forest`). */
+const FOLIO_HOUSE_MIGRATION_KEY = "notevault.folio-house-v1";
 
 const DEFAULT_SETTINGS: SettingsRecord = {
   id: "vault",
@@ -208,17 +226,56 @@ export function readSettings(): SettingsRecord {
 /** Ensure a settings row exists (call from effects / mutations, not getSnapshot). */
 export function ensureSettingsRow(): SettingsRecord {
   const existing = settingsCollection.get("vault");
-  if (existing) return normalizeSettings(existing);
-  const defaults: SettingsRecord = { ...DEFAULT_SETTINGS, updatedAt: Date.now() };
-  if (typeof window !== "undefined") {
-    settingsCollection.insert(defaults);
+  if (!existing) {
+    const defaults: SettingsRecord = { ...DEFAULT_SETTINGS, updatedAt: Date.now() };
+    if (typeof window !== "undefined") {
+      settingsCollection.insert(defaults);
+    }
+    markFolioHouseMigrated();
+    return defaults;
   }
-  return defaults;
+  return migrateHouseThemeToFolio(normalizeSettings(existing));
 }
 
 export function getSettings(): SettingsRecord {
   if (typeof window === "undefined") return SERVER_SETTINGS_SNAPSHOT;
   return ensureSettingsRow();
+}
+
+function markFolioHouseMigrated() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(FOLIO_HOUSE_MIGRATION_KEY, "1");
+  } catch {
+    /* private mode */
+  }
+}
+
+function folioHouseMigrated(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return window.localStorage.getItem(FOLIO_HOUSE_MIGRATION_KEY) === "1";
+  } catch {
+    return true;
+  }
+}
+
+/** Move vaults still on the old Phosphor house theme onto Folio. */
+function migrateHouseThemeToFolio(record: SettingsRecord): SettingsRecord {
+  if (folioHouseMigrated()) return record;
+  if (record.themeId !== "forest") {
+    markFolioHouseMigrated();
+    return record;
+  }
+  const next = normalizeSettings({
+    ...record,
+    themeId: "default",
+    updatedAt: Date.now(),
+    id: "vault",
+  });
+  writeSettings(next);
+  markFolioHouseMigrated();
+  return next;
 }
 
 function writeSettings(next: SettingsRecord) {
@@ -346,8 +403,11 @@ export function applyTheme(settings?: SettingsRecord) {
   const accent = preset.vars["--accent"];
   const background = preset.vars["--background"] ?? "#fbf8f2";
   if (accent) {
-    root.style.setProperty("--accent-bright", `color-mix(in srgb, ${accent} 72%, #fff)`);
-    root.style.setProperty("--accent-ink", preset.vars["--accent-ink"] ?? background);
+    root.style.setProperty("--accent-bright", preset.vars["--accent-bright"] ?? accent);
+    root.style.setProperty("--accent-ink", preset.vars["--accent-ink"] ?? "#fffaf2");
+  }
+  if (preset.vars["--lilac"]) {
+    root.style.setProperty("--lilac", preset.vars["--lilac"]);
   }
 
   const hex = background.replace("#", "");

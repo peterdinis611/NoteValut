@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useLayoutEffect, useSyncExternalStore } from "react";
+import { migrateLegacyLocalStorageOnce } from "@/db/migrate-legacy";
 import {
   applyTheme,
   ensureSettingsRow,
   readSettings,
-  settingsCollection,
   SERVER_SETTINGS_SNAPSHOT,
   type SettingsRecord,
+  settingsCollection,
 } from "@/db/settings-collection";
-import { migrateLegacyLocalStorageOnce } from "@/db/migrate-legacy";
 
 let snapshot: SettingsRecord = SERVER_SETTINGS_SNAPSHOT;
 
@@ -68,11 +68,17 @@ function getServerSnapshot(): SettingsRecord {
 export function useVaultSettings(): SettingsRecord {
   const record = useSyncExternalStore(subscribeSettings, getClientSnapshot, getServerSnapshot);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     migrateLegacyLocalStorageOnce();
-    ensureSettingsRow();
-    applyTheme(record);
-  }, [record]);
+    applyTheme(ensureSettingsRow());
+  }, [
+    record.themeId,
+    record.customCss,
+    record.fontMode,
+    record.fontFamily,
+    record.fontUrl,
+    record.fontDataUrl,
+  ]);
 
   return record;
 }

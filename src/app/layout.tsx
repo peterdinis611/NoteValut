@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Calistoga, Fraunces, IBM_Plex_Mono, Sora, Young_Serif } from "next/font/google";
 import { ConvexClientProvider } from "@/components/providers";
 import { PwaRegister } from "@/components/pwa-register";
+import { ThemeBoot } from "@/components/theme-boot";
 import { clerkAppearance } from "@/lib/clerk-appearance";
 import "./globals.css";
 import "./folio-pages.css";
@@ -73,6 +74,7 @@ export default function RootLayout({
     >
       <body className="min-h-full font-sans nv-atmosphere">
         <ClerkProvider appearance={clerkAppearance}>
+          <ThemeBoot />
           <ConvexClientProvider>{children}</ConvexClientProvider>
           <PwaRegister />
         </ClerkProvider>

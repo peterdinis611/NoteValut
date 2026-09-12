@@ -17,7 +17,7 @@ type SpinnerProps = {
 };
 
 /**
- * Lightweight Phosphor spinner — safe in Server and Client Components.
+ * Lightweight Folio spinner — safe in Server and Client Components.
  */
 export function Spinner({
   size = "md",

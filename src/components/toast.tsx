@@ -50,7 +50,7 @@ function ToastCard({ toast, onGone }: { toast: ToastItem; onGone: (id: string) =
     if (closingRef.current) return;
     closingRef.current = true;
     const el = ref.current;
-    void (el ? playAnime(el, "toast", "exit") : Promise.resolve()).finally(() => onGone(toast.id));
+    void (el ? playAnime(el, "toast", "exit") : Promise.resolve()).then(() => onGone(toast.id));
   }
 
   useEffect(() => {

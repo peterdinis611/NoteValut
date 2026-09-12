@@ -3,13 +3,13 @@
 import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
-  WEEKDAY_LABELS,
   formatMonthLabel,
   isTodayKey,
   monthCursorFromKey,
   monthGridKeys,
   shiftMonth,
   toDailyKey,
+  WEEKDAY_LABELS,
 } from "@/lib/daily";
 
 type Props = {
@@ -34,7 +34,7 @@ function formatChip(dueAt: number) {
   });
 }
 
-/** Phosphor-styled due date chip + mini month popover (replaces native date input). */
+/** Folio-styled due date chip + mini month popover (replaces native date input). */
 export function DueDatePicker({ value, overdue, readOnly, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const selectedKey = value ? toDailyKey(new Date(value)) : null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, type ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { PreloadSpinner, type SpinnerSize } from "./spinner";
 
 type Props = {
@@ -13,7 +13,7 @@ type Props = {
 };
 
 /**
- * Client Suspense wrapper with a Phosphor preload spinner fallback.
+ * Client Suspense wrapper with a Folio preload spinner fallback.
  */
 export function SuspenseBoundary({
   children,

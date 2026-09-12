@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "highlight.js/styles/atom-one-dark.css";
+@import "highlight.js/styles/atom-one-light.css";
 
 /* NoteVault theme — Folio (paper, ink, brew) */
 :root {
@@ -13,7 +13,7 @@
   --muted: #6d6458;
   --accent: #e8611a;
   --accent-soft: rgba(232, 97, 26, 0.14);
-  --accent-bright: #f07a38;
+  --accent-bright: #e8611a;
   --accent-ink: #fffaf2;
   --topbar: #fbf8f2;
   --grid-line: rgba(23, 20, 18, 0.05);
@@ -230,9 +230,8 @@ body {
   flex-direction: column;
   border-right: 1px solid var(--border);
   background:
-    radial-gradient(ellipse 120% 55% at 0% -5%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%),
-    radial-gradient(ellipse 80% 40% at 100% 100%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 50%),
-    linear-gradient(180deg, color-mix(in srgb, var(--sidebar) 88%, #fff) 0%, var(--sidebar) 100%);
+    radial-gradient(ellipse 120% 55% at 0% -5%, color-mix(in srgb, var(--lilac) 28%, transparent), transparent 55%),
+    var(--sidebar);
   color: var(--foreground);
   will-change: transform, opacity;
 }
@@ -1452,7 +1451,7 @@ body {
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgb(18 21 28 / 0.35) 0%,
+    color-mix(in srgb, var(--foreground) 18%, transparent) 0%,
     var(--background) 92%
   );
 }
@@ -2913,8 +2912,8 @@ body {
   justify-content: center;
   border-radius: 999px;
   background: var(--accent);
-  color: #0f1419;
-  box-shadow: 0 4px 20px rgba(45, 212, 191, 0.35);
+  color: var(--accent-ink);
+  box-shadow: 3px 3px 0 var(--foreground);
   transition: transform 0.15s;
 }
 .quick-capture-fab:hover { transform: scale(1.05); }
@@ -6869,7 +6868,7 @@ body {
   margin: 0;
 }
 
-/* Shared Phosphor spinners / preload (Server + Client safe) */
+/* Shared Folio spinners / preload (Server + Client safe) */
 .nv-spinner {
   display: inline-flex;
   align-items: center;
