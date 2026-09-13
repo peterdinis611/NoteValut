@@ -8,6 +8,8 @@
   position: relative;
   z-index: 50;
   min-height: 100dvh;
+  width: 100%;
+  overflow-x: clip;
   color: var(--ink);
   background: var(--paper);
   color-scheme: light;
@@ -15,15 +17,18 @@
 }
 
 .nv-land {
+  box-sizing: border-box;
+  width: 100%;
   max-width: 78rem;
   margin: 0 auto;
-  padding: 0 1.4rem 3.5rem;
+  padding: 0 clamp(1rem, 4vw, 1.4rem) 3.5rem;
 }
 
 .nv-land-nav {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  position: relative;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
   padding: 1.15rem 0 0.4rem;
 }
@@ -103,10 +108,12 @@
   margin: 0 auto 0.4rem;
   text-align: center;
   font-family: var(--font-land-display), "Calistoga", "Young Serif", serif;
-  font-size: clamp(2.6rem, 8vw, 4.6rem);
+  font-size: clamp(2.05rem, 9vw, 4.6rem);
   font-weight: 400;
   line-height: 0.95;
   letter-spacing: -0.03em;
+  max-width: 100%;
+  overflow-wrap: balance;
 }
 
 .nv-land-hero h1 .nv-land-line {
@@ -133,6 +140,22 @@
   align-items: center;
   gap: 1.2rem;
   margin-top: 0.6rem;
+}
+
+.nv-land-col-left,
+.nv-land-col-right {
+  align-items: center;
+  text-align: center;
+}
+
+.nv-land-col-left .nv-land-stat,
+.nv-land-col-right .nv-land-blurb {
+  margin-inline: auto;
+}
+
+.nv-land-col-right .nv-land-order,
+.nv-land-col-right .nv-land-proof {
+  margin-inline: auto;
 }
 
 .nv-land-art-wrap {
@@ -261,7 +284,7 @@
 
 .nv-land-bento article {
   position: relative;
-  padding: 1.15rem 5.4rem 1.15rem 1.1rem;
+  padding: 1.15rem 4.6rem 1.15rem 1.1rem;
   border: 1.6px solid var(--ink);
   background: #fff;
   box-shadow: 4px 4px 0 var(--ink);
@@ -370,13 +393,33 @@
 
 @media (min-width: 900px) {
   .nv-land-pill {
+    position: absolute;
+    left: 50%;
+    top: 50%;
     display: flex;
+    transform: translate(-50%, -50%);
   }
 
   .nv-land-board {
     grid-template-columns: 0.85fr 1.4fr 0.95fr;
     align-items: end;
     min-height: 22rem;
+  }
+
+  .nv-land-col-left,
+  .nv-land-col-right {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .nv-land-col-left .nv-land-stat,
+  .nv-land-col-right .nv-land-blurb {
+    margin-inline: 0;
+  }
+
+  .nv-land-col-right .nv-land-order,
+  .nv-land-col-right .nv-land-proof {
+    margin-inline: 0;
   }
 
   .nv-land-art-wrap {
@@ -407,10 +450,10 @@
   }
 }
 
-.nv-land-motion .nv-land-await,
-.nv-land-motion .nv-land-word,
-.nv-land-motion .nv-land-faces span,
-.nv-land-motion .nv-land-proof p {
+.nv-land-motion.nv-land-animating .nv-land-await,
+.nv-land-motion.nv-land-animating .nv-land-word,
+.nv-land-motion.nv-land-animating .nv-land-faces span,
+.nv-land-motion.nv-land-animating .nv-land-proof p {
   opacity: 0;
 }
 
@@ -779,7 +822,11 @@
   .nv-land-motion .nv-land-await,
   .nv-land-motion .nv-land-word,
   .nv-land-motion .nv-land-faces span,
-  .nv-land-motion .nv-land-proof p {
+  .nv-land-motion .nv-land-proof p,
+  .nv-land-motion.nv-land-animating .nv-land-await,
+  .nv-land-motion.nv-land-animating .nv-land-word,
+  .nv-land-motion.nv-land-animating .nv-land-faces span,
+  .nv-land-motion.nv-land-animating .nv-land-proof p {
     opacity: 1;
   }
 

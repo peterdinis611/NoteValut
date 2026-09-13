@@ -565,12 +565,13 @@
   animation: none;
 }
 
-.nv-folio-motion .nv-folio-await {
+.nv-folio-motion.nv-folio-animating .nv-folio-await {
   opacity: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nv-folio-motion .nv-folio-await {
+  .nv-folio-motion .nv-folio-await,
+  .nv-folio-motion.nv-folio-animating .nv-folio-await {
     opacity: 1;
   }
 

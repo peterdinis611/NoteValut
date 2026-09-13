@@ -9,6 +9,18 @@ import {
   stagger,
 } from "animejs";
 
+const MOTION_TARGETS =
+  ".nv-land-await, .nv-land-word, .nv-land-faces span, .nv-land-proof p, .nv-land-bento article, #how li, #features h2, #how h2, .nv-land-cta, .nv-land-foot, .nv-land-art-wrap";
+
+function clearLandingMotion(root: HTMLElement) {
+  root.classList.remove("nv-land-motion", "nv-land-animating");
+  root.querySelectorAll<HTMLElement>(MOTION_TARGETS).forEach((el) => {
+    el.style.opacity = "";
+    el.style.transform = "";
+    el.style.translate = "";
+  });
+}
+
 export function playLandingMotion(root: HTMLElement) {
   const scope = createScope({
     root,
@@ -17,15 +29,30 @@ export function playLandingMotion(root: HTMLElement) {
     },
   });
 
+  let safetyTimer = 0;
+
   scope.add((self) => {
-    if (self.matches.reduce) {
-      root.classList.remove("nv-land-motion");
+    if (self?.matches.reduce) {
+      clearLandingMotion(root);
       return;
     }
 
-    root.classList.add("nv-land-motion");
+    root.classList.add("nv-land-motion", "nv-land-animating");
 
-    const tl = createTimeline({ defaults: { ease: "out(3)" } });
+    const tl = createTimeline({
+      defaults: { ease: "out(3)" },
+      onComplete: () => {
+        root.classList.remove("nv-land-animating");
+        window.clearTimeout(safetyTimer);
+      },
+    });
+
+    // Never leave the page invisible if the timeline stalls (resize / bfcache / Strict Mode).
+    safetyTimer = window.setTimeout(() => {
+      if (root.classList.contains("nv-land-animating")) {
+        clearLandingMotion(root);
+      }
+    }, 2200);
 
     tl.add(
       ".nv-land-nav",
@@ -175,7 +202,17 @@ export function playLandingMotion(root: HTMLElement) {
       btn.addEventListener("pointerleave", onLeave);
     });
 
+    const onVis = () => {
+      if (document.visibilityState === "visible" && root.classList.contains("nv-land-animating")) {
+        // Resume can stall after DevTools device toggles — fail open to visible UI.
+        if (tl.paused) clearLandingMotion(root);
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+
     return () => {
+      window.clearTimeout(safetyTimer);
+      document.removeEventListener("visibilitychange", onVis);
       orders.forEach((btn) => {
         btn.removeEventListener("pointerenter", onEnter);
         btn.removeEventListener("pointerleave", onLeave);
@@ -184,7 +221,8 @@ export function playLandingMotion(root: HTMLElement) {
   });
 
   return () => {
+    window.clearTimeout(safetyTimer);
     scope.revert();
-    root.classList.remove("nv-land-motion");
+    clearLandingMotion(root);
   };
 }

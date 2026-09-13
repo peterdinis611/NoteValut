@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Folio motion (anime.js)", () => {
-  test("landing plays anime.js and does not load Framer Motion", async ({ page }) => {
+  test("landing plays anime.js and becomes visible", async ({ page }) => {
     const urls: string[] = [];
     page.on("request", (req) => urls.push(req.url()));
 
@@ -9,6 +9,12 @@ test.describe("Folio motion (anime.js)", () => {
     const root = page.getByTestId("marketing-landing");
     await expect(root).toBeVisible({ timeout: 20_000 });
     await expect(root).toHaveClass(/nv-land-motion/, { timeout: 8_000 });
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 8_000 });
+    await expect
+      .poll(async () => page.locator(".nv-land-nav").evaluate((el) => getComputedStyle(el).opacity), {
+        timeout: 8_000,
+      })
+      .toBe("1");
 
     const resources = await page.evaluate(() =>
       performance.getEntriesByType("resource").map((e) => e.name),
