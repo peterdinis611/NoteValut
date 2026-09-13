@@ -48,6 +48,8 @@ export type EditorCommands = {
         | "layoutGroupId"
         | "columnIndex"
         | "columnCount"
+        | "syncedId"
+        | "mentionUserId"
       >
     >,
   ) => void;

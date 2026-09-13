@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, FolderOpen, Trash2 } from "lucide-react";
+import { FileText, FolderOpen, LayoutTemplate, Trash2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { removeCustomTemplate } from "@/db/templates-collection";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
@@ -12,9 +12,16 @@ type Props = {
   onClose: () => void;
   onCreateEntry: (templateId: string) => void;
   onCreateCollection: () => void;
+  onBrowseTemplates?: () => void;
 };
 
-export function CreateMenu({ open, onClose, onCreateEntry, onCreateCollection }: Props) {
+export function CreateMenu({
+  open,
+  onClose,
+  onCreateEntry,
+  onCreateCollection,
+  onBrowseTemplates,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const custom = useCustomTemplates();
 
@@ -49,6 +56,23 @@ export function CreateMenu({ open, onClose, onCreateEntry, onCreateCollection }:
               <span className="block text-xs text-muted">Folder to organize entries</span>
             </span>
           </button>
+
+          {onBrowseTemplates && (
+            <button
+              type="button"
+              className="create-menu-item"
+              onClick={() => {
+                onBrowseTemplates();
+                onClose();
+              }}
+            >
+              <LayoutTemplate className="size-4 text-accent" />
+              <span>
+                <span className="block text-sm font-medium">Browse templates</span>
+                <span className="block text-xs text-muted">Marketplace of page starters</span>
+              </span>
+            </button>
+          )}
 
           {custom.length > 0 && (
             <>

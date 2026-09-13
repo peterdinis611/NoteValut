@@ -247,15 +247,23 @@ export function useEditor(options: EditorOptions) {
                     command.type === "callout" ? (command.calloutVariant ?? "info") : undefined,
                   pageId: command.type === "pagelink" ? pages[0]?._id : undefined,
                   language:
-                    command.type === "code" ? (command.language ?? "auto") : undefined,
+                    command.type === "code"
+                      ? (command.language ?? "auto")
+                      : command.type === "math"
+                        ? (command.language ?? "latex")
+                        : undefined,
                   url: undefined,
+                  rows: command.type === "table" ? emptyTable() : undefined,
+                  syncedId:
+                    command.type === "synced" ? (b.syncedId ?? crypto.randomUUID()) : undefined,
                   label:
                     command.type === "custom"
                       ? (saved?.label ?? "Custom block")
                       : command.type === "link"
                         ? "Link"
-                        : undefined,
-                  rows: command.type === "table" ? emptyTable() : undefined,
+                        : command.type === "synced"
+                          ? "Synced block"
+                          : undefined,
                   layoutGroupId: undefined,
                   columnIndex: undefined,
                   columnCount: undefined,

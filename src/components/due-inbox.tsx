@@ -1,12 +1,20 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { CalendarClock, CheckCircle2, Inbox, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
-import { collectDueTasks, formatDueLabel, groupDueTasks, type DueBucket } from "@/lib/due-tasks";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
+import {
+  collectDueTasks,
+  formatDueLabel,
+  groupDueTasks,
+  type DueBucket,
+  type DueTaskHit,
+} from "@/lib/due-tasks";
 import { useAnimeEnter } from "@/lib/anime-ui";
+import { useSwipeActions } from "@/hooks/use-swipe-actions";
+import { useToast } from "@/components/toast";
 
 type Props = {
   ownerId: string;
@@ -20,6 +28,62 @@ const TABS: { id: DueBucket | "all"; label: string }[] = [
   { id: "today", label: "Today" },
   { id: "upcoming", label: "Upcoming" },
 ];
+
+function DueRow({
+  task,
+  notes,
+  onNavigate,
+}: {
+  task: DueTaskHit;
+  notes: Doc<"notes">[] | undefined;
+  onNavigate: (id: Id<"notes">) => void;
+}) {
+  const updateNote = useMutation(api.notes.update);
+  const toast = useToast();
+  const note = notes?.find((n) => n._id === task.noteId);
+
+  const complete = async () => {
+    if (!note?.blocks) {
+      onNavigate(task.noteId);
+      return;
+    }
+    const blocks = note.blocks.map((b) =>
+      b.id === task.blockId ? { ...b, checked: true } : b,
+    );
+    try {
+      await updateNote({ id: task.noteId, blocks });
+      toast.success("Marked done");
+    } catch {
+      toast.error("Couldn’t complete task");
+    }
+  };
+
+  const swipe = useSwipeActions({
+    onSwipeLeft: () => void complete(),
+    onSwipeRight: () => onNavigate(task.noteId),
+  });
+
+  return (
+    <li className="due-inbox-swipe-wrap">
+      <button
+        type="button"
+        className={`due-inbox-item ${task.overdue ? "due-inbox-item-overdue" : ""}`}
+        onClick={() => onNavigate(task.noteId)}
+        {...swipe}
+      >
+        <span className="due-inbox-icon">{task.noteIcon}</span>
+        <span className="due-inbox-main">
+          <span className="due-inbox-text">{task.text}</span>
+          <span className="due-inbox-note">{task.noteTitle}</span>
+        </span>
+        <span className={`due-inbox-badge ${task.overdue ? "due-inbox-badge-overdue" : ""}`}>
+          <CalendarClock className="size-3" />
+          {formatDueLabel(task.dueAt)}
+        </span>
+      </button>
+    </li>
+  );
+}
 
 export function DueInbox({ ownerId, onClose, onNavigate }: Props) {
   const notes = useQuery(api.notes.list, ownerId ? { ownerId } : "skip");
@@ -55,7 +119,7 @@ export function DueInbox({ ownerId, onClose, onNavigate }: Props) {
             Due <em>inbox</em>
           </h1>
           <p className="settings-subtitle">
-            Open todos with due dates across your vault — overdue, today, and upcoming.
+            Open todos with due dates — swipe left to complete, right to open (mobile).
           </p>
         </div>
         <button
@@ -108,25 +172,12 @@ export function DueInbox({ ownerId, onClose, onNavigate }: Props) {
       ) : (
         <ul className="due-inbox-list">
           {visible.map((task) => (
-            <li key={`${task.noteId}-${task.blockId}`}>
-              <button
-                type="button"
-                className={`due-inbox-item ${task.overdue ? "due-inbox-item-overdue" : ""}`}
-                onClick={() => onNavigate(task.noteId)}
-              >
-                <span className="due-inbox-icon">{task.noteIcon}</span>
-                <span className="due-inbox-main">
-                  <span className="due-inbox-text">{task.text}</span>
-                  <span className="due-inbox-note">{task.noteTitle}</span>
-                </span>
-                <span
-                  className={`due-inbox-badge ${task.overdue ? "due-inbox-badge-overdue" : ""}`}
-                >
-                  <CalendarClock className="size-3" />
-                  {formatDueLabel(task.dueAt)}
-                </span>
-              </button>
-            </li>
+            <DueRow
+              key={`${task.noteId}-${task.blockId}`}
+              task={task}
+              notes={notes}
+              onNavigate={onNavigate}
+            />
           ))}
         </ul>
       )}

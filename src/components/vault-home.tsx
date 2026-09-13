@@ -4,8 +4,10 @@ import { useMutation, useQuery } from "convex/react";
 import {
   ArrowRight,
   CalendarClock,
+  Flame,
   FolderOpen,
   ImageIcon,
+  LayoutTemplate,
   Loader2,
   Network,
   Plus,
@@ -26,6 +28,7 @@ import { isFolder } from "@/lib/item-kinds";
 import { playFolioPageMotion } from "@/lib/folio-page-motion";
 import { PAGE_TEMPLATES } from "@/lib/templates";
 import { DailyCalendar } from "./daily-calendar";
+import { FocusModeToggle } from "./focus-mode-toggle";
 import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
 
@@ -38,6 +41,7 @@ type Props = {
   onOpenGraph?: () => void;
   onOpenCalendar?: () => void;
   onOpenDueInbox?: () => void;
+  onBrowseTemplates?: () => void;
 };
 
 function plural(n: number, one: string, many: string) {
@@ -53,6 +57,7 @@ export function VaultHome({
   onOpenGraph,
   onOpenCalendar,
   onOpenDueInbox,
+  onBrowseTemplates,
 }: Props) {
   const toast = useToast();
   const [shareOpen, setShareOpen] = useState(false);
@@ -68,6 +73,7 @@ export function VaultHome({
     [customTemplates],
   );
   const stats = useQuery(api.notes.getVaultStats, ownerId ? { ownerId } : "skip");
+  const streak = useQuery(api.vaultStats.get, ownerId ? { ownerId } : "skip");
   const notes = useQuery(api.notes.list, ownerId ? { ownerId } : "skip");
   const vaultSettings = useQuery(api.vaultSettings.get, ownerId ? { ownerId } : "skip");
   const backgroundImage = vaultSettings?.backgroundImage;
@@ -261,6 +267,32 @@ export function VaultHome({
       </div>
 
       <div className="vault-home-body">
+        <section className="vault-section vault-widgets nv-folio-await">
+          <div className="vault-widget-row">
+            <div className="vault-widget vault-widget-streak">
+              <Flame className="size-4 text-accent" />
+              <div>
+                <p className="vault-widget-label">Writing streak</p>
+                <p className="vault-widget-value">
+                  {streak?.currentStreak ?? 0}
+                  <span className="vault-widget-unit">
+                    {(streak?.currentStreak ?? 0) === 1 ? " day" : " days"}
+                  </span>
+                </p>
+                {(streak?.longestStreak ?? 0) > 0 && (
+                  <p className="vault-widget-hint">
+                    Best {streak!.longestStreak} · keep showing up
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="vault-widget vault-widget-focus">
+              <FocusModeToggle className="vault-focus-cta" label="Focus mode" />
+              <p className="vault-widget-hint">Hide chrome — write only</p>
+            </div>
+          </div>
+        </section>
+
         <section className="vault-section nv-folio-await">
           <div className="vault-section-head">
             <h2 className="vault-section-title">Continue</h2>
@@ -372,6 +404,13 @@ export function VaultHome({
         <section className="vault-section nv-folio-await">
           <div className="vault-section-head">
             <h2 className="vault-section-title">Start from</h2>
+            {onBrowseTemplates && (
+              <button type="button" className="vault-section-link" onClick={onBrowseTemplates}>
+                <LayoutTemplate className="size-3.5" />
+                Browse templates
+                <ArrowRight className="size-3.5" />
+              </button>
+            )}
           </div>
           <div className="vault-template-row">
             {templates.map((template) => (

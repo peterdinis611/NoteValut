@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { ChevronRight, Copy, Eye, PanelLeft, Pin, Share2, Trash2 } from "lucide-react";
+import { ChevronRight, Copy, Eye, Globe, PanelLeft, Pin, Share2, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
@@ -19,6 +19,7 @@ import { normalizeTags } from "@/lib/tags";
 import { useVaultAccess } from "@/context/vault-access";
 import { TableOfContents } from "./table-of-contents";
 import { BacklinksPanel } from "./backlinks-panel";
+import { CommentsPanel } from "./comments-panel";
 import { PagePins } from "./page-pins";
 import { VaultEditor } from "@/editor";
 import { saveCustomTemplate } from "@/db/templates-collection";
@@ -29,6 +30,7 @@ import { MoveDialog } from "./move-dialog";
 import { PageBreadcrumbs } from "./page-breadcrumbs";
 import { CoverBanner } from "./cover-banner";
 import { PageProperties } from "./page-properties";
+import { PublishPanel } from "./publish-panel";
 import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
 import { UiTooltip } from "./ui-tooltip";
@@ -47,6 +49,9 @@ type Props = {
   onCreateEntry: (parentId?: Id<"notes">, templateId?: string) => void;
   onCreateCollection: (parentId?: Id<"notes">) => void;
   onOpenTag?: (tag: string) => void;
+  openShareSignal?: number;
+  openMoveSignal?: number;
+  openPublishSignal?: number;
 };
 
 export function NoteEditor({
@@ -58,6 +63,9 @@ export function NoteEditor({
   onCreateEntry,
   onCreateCollection,
   onOpenTag,
+  openShareSignal = 0,
+  openMoveSignal = 0,
+  openPublishSignal = 0,
 }: Props) {
   const toast = useToast();
   const { readOnly: globalReadOnly, role, ability } = useVaultAccess();
@@ -69,19 +77,34 @@ export function NoteEditor({
   const updateNote = useMutation(api.notes.update);
   const trashNote = useMutation(api.notes.trash);
   const duplicateNote = useMutation(api.notes.duplicate);
+  const recordActivity = useMutation(api.vaultStats.recordActivity);
 
   const [title, setTitle] = useState("");
   const [blocks, setBlocks] = useState<Block[]>(defaultBlocks());
   const [tags, setTags] = useState<string[]>([]);
   const [showIcon, setShowIcon] = useState(true);
   const [shareOpen, setShareOpen] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [fontOpen, setFontOpen] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving" | "queued">("saved");
 
   const readOnly = globalReadOnly || !canUpdate;
+
+  useEffect(() => {
+    if (openShareSignal > 0) setShareOpen(true);
+  }, [openShareSignal]);
+
+  useEffect(() => {
+    if (openMoveSignal > 0) setMoveOpen(true);
+  }, [openMoveSignal]);
+
+  useEffect(() => {
+    if (openPublishSignal > 0) setPublishOpen(true);
+  }, [openPublishSignal]);
 
   useEffect(() => {
     if (!note || isFolder(note)) {
@@ -164,6 +187,12 @@ export function NoteEditor({
           ...payload,
         });
         setSaveState("saved");
+        if (activityTimer.current) clearTimeout(activityTimer.current);
+        activityTimer.current = setTimeout(() => {
+          void recordActivity({ ownerId }).catch(() => {
+            /* streak is best-effort */
+          });
+        }, 2000);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.includes("CONFLICT:")) {
@@ -342,6 +371,12 @@ export function NoteEditor({
           label: note.fontFamily ? `Page font: ${note.fontFamily}` : "Page font…",
           icon: MoreActionIcons.template,
           onClick: () => setFontOpen(true),
+        },
+        {
+          id: "publish",
+          label: "Publish…",
+          icon: <Globe className="size-3.5" />,
+          onClick: () => setPublishOpen(true),
         },
       );
     }
@@ -604,6 +639,12 @@ export function NoteEditor({
                   }}
                 />
                 <BacklinksPanel ownerId={ownerId} noteId={noteId} onNavigate={onNavigate} />
+                <CommentsPanel
+                  ownerId={ownerId}
+                  noteId={noteId}
+                  authorId={ownerId}
+                  authorName="You"
+                />
               </div>
               <TableOfContents
                 blocks={blocks}
@@ -650,6 +691,16 @@ export function NoteEditor({
         noteId={noteId}
         title={note.title}
       />
+      {!isFolder(note) && (
+        <PublishPanel
+          ownerId={ownerId}
+          noteId={noteId}
+          noteTitle={note.title}
+          coverImage={note.coverImage}
+          open={publishOpen}
+          onClose={() => setPublishOpen(false)}
+        />
+      )}
       {!readOnly && (
         <MoveDialog
           open={moveOpen}

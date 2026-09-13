@@ -16,6 +16,7 @@ import { ImageBlock, NumberedList, Toggle } from "./extra";
 import { CustomBlock } from "./custom";
 import { TableBlock, VideoBlock, WebLink, PdfBlock, FileBlock } from "./rich";
 import { CanvasBlock } from "./canvas";
+import { MathBlock, SyncedBlock } from "./math-synced";
 import type { Extension } from "../types";
 
 /** Default NoteVault starter kit — TipTap-style bundle of block extensions. */
@@ -32,6 +33,7 @@ export const StarterKit: Extension[] = [
   Todo,
   Quote,
   Code,
+  MathBlock,
   Callout,
   TableBlock,
   PageLink,
@@ -41,6 +43,7 @@ export const StarterKit: Extension[] = [
   FileBlock,
   ImageBlock,
   CanvasBlock,
+  SyncedBlock,
   Toggle,
   CustomBlock,
   Divider,
@@ -59,6 +62,7 @@ export {
   Todo,
   Quote,
   Code,
+  MathBlock,
   Callout,
   TableBlock,
   PageLink,
@@ -68,6 +72,7 @@ export {
   FileBlock,
   ImageBlock,
   CanvasBlock,
+  SyncedBlock,
   Toggle,
   CustomBlock,
   Divider,

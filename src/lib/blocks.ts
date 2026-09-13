@@ -22,7 +22,9 @@ export type BlockType =
   | "link"
   | "pdf"
   | "file"
-  | "canvas";
+  | "canvas"
+  | "math"
+  | "synced";
 
 export type CalloutVariant = "info" | "tip" | "warning";
 
@@ -56,6 +58,10 @@ export type Block = {
   layoutGroupId?: string;
   columnIndex?: number;
   columnCount?: number;
+  /** Synced block key shared across pages */
+  syncedId?: string;
+  /** Mentioned user id */
+  mentionUserId?: string;
 };
 
 export type SlashCommand = {
@@ -151,6 +157,8 @@ export function createBlock(
       | "layoutGroupId"
       | "columnIndex"
       | "columnCount"
+      | "syncedId"
+      | "mentionUserId"
     >
   >,
 ): Block {
@@ -165,6 +173,10 @@ export function createBlock(
     ...(type === "code" && !extras?.language ? { language: "auto" } : {}),
     ...(type === "custom" && !extras?.label ? { label: "Custom block" } : {}),
     ...(type === "table" && !extras?.rows ? { rows: emptyTable() } : {}),
+    ...(type === "math" && !text ? { text: "E = mc^2" } : {}),
+    ...(type === "synced" && !extras?.syncedId
+      ? { syncedId: crypto.randomUUID(), label: extras?.label ?? "Synced block" }
+      : {}),
   };
 }
 
@@ -387,6 +399,12 @@ export function blocksToMarkdown(blocks: Block[]): string {
         }
         case "custom":
           return `<!-- custom: ${block.label ?? "Custom"} -->\n${block.text}`;
+        case "math":
+          return `$$\n${block.text}\n$$`;
+        case "synced":
+          return `<!-- synced:${block.syncedId ?? ""} -->\n${block.text}`;
+        case "canvas":
+          return `<!-- canvas -->\n${block.text}`;
         case "divider":
           return "---";
         default:

@@ -372,7 +372,9 @@ export const update = mutation({
     coverImage: v.optional(v.union(v.string(), v.null())),
     color: v.optional(v.union(v.string(), v.null())),
     description: v.optional(v.union(v.string(), v.null())),
-    viewMode: v.optional(v.union(v.literal("grid"), v.literal("list"), v.literal("table"))),
+    viewMode: v.optional(
+      v.union(v.literal("grid"), v.literal("list"), v.literal("table"), v.literal("gallery")),
+    ),
     sortMode: v.optional(v.union(v.literal("updated"), v.literal("name"), v.literal("kind"))),
     defaultTemplateId: v.optional(v.union(v.string(), v.null())),
     isLocked: v.optional(v.boolean()),
@@ -597,6 +599,156 @@ export const listBacklinks = query({
   },
 });
 
+/**
+ * Unlinked mentions: other notes whose plain text contains this note’s title
+ * but do not yet have a pagelink to it.
+ */
+export const listUnlinkedMentions = query({
+  args: {
+    ownerId: v.string(),
+    noteId: v.id("notes"),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const target = await ctx.db.get(args.noteId);
+    if (!target || target.ownerId !== args.ownerId) return [];
+    const title = target.title.trim();
+    if (title.length < 3) return [];
+
+    const needle = title.toLowerCase();
+    const notes = await ctx.db
+      .query("notes")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+
+    const hits: Array<{
+      _id: typeof args.noteId;
+      title: string;
+      icon: string;
+      updatedAt: number;
+      snippet: string;
+    }> = [];
+
+    for (const n of notes) {
+      if (n._id === args.noteId || n.trashed || n.kind === "folder") continue;
+      const alreadyLinked = n.blocks?.some(
+        (b) => b.type === "pagelink" && b.pageId === (args.noteId as string),
+      );
+      if (alreadyLinked) continue;
+
+      const hay = (n.searchText || `${n.title} ${n.content}`).toLowerCase();
+      const idx = hay.indexOf(needle);
+      if (idx < 0) continue;
+
+      const start = Math.max(0, idx - 40);
+      const end = Math.min(hay.length, idx + needle.length + 40);
+      hits.push({
+        _id: n._id,
+        title: n.title,
+        icon: n.icon,
+        updatedAt: n.updatedAt,
+        snippet: hay.slice(start, end).trim(),
+      });
+    }
+
+    return hits.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 40);
+  },
+});
+
+/** All media/file attachments across the vault. */
+export const listAttachments = query({
+  args: { ownerId: v.string() },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const notes = await ctx.db
+      .query("notes")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+
+    const mediaTypes = new Set(["image", "pdf", "video", "file"]);
+    const items: Array<{
+      noteId: typeof notes[0]["_id"];
+      noteTitle: string;
+      blockId: string;
+      type: string;
+      url: string;
+      label: string;
+      updatedAt: number;
+    }> = [];
+
+    for (const n of notes) {
+      if (n.trashed || n.archived) continue;
+      for (const b of n.blocks ?? []) {
+        if (!mediaTypes.has(b.type) || !b.url) continue;
+        items.push({
+          noteId: n._id,
+          noteTitle: n.title || "Untitled",
+          blockId: b.id,
+          type: b.type,
+          url: b.url,
+          label: b.label || b.text || b.type,
+          updatedAt: n.updatedAt,
+        });
+      }
+      if (n.coverImage) {
+        items.push({
+          noteId: n._id,
+          noteTitle: n.title || "Untitled",
+          blockId: `cover-${n._id}`,
+          type: "cover",
+          url: n.coverImage,
+          label: "Cover",
+          updatedAt: n.updatedAt,
+        });
+      }
+    }
+
+    return items.sort((a, b) => b.updatedAt - a.updatedAt);
+  },
+});
+
+/**
+ * Append a pagelink from `fromNoteId` → `toNoteId` (for unlinked mentions).
+ */
+export const appendPagelink = mutation({
+  args: {
+    ownerId: v.string(),
+    fromNoteId: v.id("notes"),
+    toNoteId: v.id("notes"),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const from = await ctx.db.get(args.fromNoteId);
+    const to = await ctx.db.get(args.toNoteId);
+    if (!from || from.ownerId !== args.ownerId) throw new Error("Not found");
+    if (!to || to.ownerId !== args.ownerId) throw new Error("Not found");
+    if (from.blocks?.some((b) => b.type === "pagelink" && b.pageId === (args.toNoteId as string))) {
+      return from._id;
+    }
+    const link = {
+      id: crypto.randomUUID(),
+      type: "pagelink" as const,
+      text: to.title || "Untitled",
+      pageId: args.toNoteId as string,
+    };
+    const blocks = [...(from.blocks ?? []), link];
+    await ctx.db.patch(args.fromNoteId, {
+      blocks,
+      updatedAt: Date.now(),
+      searchText: buildNoteSearchText({
+        title: from.title,
+        content: from.content,
+        description: from.description,
+        status: from.status,
+        tags: from.tags,
+        blocks,
+        folderBlocks: from.folderBlocks,
+      }),
+    });
+    return from._id;
+  },
+});
+
 /** Apply the same patch to many notes (sidebar bulk actions). */
 export const bulkUpdate = mutation({
   args: {
@@ -775,7 +927,9 @@ const importNoteValidator = v.object({
   kind: v.optional(v.union(v.literal("page"), v.literal("folder"))),
   color: v.optional(v.string()),
   description: v.optional(v.string()),
-  viewMode: v.optional(v.union(v.literal("grid"), v.literal("list"), v.literal("table"))),
+  viewMode: v.optional(
+    v.union(v.literal("grid"), v.literal("list"), v.literal("table"), v.literal("gallery")),
+  ),
   sortMode: v.optional(v.union(v.literal("updated"), v.literal("name"), v.literal("kind"))),
   defaultTemplateId: v.optional(v.string()),
   isLocked: v.optional(v.boolean()),

@@ -5,6 +5,7 @@ import {
   FileText,
   FolderOpen,
   Grid3X3,
+  LayoutGrid,
   LayoutList,
   Lock,
   Plus,
@@ -274,6 +275,16 @@ export function CollectionDetail({
                   >
                     <Table2 className="size-4" />
                   </button>
+                  <button
+                    type="button"
+                    className={viewMode === "gallery" ? "view-toggle-active" : ""}
+                    onClick={() =>
+                      !readOnly && updateNote({ id: folder._id, viewMode: "gallery" })
+                    }
+                    title="Gallery"
+                  >
+                    <LayoutGrid className="size-4" />
+                  </button>
                 </div>
               </div>
             )}
@@ -289,6 +300,18 @@ export function CollectionDetail({
               <div className="folder-grid">
                 {children.map((child) => (
                   <ChildCard
+                    key={child._id}
+                    child={child}
+                    readOnly={readOnly}
+                    onNavigate={onNavigate}
+                    onTrash={() => handleTrashChild(child._id)}
+                  />
+                ))}
+              </div>
+            ) : viewMode === "gallery" ? (
+              <div className="collection-gallery">
+                {children.map((child) => (
+                  <GalleryCard
                     key={child._id}
                     child={child}
                     readOnly={readOnly}
@@ -491,6 +514,65 @@ function ChildCard({
         <button
           type="button"
           className="folder-card-trash"
+          aria-label="Move to bin"
+          onClick={onTrash}
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function GalleryCard({
+  child,
+  readOnly,
+  onNavigate,
+  onTrash,
+}: {
+  child: Doc<"notes">;
+  readOnly?: boolean;
+  onNavigate: (id: Id<"notes">) => void;
+  onTrash: () => void;
+}) {
+  const hasImage = !!child.coverImage;
+  const hasColor = !!child.coverColor;
+
+  return (
+    <div className="collection-gallery-card-wrap">
+      <button
+        type="button"
+        className="collection-gallery-card"
+        onClick={() => onNavigate(child._id)}
+      >
+        <div
+          className={`collection-gallery-media ${!hasImage && !hasColor ? "is-empty" : ""}`}
+          style={
+            hasImage
+              ? { backgroundImage: `url(${child.coverImage})` }
+              : hasColor
+                ? undefined
+                : { background: getLabelColor(child.color).hex }
+          }
+        >
+          {hasColor && !hasImage && (
+            <div className={`collection-gallery-gradient bg-gradient-to-br ${child.coverColor}`} />
+          )}
+          {!hasImage && !hasColor && (
+            <span className="collection-gallery-fallback-icon">{child.icon || "📝"}</span>
+          )}
+        </div>
+        <div className="collection-gallery-meta">
+          <span className="collection-gallery-title">{child.title || "Untitled"}</span>
+          <span className="collection-gallery-sub">
+            {isFolder(child) ? "Collection" : "Entry"} · {formatRelativeTime(child.updatedAt)}
+          </span>
+        </div>
+      </button>
+      {!readOnly && (
+        <button
+          type="button"
+          className="collection-gallery-trash"
           aria-label="Move to bin"
           onClick={onTrash}
         >

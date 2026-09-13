@@ -18,7 +18,12 @@ import { CalendarPage } from "./calendar-page";
 import { type CommandAction, CommandIcons, CommandPalette } from "./command-palette";
 import { ConnectionStatus } from "./connection-status";
 import { DueInbox } from "./due-inbox";
+import { FocusModeBoot } from "./focus-mode-toggle";
+import { toggleFocusMode } from "@/lib/focus-mode";
 import { GraphView } from "./graph-view";
+import { AttachmentsBrowser } from "./attachments-browser";
+import { InboxTriage } from "./inbox-triage";
+import { TemplatesMarketplace } from "./templates-marketplace";
 import { KeyboardCheatSheet } from "./keyboard-cheat-sheet";
 import { LottieStatus } from "./lottie-status";
 import { MobileBottomNav } from "./mobile-bottom-nav";
@@ -75,6 +80,12 @@ export function NoteVaultApp() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
   const [shareSignal, setShareSignal] = useState(0);
+  const [noteShareSignal, setNoteShareSignal] = useState(0);
+  const [noteMoveSignal, setNoteMoveSignal] = useState(0);
+  const [notePublishSignal, setNotePublishSignal] = useState(0);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+  const [inboxTriageOpen, setInboxTriageOpen] = useState(false);
   const tourBooted = useRef(false);
 
   useEffect(() => {
@@ -396,6 +407,66 @@ export function NoteVaultApp() {
         keywords: ["graph", "links", "backlinks", "network"],
         run: () => setGraphOpen(true),
       },
+      {
+        id: "attachments",
+        label: "Attachments browser",
+        hint: "Images, PDFs, videos, files",
+        icon: CommandIcons.attachments,
+        keywords: ["media", "files", "images", "pdf"],
+        run: () => setAttachmentsOpen(true),
+      },
+      {
+        id: "templates",
+        label: "Browse templates",
+        hint: "Template marketplace",
+        icon: CommandIcons.templates,
+        keywords: ["template", "starter", "marketplace"],
+        run: () => setTemplatesOpen(true),
+      },
+      {
+        id: "inbox-triage",
+        label: "Inbox triage",
+        hint: "Clear the Inbox collection",
+        icon: CommandIcons.inbox,
+        keywords: ["inbox", "triage", "process"],
+        run: () => setInboxTriageOpen(true),
+      },
+      {
+        id: "focus-mode",
+        label: "Toggle focus mode",
+        hint: "Hide sidebar & chrome",
+        icon: CommandIcons.focus,
+        keywords: ["focus", "zen", "distraction"],
+        run: () => toggleFocusMode(),
+      },
+      ...(activeId
+        ? [
+            {
+              id: "publish",
+              label: "Publish page",
+              hint: "Public web page",
+              icon: CommandIcons.share,
+              keywords: ["publish", "web", "public"],
+              run: () => setNotePublishSignal((n) => n + 1),
+            } satisfies CommandAction,
+            {
+              id: "move",
+              label: "Move page",
+              hint: "Change collection",
+              icon: CommandIcons.collection,
+              keywords: ["move", "parent", "folder"],
+              run: () => setNoteMoveSignal((n) => n + 1),
+            } satisfies CommandAction,
+            {
+              id: "share-note",
+              label: "Share page",
+              hint: "Invite with a link",
+              icon: CommandIcons.share,
+              keywords: ["share", "invite", "link"],
+              run: () => setNoteShareSignal((n) => n + 1),
+            } satisfies CommandAction,
+          ]
+        : []),
     ],
     [
       clearPanels,
@@ -407,6 +478,7 @@ export function NoteVaultApp() {
       openTags,
       openCalendar,
       openDueInbox,
+      activeId,
     ],
   );
 
@@ -457,6 +529,7 @@ export function NoteVaultApp() {
       <div
         className={`app-shell ${isMobile ? "app-shell-mobile" : ""} ${sidebarOpen ? "app-shell-sidebar-open" : ""}`}
       >
+        <FocusModeBoot />
         <AnimePresence show={isMobile && sidebarOpen} kind="overlay">
           <button
             type="button"
@@ -497,6 +570,7 @@ export function NoteVaultApp() {
             onCreateEntry={handleCreateEntry}
             onCreateCollection={handleCreateCollection}
             onQuickCapture={() => setQuickCaptureOpen(true)}
+            onBrowseTemplates={() => setTemplatesOpen(true)}
             openShareSignal={shareSignal}
           />
         ) : null}
@@ -581,6 +655,9 @@ export function NoteVaultApp() {
                 onCreateEntry={handleCreateEntry}
                 onCreateCollection={handleCreateCollection}
                 onOpenTag={(tag) => openTags(tag)}
+                openShareSignal={noteShareSignal}
+                openMoveSignal={noteMoveSignal}
+                openPublishSignal={notePublishSignal}
               />
             ) : (
               <VaultHome
@@ -592,6 +669,7 @@ export function NoteVaultApp() {
                 onOpenGraph={() => setGraphOpen(true)}
                 onOpenCalendar={openCalendar}
                 onOpenDueInbox={openDueInbox}
+                onBrowseTemplates={() => setTemplatesOpen(true)}
               />
             )}
           </div>
@@ -643,6 +721,25 @@ export function NoteVaultApp() {
             onClose={() => setGraphOpen(false)}
             notes={notes}
             onNavigate={selectNote}
+          />
+          <TemplatesMarketplace
+            open={templatesOpen}
+            onClose={() => setTemplatesOpen(false)}
+            onApply={(templateId) => void handleCreateEntry(undefined, templateId)}
+          />
+          <AttachmentsBrowser
+            ownerId={ownerId}
+            open={attachmentsOpen}
+            onClose={() => setAttachmentsOpen(false)}
+            onNavigate={selectNote}
+          />
+          <InboxTriage
+            ownerId={ownerId}
+            notes={notes}
+            open={inboxTriageOpen}
+            onClose={() => setInboxTriageOpen(false)}
+            onNavigate={selectNote}
+            onOpenToday={() => void openToday()}
           />
         </main>
       </div>

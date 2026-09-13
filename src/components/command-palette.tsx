@@ -8,11 +8,15 @@ import {
   CalendarDays,
   Clock,
   Download,
+  Focus,
   FolderOpen,
   Hash,
   Home,
+  Inbox,
   Keyboard,
+  LayoutTemplate,
   Network,
+  Paperclip,
   Plus,
   Search,
   Settings2,
@@ -28,6 +32,7 @@ import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { isFolder } from "@/lib/item-kinds";
 import { searchNotes, type NoteSearchHit } from "@/lib/search";
+import { semanticSearch } from "@/lib/semantic-search";
 import {
   highlightMatches,
   noteMatchesFilters,
@@ -169,7 +174,31 @@ export function CommandPalette({
     | { kind: "recent"; q: string }
     | { kind: "action"; action: CommandAction }
     | { kind: "tag"; tag: string; count: number }
-    | { kind: "note"; note: NoteSearchHit };
+    | { kind: "note"; note: NoteSearchHit }
+    | { kind: "semantic"; note: NoteSearchHit; score: number };
+
+  const semanticHits = useMemo(() => {
+    if (!notes || searchBare.length < 3 || q.startsWith("#")) return [];
+    const pool = notes.filter((n) => !isFolder(n) && noteMatchesFilters(n, filters));
+    const ftsIds = new Set(noteHits.map((n) => n._id));
+    return semanticSearch(pool, searchBare, 8)
+      .filter((h) => !ftsIds.has(h.note._id))
+      .map((h) => {
+        const body = [h.note.content, blocksToSearchText(h.note.blocks)]
+          .filter(Boolean)
+          .join("\n");
+        return {
+          note: {
+            ...h.note,
+            snippet:
+              snippetAround(body, searchBare) ||
+              snippetAround(h.note.title || "", searchBare) ||
+              null,
+          } as NoteSearchHit,
+          score: h.score,
+        };
+      });
+  }, [notes, searchBare, q, filters, noteHits]);
 
   const showRecent = open && !q && recent.length > 0;
 
@@ -181,8 +210,9 @@ export function CommandPalette({
     for (const action of actionHits) list.push({ kind: "action", action });
     for (const t of tagHits) list.push({ kind: "tag", tag: t.tag, count: t.count });
     for (const note of noteHits) list.push({ kind: "note", note });
+    for (const hit of semanticHits) list.push({ kind: "semantic", note: hit.note, score: hit.score });
     return list;
-  }, [actionHits, tagHits, noteHits, showRecent, recent]);
+  }, [actionHits, tagHits, noteHits, semanticHits, showRecent, recent]);
 
   useEffect(() => {
     setIndex(0);
@@ -224,7 +254,7 @@ export function CommandPalette({
         } else if (row.kind === "tag") {
           onOpenTag?.(row.tag);
           onClose();
-        } else {
+        } else if (row.kind === "note" || row.kind === "semantic") {
           commitNavigate(row.note._id);
         }
       }
@@ -365,6 +395,36 @@ export function CommandPalette({
                   const noteStart =
                     (showRecent ? recent.length : 0) + actionHits.length + tagHits.length;
                   const showSection = i === noteStart;
+                  if (row.kind === "semantic") {
+                    const semanticStart = noteStart + noteHits.length;
+                    const showSemanticSection = i === semanticStart;
+                    return (
+                      <div key={`s-${row.note._id}`}>
+                        {showSemanticSection && <p className="cmd-section">Semantic</p>}
+                        <button
+                          type="button"
+                          className={`cmd-row ${i === index ? "cmd-row-active" : ""}`}
+                          onMouseEnter={() => setIndex(i)}
+                          onClick={() => commitNavigate(row.note._id)}
+                        >
+                          <span className="cmd-row-icon text-base">{row.note.icon}</span>
+                          <span className="min-w-0 flex-1 text-left">
+                            <span className="block truncate text-sm">
+                              <Highlighted
+                                text={row.note.title || "Untitled"}
+                                query={highlightQ}
+                              />
+                            </span>
+                            {row.note.snippet ? (
+                              <span className="block truncate text-xs text-muted cmd-snippet">
+                                <Highlighted text={row.note.snippet} query={highlightQ} />
+                              </span>
+                            ) : null}
+                          </span>
+                        </button>
+                      </div>
+                    );
+                  }
                   return (
                     <div key={`n-${row.note._id}`}>
                       {showSection && <p className="cmd-section">Notes</p>}
@@ -429,4 +489,8 @@ export const CommandIcons = {
   keyboard: <Keyboard className="size-3.5" />,
   network: <Network className="size-3.5" />,
   share: <Share2 className="size-3.5" />,
+  attachments: <Paperclip className="size-3.5" />,
+  templates: <LayoutTemplate className="size-3.5" />,
+  inbox: <Inbox className="size-3.5" />,
+  focus: <Focus className="size-3.5" />,
 };

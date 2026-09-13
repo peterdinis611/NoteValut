@@ -33,7 +33,7 @@ import {
 import { removeCustomTemplate } from "@/db/templates-collection";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { useVaultSettings } from "@/hooks/use-vault-settings";
-import { importMarkdownFiles } from "@/lib/import-notes";
+import { importMarkdownFiles, importZipVault } from "@/lib/import-notes";
 import { startVaultTour } from "@/lib/onboarding";
 import { useAnimeEnter } from "@/lib/anime-ui";
 import { listDefaultTemplates } from "@/lib/templates";
@@ -189,7 +189,16 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
     if (!files?.length) return;
     setImporting(true);
     try {
-      const drafts = await importMarkdownFiles(files, importSource);
+      const list = [...files];
+      const zips = list.filter((f) => /\.zip$/i.test(f.name) || f.type === "application/zip");
+      const mds = list.filter((f) => !zips.includes(f));
+      const drafts = [
+        ...(mds.length ? await importMarkdownFiles(mds, importSource) : []),
+        ...(
+          await Promise.all(zips.map((z) => importZipVault(z)))
+        ).flat(),
+      ];
+      if (!drafts.length) throw new Error("No Markdown files found");
       const result = await importVault({
         ownerId,
         notes: drafts.map((n) => ({
@@ -206,7 +215,9 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
           updatedAt: n.updatedAt,
         })),
       });
-      toast.success(`Imported ${result.imported} Markdown pages (${importSource})`);
+      toast.success(
+        `Imported ${result.imported} pages${zips.length ? " (incl. ZIP)" : ` (${importSource})`}`,
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn’t import Markdown");
     } finally {
@@ -700,12 +711,12 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
             onClick={() => mdImportRef.current?.click()}
           >
             <FileUp className="size-3.5" />
-            {importing ? "Importing…" : "Choose .md files"}
+            {importing ? "Importing…" : "Choose .md / .zip"}
           </button>
           <input
             ref={mdImportRef}
             type="file"
-            accept=".md,.markdown,.txt,text/markdown,text/plain"
+            accept=".md,.markdown,.txt,.zip,text/markdown,text/plain,application/zip"
             multiple
             className="sr-only"
             onChange={(e) => {
@@ -717,8 +728,8 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
         </div>
         <p className="settings-hint">
           Obsidian: reads YAML frontmatter and <code>[[wikilinks]]</code>. Notion: picks exported
-          Markdown pages (export as Markdown &amp; CSV, then select the .md files). Each file
-          becomes a new page.
+          Markdown pages (export as Markdown &amp; CSV, then select the .md files). ZIP: extracts
+          nested .md paths into titles. Each file becomes a new page.
         </p>
       </section>
 

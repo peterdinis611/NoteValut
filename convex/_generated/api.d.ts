@@ -9,6 +9,7 @@
  */
 
 import type * as block from "../block.js";
+import type * as comments from "../comments.js";
 import type * as files from "../files.js";
 import type * as googleFonts from "../googleFonts.js";
 import type * as lib_auth from "../lib/auth.js";
@@ -21,8 +22,10 @@ import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
 import type * as reminders from "../reminders.js";
 import type * as shares from "../shares.js";
+import type * as syncedBlocks from "../syncedBlocks.js";
 import type * as tags from "../tags.js";
 import type * as vaultSettings from "../vaultSettings.js";
+import type * as vaultStats from "../vaultStats.js";
 import type * as versions from "../versions.js";
 
 import type {
@@ -33,6 +36,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   block: typeof block;
+  comments: typeof comments;
   files: typeof files;
   googleFonts: typeof googleFonts;
   "lib/auth": typeof lib_auth;
@@ -45,8 +49,10 @@ declare const fullApi: ApiFromModules<{
   pushActions: typeof pushActions;
   reminders: typeof reminders;
   shares: typeof shares;
+  syncedBlocks: typeof syncedBlocks;
   tags: typeof tags;
   vaultSettings: typeof vaultSettings;
+  vaultStats: typeof vaultStats;
   versions: typeof versions;
 }>;
 

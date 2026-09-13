@@ -95,6 +95,7 @@ type Props = {
   onCreateEntry: (parentId?: Id<"notes">, templateId?: string) => void;
   onCreateCollection: (parentId?: Id<"notes">) => void;
   onQuickCapture: () => void;
+  onBrowseTemplates?: () => void;
   /** Increment to open the vault share panel (e.g. from ⌘K). */
   openShareSignal?: number;
   slotRef?: Ref<HTMLDivElement>;
@@ -118,6 +119,7 @@ export function Sidebar({
   onCreateEntry,
   onCreateCollection,
   onQuickCapture,
+  onBrowseTemplates,
   openShareSignal = 0,
   slotRef,
 }: Props) {
@@ -546,6 +548,7 @@ export function Sidebar({
               onClose={() => setShowCreate(false)}
               onCreateEntry={(templateId) => onCreateEntry(undefined, templateId)}
               onCreateCollection={() => onCreateCollection()}
+              onBrowseTemplates={onBrowseTemplates}
             />
           </div>
 
