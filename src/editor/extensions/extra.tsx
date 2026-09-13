@@ -84,8 +84,7 @@ export const Toggle = Extension({
           type="button"
           className="nv-toggle-head"
           onClick={() =>
-            !props.readOnly &&
-            props.commands.updateBlock(props.block.id, { checked: !open })
+            !props.readOnly && props.commands.updateBlock(props.block.id, { checked: !open })
           }
         >
           {open ? (
@@ -136,12 +135,11 @@ export const ImageBlock = Extension({
       id: "image",
       type: "image",
       label: "Image",
-      description: "Embed an image by URL",
+      description: "Upload, drop, or embed an image",
       icon: "🖼",
-      keywords: ["image", "img", "photo", "picture"],
+      keywords: ["image", "img", "photo", "picture", "upload", "drop"],
       group: "Media",
     },
   ],
   render: (props) => <ImageBlockView {...props} />,
 });
-

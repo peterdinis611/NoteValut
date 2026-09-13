@@ -3,13 +3,7 @@ import { useState } from "react";
 import { fn } from "storybook/test";
 import { IconPicker } from "@/components/icon-picker";
 
-function ControlledIconPicker({
-  size,
-  initial = "📚",
-}: {
-  size?: "sm" | "lg";
-  initial?: string;
-}) {
+function ControlledIconPicker({ size, initial = "📚" }: { size?: "sm" | "lg"; initial?: string }) {
   const [value, setValue] = useState(initial);
   return (
     <IconPicker

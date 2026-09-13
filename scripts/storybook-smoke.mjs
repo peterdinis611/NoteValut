@@ -39,7 +39,10 @@ async function main() {
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20_000 });
       await page.waitForTimeout(800);
 
-      const bodyText = await page.locator("body").innerText().catch(() => "");
+      const bodyText = await page
+        .locator("body")
+        .innerText()
+        .catch(() => "");
       const hasSbError = await page
         .locator(".sb-errordisplay, #error-message, [data-is-storybook-error]")
         .count();

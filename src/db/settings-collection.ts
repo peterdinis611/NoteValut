@@ -52,21 +52,26 @@ export const THEME_PRESETS: Record<
 > = {
   default: {
     id: "default",
-    label: "Copper ink",
-    description: "Warm amber on parchment dark",
-    swatch: "#e2a45a",
+    label: "Folio",
+    description: "Cream paper, ink, and brew orange",
+    swatch: "#c4480e",
     vars: {
-      "--background": "#141210",
-      "--foreground": "rgba(250, 245, 235, 0.92)",
-      "--sidebar": "#1a1713",
-      "--panel": "#24201a",
-      "--hover": "rgba(255, 236, 210, 0.05)",
-      "--hover-strong": "rgba(255, 236, 210, 0.1)",
-      "--border": "rgba(255, 230, 200, 0.09)",
-      "--muted": "rgba(210, 190, 165, 0.58)",
-      "--accent": "#e2a45a",
-      "--accent-soft": "rgba(226, 164, 90, 0.14)",
-      "--topbar": "#141210",
+      "--background": "#fbf8f2",
+      "--foreground": "#171412",
+      "--sidebar": "#efe4d0",
+      "--panel": "#fffdf8",
+      "--hover": "rgba(23, 20, 18, 0.065)",
+      "--hover-strong": "rgba(196, 72, 14, 0.14)",
+      "--border": "rgba(23, 20, 18, 0.16)",
+      "--muted": "#5a5248",
+      "--accent": "#c4480e",
+      "--accent-soft": "rgba(196, 72, 14, 0.11)",
+      "--accent-bright": "#a83c0b",
+      "--accent-ink": "#fffaf2",
+      "--topbar": "#fbf8f2",
+      "--lilac": "#b9a3e6",
+      "--live": "#3d6b38",
+      "--live-soft": "rgba(61, 107, 56, 0.14)",
     },
   },
   ocean: {
@@ -85,7 +90,10 @@ export const THEME_PRESETS: Record<
       "--muted": "rgba(150, 180, 205, 0.58)",
       "--accent": "#5eb0e0",
       "--accent-soft": "rgba(94, 176, 224, 0.14)",
+      "--accent-bright": "#7ec8ee",
+      "--accent-ink": "#0c1218",
       "--topbar": "#0c1218",
+      "--lilac": "#8eb4d4",
     },
   },
   violet: {
@@ -104,7 +112,10 @@ export const THEME_PRESETS: Record<
       "--muted": "rgba(200, 170, 190, 0.55)",
       "--accent": "#c48ab8",
       "--accent-soft": "rgba(196, 138, 184, 0.15)",
+      "--accent-bright": "#d4a4c8",
+      "--accent-ink": "#151218",
       "--topbar": "#151218",
+      "--lilac": "#cbb6ee",
     },
   },
   rose: {
@@ -123,26 +134,32 @@ export const THEME_PRESETS: Record<
       "--muted": "rgba(210, 165, 145, 0.55)",
       "--accent": "#d4846a",
       "--accent-soft": "rgba(212, 132, 106, 0.15)",
+      "--accent-bright": "#e49a82",
+      "--accent-ink": "#161210",
       "--topbar": "#161210",
+      "--lilac": "#e0c4b0",
     },
   },
   forest: {
     id: "forest",
-    label: "Olive",
-    description: "Quiet moss and leaf",
-    swatch: "#8faf6e",
+    label: "Phosphor",
+    description: "Abyssal teal with acid lime",
+    swatch: "#c8f542",
     vars: {
-      "--background": "#121510",
-      "--foreground": "rgba(240, 246, 232, 0.92)",
-      "--sidebar": "#171b14",
-      "--panel": "#22281c",
-      "--hover": "rgba(180, 200, 150, 0.07)",
-      "--hover-strong": "rgba(180, 200, 150, 0.13)",
-      "--border": "rgba(170, 190, 140, 0.11)",
-      "--muted": "rgba(170, 185, 150, 0.55)",
-      "--accent": "#8faf6e",
-      "--accent-soft": "rgba(143, 175, 110, 0.15)",
-      "--topbar": "#121510",
+      "--background": "#0a1210",
+      "--foreground": "rgba(232, 244, 236, 0.94)",
+      "--sidebar": "#0e1714",
+      "--panel": "#15201c",
+      "--hover": "rgba(200, 245, 66, 0.06)",
+      "--hover-strong": "rgba(200, 245, 66, 0.12)",
+      "--border": "rgba(170, 210, 185, 0.12)",
+      "--muted": "rgba(156, 184, 168, 0.62)",
+      "--accent": "#c8f542",
+      "--accent-soft": "rgba(200, 245, 66, 0.14)",
+      "--accent-bright": "#c8f542",
+      "--accent-ink": "#0a1210",
+      "--topbar": "#0a1210",
+      "--lilac": "#8fb89a",
     },
   },
   slate: {
@@ -161,7 +178,10 @@ export const THEME_PRESETS: Record<
       "--muted": "rgba(155, 165, 180, 0.58)",
       "--accent": "#9aa3b2",
       "--accent-soft": "rgba(154, 163, 178, 0.14)",
+      "--accent-bright": "#b4bcc8",
+      "--accent-ink": "#12141a",
       "--topbar": "#12141a",
+      "--lilac": "#a8b0c0",
     },
   },
 };
@@ -169,6 +189,8 @@ export const THEME_PRESETS: Record<
 const STYLE_ID = "nv-custom-theme-css";
 const FONT_STYLE_ID = "nv-custom-font-css";
 const FONT_LINK_ID = "nv-custom-font-link";
+/** One-shot: previous house look was Phosphor (`forest`). */
+const FOLIO_HOUSE_MIGRATION_KEY = "notevault.folio-house-v1";
 
 const DEFAULT_SETTINGS: SettingsRecord = {
   id: "vault",
@@ -206,17 +228,56 @@ export function readSettings(): SettingsRecord {
 /** Ensure a settings row exists (call from effects / mutations, not getSnapshot). */
 export function ensureSettingsRow(): SettingsRecord {
   const existing = settingsCollection.get("vault");
-  if (existing) return normalizeSettings(existing);
-  const defaults: SettingsRecord = { ...DEFAULT_SETTINGS, updatedAt: Date.now() };
-  if (typeof window !== "undefined") {
-    settingsCollection.insert(defaults);
+  if (!existing) {
+    const defaults: SettingsRecord = { ...DEFAULT_SETTINGS, updatedAt: Date.now() };
+    if (typeof window !== "undefined") {
+      settingsCollection.insert(defaults);
+    }
+    markFolioHouseMigrated();
+    return defaults;
   }
-  return defaults;
+  return migrateHouseThemeToFolio(normalizeSettings(existing));
 }
 
 export function getSettings(): SettingsRecord {
   if (typeof window === "undefined") return SERVER_SETTINGS_SNAPSHOT;
   return ensureSettingsRow();
+}
+
+function markFolioHouseMigrated() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(FOLIO_HOUSE_MIGRATION_KEY, "1");
+  } catch {
+    /* private mode */
+  }
+}
+
+function folioHouseMigrated(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return window.localStorage.getItem(FOLIO_HOUSE_MIGRATION_KEY) === "1";
+  } catch {
+    return true;
+  }
+}
+
+/** Move vaults still on the old Phosphor house theme onto Folio. */
+function migrateHouseThemeToFolio(record: SettingsRecord): SettingsRecord {
+  if (folioHouseMigrated()) return record;
+  if (record.themeId !== "forest") {
+    markFolioHouseMigrated();
+    return record;
+  }
+  const next = normalizeSettings({
+    ...record,
+    themeId: "default",
+    updatedAt: Date.now(),
+    id: "vault",
+  });
+  writeSettings(next);
+  markFolioHouseMigrated();
+  return next;
 }
 
 function writeSettings(next: SettingsRecord) {
@@ -270,6 +331,7 @@ function familyStack(family: string): string {
 function clearFontDom() {
   document.getElementById(FONT_STYLE_ID)?.remove();
   document.getElementById(FONT_LINK_ID)?.remove();
+  document.documentElement.style.removeProperty("--font-body");
   document.documentElement.style.removeProperty("--font-geist-sans");
   document.documentElement.style.removeProperty("--font-sans");
 }
@@ -306,6 +368,7 @@ export function applyFont(settings?: SettingsRecord) {
   font-style: normal;
 }
 `.trim();
+    root.style.setProperty("--font-body", stack);
     root.style.setProperty("--font-geist-sans", stack);
     root.style.setProperty("--font-sans", stack);
     return;
@@ -321,6 +384,7 @@ export function applyFont(settings?: SettingsRecord) {
       document.head.appendChild(link);
     }
     link.href = s.fontUrl.trim();
+    root.style.setProperty("--font-body", stack);
     root.style.setProperty("--font-geist-sans", stack);
     root.style.setProperty("--font-sans", stack);
     return;
@@ -334,11 +398,30 @@ export function applyTheme(settings?: SettingsRecord) {
   const s = normalizeSettings(settings ?? getSettings());
   const root = document.documentElement;
 
-  const preset =
-    s.themeId === "custom" ? THEME_PRESETS.default : THEME_PRESETS[s.themeId];
+  const preset = s.themeId === "custom" ? THEME_PRESETS.default : THEME_PRESETS[s.themeId];
   for (const [key, value] of Object.entries(preset.vars)) {
     root.style.setProperty(key, value);
   }
+  const accent = preset.vars["--accent"];
+  const background = preset.vars["--background"] ?? "#fbf8f2";
+  if (accent) {
+    root.style.setProperty("--accent-bright", preset.vars["--accent-bright"] ?? accent);
+    root.style.setProperty("--accent-ink", preset.vars["--accent-ink"] ?? "#fffaf2");
+  }
+  if (preset.vars["--lilac"]) {
+    root.style.setProperty("--lilac", preset.vars["--lilac"]);
+  }
+
+  const hex = background.replace("#", "");
+  let isLight = true;
+  if (hex.length >= 6) {
+    const r = parseInt(hex.slice(0, 2), 16) / 255;
+    const g = parseInt(hex.slice(2, 4), 16) / 255;
+    const b = parseInt(hex.slice(4, 6), 16) / 255;
+    isLight = 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45;
+  }
+  root.style.colorScheme = isLight ? "light" : "dark";
+  root.classList.toggle("dark", !isLight);
 
   let styleEl = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
   const css = s.themeId === "custom" ? s.customCss.trim() : "";
@@ -414,9 +497,7 @@ export function clearCustomFont() {
 }
 
 export function familyNameFromFile(fileName: string): string {
-  return sanitizeFontFamily(
-    fileName.replace(/\.(woff2?|ttf|otf)$/i, "").replace(/[-_]+/g, " "),
-  );
+  return sanitizeFontFamily(fileName.replace(/\.(woff2?|ttf|otf)$/i, "").replace(/[-_]+/g, " "));
 }
 
 export async function readFontFileAsDataUrl(file: File): Promise<string> {

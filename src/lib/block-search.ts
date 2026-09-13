@@ -20,11 +20,7 @@ export function blocksToSearchText(blocks: Block[] | undefined): string {
   return parts.join("\n");
 }
 
-export function snippetAround(
-  haystack: string,
-  query: string,
-  radius = 48,
-): string | null {
+export function snippetAround(haystack: string, query: string, radius = 48): string | null {
   const h = haystack.toLowerCase();
   const q = query.trim().toLowerCase();
   if (!q) return null;

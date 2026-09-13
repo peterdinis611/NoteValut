@@ -13,8 +13,7 @@ export type UploadedFile = {
 
 export type MediaKind = "image" | "pdf" | "video" | "file";
 
-const OFFICE_EXT =
-  /\.(docx?|xlsx?|pptx?)$/i;
+const OFFICE_EXT = /\.(docx?|xlsx?|pptx?)$/i;
 
 const OFFICE_MIME = new Set([
   "application/msword",
@@ -80,10 +79,7 @@ export function mediaKindFromFile(file: File): MediaKind | null {
     return "image";
   }
   if (type === "application/pdf" || name.endsWith(".pdf")) return "pdf";
-  if (
-    type.startsWith("video/") ||
-    /\.(mp4|webm|ogg|mov|m4v)$/i.test(name)
-  ) {
+  if (type.startsWith("video/") || /\.(mp4|webm|ogg|mov|m4v)$/i.test(name)) {
     return "video";
   }
   if (isOfficeFile(file)) return "file";

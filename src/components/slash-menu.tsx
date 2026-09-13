@@ -1,8 +1,7 @@
 "use client";
 
-import { motion } from "motion/react";
 import type { SlashCommand } from "@/lib/blocks";
-import { dropdownVariants, easeOutSoft } from "@/lib/motion";
+import { useAnimeEnter } from "@/lib/anime-ui";
 
 type Props = {
   commands: SlashCommand[];
@@ -11,29 +10,18 @@ type Props = {
 };
 
 export function SlashMenu({ commands, selectedIndex, onSelect }: Props) {
+  const enterRef = useAnimeEnter<HTMLDivElement>("dropdown");
+
   if (!commands.length) {
     return (
-      <motion.div
-        className="slash-menu"
-        variants={dropdownVariants}
-        initial="hidden"
-        animate="visible"
-        transition={easeOutSoft}
-      >
+      <div ref={enterRef} className="slash-menu">
         <p className="px-3 py-2 text-sm text-muted">No matching blocks</p>
-      </motion.div>
+      </div>
     );
   }
 
   return (
-    <motion.div
-      className="slash-menu"
-      role="listbox"
-      variants={dropdownVariants}
-      initial="hidden"
-      animate="visible"
-      transition={easeOutSoft}
-    >
+    <div ref={enterRef} className="slash-menu" role="listbox">
       <p className="slash-menu-label">Blocks</p>
       {commands.map((cmd, index) => (
         <button
@@ -54,6 +42,6 @@ export function SlashMenu({ commands, selectedIndex, onSelect }: Props) {
           </span>
         </button>
       ))}
-    </motion.div>
+    </div>
   );
 }

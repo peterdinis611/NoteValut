@@ -201,8 +201,7 @@ function resolveVimeo(src: string, u: URL, host: string): VideoSource | null {
 
 function resolveLoom(src: string, u: URL, host: string): VideoSource | null {
   if (host !== "loom.com") return null;
-  const id =
-    pathSegmentAfter(u.pathname, "share") || pathSegmentAfter(u.pathname, "embed");
+  const id = pathSegmentAfter(u.pathname, "share") || pathSegmentAfter(u.pathname, "embed");
   if (!id) return null;
   return {
     provider: "loom",
@@ -213,12 +212,7 @@ function resolveLoom(src: string, u: URL, host: string): VideoSource | null {
   };
 }
 
-function resolveTwitch(
-  src: string,
-  u: URL,
-  host: string,
-  parent: string,
-): VideoSource | null {
+function resolveTwitch(src: string, u: URL, host: string, parent: string): VideoSource | null {
   if (host !== "twitch.tv" && host !== "clips.twitch.tv") return null;
 
   // clips.twitch.tv/ClipSlug or twitch.tv/user/clip/Slug
@@ -321,9 +315,7 @@ function resolveStreamable(src: string, u: URL, host: string): VideoSource | nul
 
 function resolveWistia(src: string, u: URL, host: string): VideoSource | null {
   const isWistia =
-    host.endsWith("wistia.com") ||
-    host.endsWith("wistia.net") ||
-    host.endsWith("wi.st");
+    host.endsWith("wistia.com") || host.endsWith("wistia.net") || host.endsWith("wi.st");
   if (!isWistia) return null;
   const id =
     pathSegmentAfter(u.pathname, "medias") ||

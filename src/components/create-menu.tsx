@@ -1,11 +1,10 @@
 "use client";
 
-import { FileText, FolderOpen, Trash2 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { FileText, FolderOpen, LayoutTemplate, Trash2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { removeCustomTemplate } from "@/db/templates-collection";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
-import { dropdownVariants, easeOutSoft } from "@/lib/motion";
+import { AnimePresence } from "@/lib/anime-ui";
 import { PAGE_TEMPLATES } from "@/lib/templates";
 
 type Props = {
@@ -13,9 +12,16 @@ type Props = {
   onClose: () => void;
   onCreateEntry: (templateId: string) => void;
   onCreateCollection: () => void;
+  onBrowseTemplates?: () => void;
 };
 
-export function CreateMenu({ open, onClose, onCreateEntry, onCreateCollection }: Props) {
+export function CreateMenu({
+  open,
+  onClose,
+  onCreateEntry,
+  onCreateCollection,
+  onBrowseTemplates,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const custom = useCustomTemplates();
 
@@ -33,17 +39,8 @@ export function CreateMenu({ open, onClose, onCreateEntry, onCreateCollection }:
   }, [open, onClose]);
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          ref={ref}
-          className="create-menu"
-          variants={dropdownVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={easeOutSoft}
-        >
+    <AnimePresence show={open} kind="dropdown">
+      <div ref={ref} className="create-menu">
           <p className="create-menu-label">Create new</p>
           <button
             type="button"
@@ -59,6 +56,23 @@ export function CreateMenu({ open, onClose, onCreateEntry, onCreateCollection }:
               <span className="block text-xs text-muted">Folder to organize entries</span>
             </span>
           </button>
+
+          {onBrowseTemplates && (
+            <button
+              type="button"
+              className="create-menu-item"
+              onClick={() => {
+                onBrowseTemplates();
+                onClose();
+              }}
+            >
+              <LayoutTemplate className="size-4 text-accent" />
+              <span>
+                <span className="block text-sm font-medium">Browse templates</span>
+                <span className="block text-xs text-muted">Marketplace of page starters</span>
+              </span>
+            </button>
+          )}
 
           {custom.length > 0 && (
             <>
@@ -116,9 +130,8 @@ export function CreateMenu({ open, onClose, onCreateEntry, onCreateCollection }:
               </span>
             </button>
           ))}
-        </motion.div>
-      )}
-    </AnimatePresence>
+      </div>
+    </AnimePresence>
   );
 }
 

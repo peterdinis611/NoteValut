@@ -1,23 +1,13 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import {
-  Check,
-  Copy,
-  Eye,
-  Link2,
-  Lock,
-  Pencil,
-  Trash2,
-  X,
-} from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { Check, Copy, Eye, Link2, Lock, Pencil, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { roleDescription } from "@/lib/ability";
-import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
+import { AnimePresence } from "@/lib/anime-ui";
 import { permissionLabel, shareUrl, type ShareScope } from "@/lib/share";
 import { useToast } from "./toast";
 
@@ -37,12 +27,15 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
   const createShare = useMutation(api.shares.create);
   const updateShare = useMutation(api.shares.update);
   const removeShare = useMutation(api.shares.remove);
+  const revokeAll = useMutation(api.shares.revokeAll);
   const updateSettings = useMutation(api.vaultSettings.update);
 
   const [permission, setPermission] = useState<"read" | "write">("read");
   const [copied, setCopied] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [expiresInDays, setExpiresInDays] = useState<"" | "1" | "7" | "30">("");
+  const [password, setPassword] = useState("");
 
   useEffect(() => setMounted(true), []);
 
@@ -74,20 +67,43 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
   async function handleCreate() {
     setBusy(true);
     try {
+      const expiresAt =
+        expiresInDays === ""
+          ? undefined
+          : Date.now() + Number(expiresInDays) * 24 * 60 * 60 * 1000;
       await createShare({
         ownerId,
         scope,
         noteId,
         permission,
         label: title ? `Share: ${title}` : undefined,
+        expiresAt,
+        password: password.trim() || undefined,
       });
-      toast.success(
-        permission === "read" ? "Viewer link created" : "Editor link created",
-      );
+      setPassword("");
+      setExpiresInDays("");
+      toast.success(permission === "read" ? "Viewer link created" : "Editor link created");
     } catch {
       toast.error("Couldn’t create share link");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleRevokeAll() {
+    try {
+      const result = await revokeAll({
+        ownerId,
+        noteId: scope === "vault" ? undefined : noteId,
+        hardDelete: false,
+      });
+      toast.success(
+        result.count === 0
+          ? "No links to revoke"
+          : `Revoked ${result.count} link${result.count === 1 ? "" : "s"}`,
+      );
+    } catch {
+      toast.error("Couldn’t revoke links");
     }
   }
 
@@ -127,29 +143,15 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
   if (!mounted) return null;
 
   return createPortal(
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="share-overlay"
-          onClick={onClose}
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={easeQuick}
+    <AnimePresence show={open} kind="overlay">
+      <div className="share-overlay" onClick={onClose}>
+        <div
+          className="share-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="share-panel-title"
+          onClick={(e) => e.stopPropagation()}
         >
-          <motion.div
-            className="share-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="share-panel-title"
-            onClick={(e) => e.stopPropagation()}
-            variants={modalVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={easeOutSoft}
-          >
             <header className="share-panel-header">
               <div className="share-panel-heading">
                 <span className="share-panel-icon" aria-hidden>
@@ -195,9 +197,7 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                           ownerId,
                           sharingEnabled: e.target.checked,
                         });
-                        toast.success(
-                          e.target.checked ? "Sharing enabled" : "Sharing disabled",
-                        );
+                        toast.success(e.target.checked ? "Sharing enabled" : "Sharing disabled");
                       } catch {
                         toast.error("Couldn’t update sharing settings");
                       }
@@ -208,9 +208,7 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                 <label className="share-switch">
                   <span className="share-switch-copy">
                     <span className="share-switch-label">Prefer Viewer links</span>
-                    <span className="share-switch-hint">
-                      New links default to view-only
-                    </span>
+                    <span className="share-switch-hint">New links default to view-only</span>
                   </span>
                   <input
                     type="checkbox"
@@ -224,9 +222,7 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                         });
                         if (e.target.checked) setPermission("read");
                         toast.info(
-                          e.target.checked
-                            ? "New links default to Viewer"
-                            : "Editor links allowed",
+                          e.target.checked ? "New links default to Viewer" : "Editor links allowed",
                         );
                       } catch {
                         toast.error("Couldn’t update sharing settings");
@@ -265,6 +261,32 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                   </span>
                 </button>
               </div>
+              <div className="share-extra-fields">
+                <label className="share-field">
+                  <span>Expires</span>
+                  <select
+                    value={expiresInDays}
+                    onChange={(e) =>
+                      setExpiresInDays(e.target.value as "" | "1" | "7" | "30")
+                    }
+                  >
+                    <option value="">Never</option>
+                    <option value="1">In 1 day</option>
+                    <option value="7">In 7 days</option>
+                    <option value="30">In 30 days</option>
+                  </select>
+                </label>
+                <label className="share-field">
+                  <span>Password (optional)</span>
+                  <input
+                    type="password"
+                    value={password}
+                    placeholder="Leave empty for open link"
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                </label>
+              </div>
               <button
                 type="button"
                 className="share-create-btn"
@@ -279,9 +301,20 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
             <section className="share-list-section" aria-label="Active links">
               <div className="share-list-head">
                 <p className="share-section-label">Active links</p>
-                {relevant.length > 0 && (
-                  <span className="share-list-count">{relevant.length}</span>
-                )}
+                <div className="share-list-head-actions">
+                  {relevant.length > 0 && (
+                    <span className="share-list-count">{relevant.length}</span>
+                  )}
+                  {relevant.length > 0 && (
+                    <button
+                      type="button"
+                      className="share-revoke-all"
+                      onClick={() => void handleRevokeAll()}
+                    >
+                      Revoke all
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="share-list">
                 {shares === undefined ? (
@@ -315,6 +348,19 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                             )}
                             {permissionLabel(share.permission)}
                           </span>
+                          {share.passwordHash ? (
+                            <span title="Password protected">
+                              <Lock className="size-3 inline" /> Password
+                            </span>
+                          ) : null}
+                          {share.expiresAt ? (
+                            <span>
+                              Exp {new Date(share.expiresAt).toLocaleDateString()}
+                            </span>
+                          ) : null}
+                          <span>
+                            {share.viewCount ?? 0} view{(share.viewCount ?? 0) === 1 ? "" : "s"}
+                          </span>
                           {!share.enabled && <span>Disabled</span>}
                         </p>
                       </div>
@@ -336,9 +382,7 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                           type="button"
                           className="share-icon-btn"
                           title={
-                            share.permission === "read"
-                              ? "Switch to Editor"
-                              : "Switch to Viewer"
+                            share.permission === "read" ? "Switch to Editor" : "Switch to Viewer"
                           }
                           aria-label="Toggle permission"
                           onClick={() => void handleTogglePermission(share)}
@@ -367,13 +411,11 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
 
             <p className="share-hint">
               <Lock className="size-3.5 shrink-0" />
-              Recipients open the link as Viewer or Editor. Only you can create or revoke
-              links.
+              Recipients open the link as Viewer or Editor. Only you can create or revoke links.
             </p>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>,
+        </div>
+      </div>
+    </AnimePresence>,
     document.body,
   );
 }

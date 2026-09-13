@@ -1,5 +1,5 @@
-import { NoteVaultApp } from "@/components/note-vault-app";
+import { HomeGate } from "@/components/home-gate";
 
 export default function Home() {
-  return <NoteVaultApp />;
+  return <HomeGate />;
 }

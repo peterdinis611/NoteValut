@@ -1,11 +1,11 @@
 "use client";
 
 import { Expand, Film, Link2, Trash2 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { MediaUploadButton } from "@/components/media-upload-button";
 import { VideoViewer, VideoViewerOverlay } from "@/components/video-viewer";
 import { useToast } from "@/components/toast";
+import { AnimePresence } from "@/lib/anime-ui";
 import { resolveVideoSource, VIDEO_PROVIDER_CATALOG } from "@/lib/video";
 import type { BlockRenderProps } from "../types";
 
@@ -76,7 +76,11 @@ export function VideoBlockView(props: BlockRenderProps) {
         </div>
         <div className="nv-video-providers" aria-label="Supported providers">
           {VIDEO_PROVIDER_CATALOG.map((p) => (
-            <span key={p.id} className={`nv-video-provider-chip nv-video-badge-${p.id}`} title={p.example}>
+            <span
+              key={p.id}
+              className={`nv-video-provider-chip nv-video-badge-${p.id}`}
+              title={p.example}
+            >
               {p.label}
             </span>
           ))}
@@ -173,14 +177,8 @@ export function VideoBlockView(props: BlockRenderProps) {
         </div>
       )}
 
-      <AnimatePresence>
-        {editingUrl && !props.readOnly && (
-          <motion.div
-            className="nv-video-url-bar"
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-          >
+      <AnimePresence show={editingUrl && !props.readOnly} kind="dropdown">
+          <div className="nv-video-url-bar">
             <Link2 className="size-3.5 shrink-0 opacity-50" />
             <input
               ref={urlRef}
@@ -207,9 +205,8 @@ export function VideoBlockView(props: BlockRenderProps) {
             >
               Save
             </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+      </AnimePresence>
 
       {source ? (
         <VideoViewer
@@ -222,11 +219,7 @@ export function VideoBlockView(props: BlockRenderProps) {
         <div className="nv-video-status nv-video-status-error">
           <Film className="size-5" />
           <p>Couldn’t parse this URL</p>
-          <button
-            type="button"
-            className="nv-video-url-apply"
-            onClick={() => setEditingUrl(true)}
-          >
+          <button type="button" className="nv-video-url-apply" onClick={() => setEditingUrl(true)}>
             Edit link
           </button>
         </div>

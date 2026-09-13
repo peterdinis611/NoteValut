@@ -1,25 +1,44 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Geist, Geist_Mono } from "next/font/google";
+import { Calistoga, Fraunces, IBM_Plex_Mono, Sora, Young_Serif } from "next/font/google";
 import { ConvexClientProvider } from "@/components/providers";
 import { PwaRegister } from "@/components/pwa-register";
+import { ThemeBoot } from "@/components/theme-boot";
 import { clerkAppearance } from "@/lib/clerk-appearance";
 import "./globals.css";
+import "./folio-pages.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const sora = Sora({
+  variable: "--font-body",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
   subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
-const fraunces = Fraunces({
+const youngSerif = Young_Serif({
   variable: "--font-display",
   subsets: ["latin"],
-  axes: ["SOFT", "WONK", "opsz"],
+  weight: "400",
+});
+
+const landDisplay = Calistoga({
+  variable: "--font-land-display",
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+});
+
+const landScript = Fraunces({
+  variable: "--font-land-script",
+  subsets: ["latin"],
+  weight: ["600"],
+  style: ["italic"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -39,8 +58,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#141210",
-  colorScheme: "dark",
+  themeColor: "#fbf8f2",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
@@ -51,10 +70,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full dark`}
+      className={`${sora.variable} ${plexMono.variable} ${youngSerif.variable} ${landDisplay.variable} ${landScript.variable} h-full`}
     >
-      <body className="min-h-full font-sans">
+      <body className="min-h-full font-sans nv-atmosphere">
         <ClerkProvider appearance={clerkAppearance}>
+          <ThemeBoot />
           <ConvexClientProvider>{children}</ConvexClientProvider>
           <PwaRegister />
         </ClerkProvider>

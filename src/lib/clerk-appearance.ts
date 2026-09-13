@@ -1,19 +1,27 @@
-import { dark } from "@clerk/themes";
-
-/** NoteVault-tuned Clerk appearance (dark + copper accent). */
+/** NoteVault — Folio (paper, ink, brew). */
 export const clerkAppearance = {
-  theme: dark,
-  baseTheme: dark,
+  options: {
+    socialButtonsVariant: "blockButton" as const,
+    socialButtonsPlacement: "top" as const,
+    logoPlacement: "none" as const,
+  },
+  layout: {
+    socialButtonsVariant: "blockButton" as const,
+    socialButtonsPlacement: "top" as const,
+    logoPlacement: "none" as const,
+  },
   variables: {
-    colorPrimary: "#e2a45a",
-    colorBackground: "#1a1713",
-    colorInputBackground: "#141210",
-    colorInputText: "rgba(250,245,235,0.92)",
-    colorText: "rgba(250,245,235,0.9)",
-    colorTextSecondary: "rgba(210,190,165,0.58)",
-    colorNeutral: "rgba(210,190,165,0.7)",
-    borderRadius: "0.65rem",
-    fontFamily: "var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif",
+    colorPrimary: "#c4480e",
+    colorBackground: "#fffaf3",
+    colorInputBackground: "#fbf8f2",
+    colorInputText: "#171412",
+    colorText: "#171412",
+    colorTextSecondary: "#6d6458",
+    colorNeutral: "#6d6458",
+    colorDanger: "#c43c1a",
+    borderRadius: "0.35rem",
+    fontFamily: "var(--font-body), ui-sans-serif, sans-serif",
+    fontFamilyButtons: "var(--font-body), ui-sans-serif, sans-serif",
   },
   elements: {
     rootBox: "clerk-root-box",
@@ -23,5 +31,7 @@ export const clerkAppearance = {
     socialButtonsBlockButton: "clerk-social-btn",
     formButtonPrimary: "clerk-primary-btn",
     footerActionLink: "clerk-footer-link",
+    logoBox: "clerk-logo-box",
+    footer: "clerk-footer",
   },
 };

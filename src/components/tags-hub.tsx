@@ -2,12 +2,11 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { Hash, Pencil, Tag, Trash2, X } from "lucide-react";
-import { motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { isFolder } from "@/lib/item-kinds";
-import { easeOutSoft, fadeUpVariants } from "@/lib/motion";
+import { useAnimeEnter } from "@/lib/anime-ui";
 import { formatRelativeTime } from "@/lib/format";
 import { normalizeTag, tagKey } from "@/lib/tags";
 import { useToast } from "./toast";
@@ -21,8 +20,8 @@ type Props = {
 
 export function TagsHub({ ownerId, onClose, onNavigate, initialTag = null }: Props) {
   const toast = useToast();
-  const tags = useQuery(api.notes.listTags, { ownerId });
-  const notes = useQuery(api.notes.list, { ownerId });
+  const tags = useQuery(api.notes.listTags, ownerId ? { ownerId } : "skip");
+  const notes = useQuery(api.notes.list, ownerId ? { ownerId } : "skip");
   const renameTag = useMutation(api.notes.renameTag);
   const deleteTag = useMutation(api.notes.deleteTag);
 
@@ -30,6 +29,7 @@ export function TagsHub({ ownerId, onClose, onNavigate, initialTag = null }: Pro
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const enterRef = useAnimeEnter<HTMLDivElement>("page");
 
   useEffect(() => {
     if (initialTag) setActiveTag(initialTag);
@@ -38,9 +38,7 @@ export function TagsHub({ ownerId, onClose, onNavigate, initialTag = null }: Pro
   const filtered = useMemo(() => {
     if (!notes || !activeTag) return [];
     const needle = tagKey(activeTag);
-    return notes.filter(
-      (n) => !isFolder(n) && n.tags.some((t) => tagKey(t) === needle),
-    );
+    return notes.filter((n) => !isFolder(n) && n.tags.some((t) => tagKey(t) === needle));
   }, [notes, activeTag]);
 
   async function handleRename(from: string) {
@@ -77,20 +75,16 @@ export function TagsHub({ ownerId, onClose, onNavigate, initialTag = null }: Pro
   }
 
   return (
-    <motion.div
-      className="tags-hub note-scroll"
-      initial="hidden"
-      animate="visible"
-      variants={fadeUpVariants}
-      transition={easeOutSoft}
-    >
+    <div ref={enterRef} className="tags-hub note-scroll">
       <header className="settings-header">
         <div>
           <p className="settings-kicker">
             <Tag className="size-3.5" />
             Browse
           </p>
-          <h1 className="settings-title">Tags</h1>
+          <h1 className="settings-title">
+            Page <em>tags</em>
+          </h1>
           <p className="settings-subtitle">Filter, rename, or delete tags across your vault</p>
         </div>
         <button type="button" className="settings-close" onClick={onClose} aria-label="Close tags">
@@ -209,6 +203,6 @@ export function TagsHub({ ownerId, onClose, onNavigate, initialTag = null }: Pro
           )}
         </section>
       )}
-    </motion.div>
+    </div>
   );
 }

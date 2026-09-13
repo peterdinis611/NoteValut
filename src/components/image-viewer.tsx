@@ -10,7 +10,6 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import {
   useCallback,
   useEffect,
@@ -21,7 +20,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { easeOutSoft, overlayVariants } from "@/lib/motion";
+import { AnimePresence } from "@/lib/anime-ui";
 
 export type ImageViewerItem = {
   src: string;
@@ -40,21 +39,13 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 5;
 const ZOOM_STEP = 0.35;
 
-export function ImageViewer({
-  open,
-  onClose,
-  images,
-  index = 0,
-  onIndexChange,
-}: Props) {
+export function ImageViewer({ open, onClose, images, index = 0, onIndexChange }: Props) {
   const [mounted, setMounted] = useState(false);
   const [active, setActive] = useState(index);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
-  const dragOrigin = useRef<{ x: number; y: number; ox: number; oy: number } | null>(
-    null,
-  );
+  const dragOrigin = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
   const resetTransform = useCallback(() => {
     setScale(1);
@@ -177,19 +168,13 @@ export function ImageViewer({
   if (!mounted) return null;
 
   return createPortal(
-    <AnimatePresence>
-      {open && current && (
-        <motion.div
-          className="image-viewer"
-          role="dialog"
-          aria-modal="true"
-          aria-label={current.alt || "Image viewer"}
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={{ duration: 0.18 }}
-        >
+    <AnimePresence show={open && !!current} kind="overlay">
+      <div
+        className="image-viewer"
+        role="dialog"
+        aria-modal="true"
+        aria-label={current?.alt || "Image viewer"}
+      >
           <button
             type="button"
             className="image-viewer-backdrop"
@@ -199,9 +184,7 @@ export function ImageViewer({
 
           <header className="image-viewer-bar">
             <div className="image-viewer-meta">
-              <p className="image-viewer-caption">
-                {current.alt?.trim() || "Image"}
-              </p>
+              <p className="image-viewer-caption">{current?.alt?.trim() || "Image"}</p>
               {hasGallery && (
                 <span className="image-viewer-count">
                   {active + 1} / {images.length}
@@ -220,11 +203,7 @@ export function ImageViewer({
                 label={scale > 1 ? "Fit" : "Zoom 200%"}
                 onClick={() => (scale > 1 ? resetTransform() : setScale(2))}
               >
-                {scale > 1 ? (
-                  <Minimize2 className="size-4" />
-                ) : (
-                  <Maximize2 className="size-4" />
-                )}
+                {scale > 1 ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
               </ToolBtn>
               <ToolBtn label="Reset" onClick={resetTransform}>
                 <RotateCcw className="size-4" />
@@ -234,7 +213,7 @@ export function ImageViewer({
               </ToolBtn>
               <a
                 className="image-viewer-tool"
-                href={current.src}
+                href={current?.src}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Open original"
@@ -260,15 +239,12 @@ export function ImageViewer({
             onPointerCancel={onPointerUp}
             onDoubleClick={onDoubleClick}
           >
-            <motion.img
-              key={current.src}
-              src={current.src}
-              alt={current.alt || "Image"}
+            <img
+              key={current?.src}
+              src={current?.src}
+              alt={current?.alt || "Image"}
               className="image-viewer-img"
               draggable={false}
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={easeOutSoft}
               style={{
                 transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
               }}
@@ -300,9 +276,8 @@ export function ImageViewer({
             Scroll to zoom · drag to pan · Esc to close
             {hasGallery ? " · ← → to browse" : ""}
           </p>
-        </motion.div>
-      )}
-    </AnimatePresence>,
+      </div>
+    </AnimePresence>,
     document.body,
   );
 }

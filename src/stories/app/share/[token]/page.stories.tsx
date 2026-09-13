@@ -20,8 +20,7 @@ const meta = {
     layout: "fullscreen",
     docs: {
       description: {
-        component:
-          "Route `app/share/[token]/page.tsx` awaits params and renders SharedVaultApp.",
+        component: "Route `app/share/[token]/page.tsx` awaits params and renders SharedVaultApp.",
       },
     },
   },

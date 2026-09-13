@@ -1,9 +1,8 @@
 "use client";
 
 import { ArrowUp } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { easeOutSoft } from "@/lib/motion";
+import { AnimePresence } from "@/lib/anime-ui";
 
 const THRESHOLD = 280;
 
@@ -55,22 +54,16 @@ export function ScrollToTop({ resetKey }: Props) {
   }
 
   return (
-    <AnimatePresence>
-      {visible && (
-        <motion.button
+    <AnimePresence show={visible} kind="pop">
+        <button
           type="button"
           className="scroll-top-btn"
           onClick={scrollUp}
           aria-label="Scroll to top"
           title="Scroll to top"
-          initial={{ opacity: 0, y: 12, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 12, scale: 0.9 }}
-          transition={easeOutSoft}
         >
           <ArrowUp className="size-4" />
-        </motion.button>
-      )}
-    </AnimatePresence>
+        </button>
+    </AnimePresence>
   );
 }

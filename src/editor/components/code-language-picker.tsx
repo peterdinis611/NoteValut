@@ -1,7 +1,6 @@
 "use client";
 
 import { Check, ChevronsUpDown, Search, Sparkles } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import {
   useEffect,
   useLayoutEffect,
@@ -11,12 +10,8 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import {
-  CODE_LANGUAGES,
-  POPULAR_PICKER_IDS,
-  type LanguageOption,
-} from "@/lib/highlight";
-import { dropdownVariants, easeOutSoft } from "@/lib/motion";
+import { CODE_LANGUAGES, POPULAR_PICKER_IDS, type LanguageOption } from "@/lib/highlight";
+import { AnimePresence } from "@/lib/anime-ui";
 
 type Props = {
   value: string;
@@ -28,13 +23,7 @@ type Props = {
 
 type MenuPos = { top: number; left: number; width: number };
 
-export function CodeLanguagePicker({
-  value,
-  disabled,
-  detected,
-  onChange,
-  onFocus,
-}: Props) {
+export function CodeLanguagePicker({ value, disabled, detected, onChange, onFocus }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -101,7 +90,12 @@ export function CodeLanguagePicker({
     if (!open) return;
     updatePos();
     setQuery("");
-    setActiveIndex(Math.max(0, flatList.findIndex((l) => l.id === value)));
+    setActiveIndex(
+      Math.max(
+        0,
+        flatList.findIndex((l) => l.id === value),
+      ),
+    );
     requestAnimationFrame(() => searchRef.current?.focus());
     function onScroll() {
       updatePos();
@@ -165,29 +159,21 @@ export function CodeLanguagePicker({
     }
   }
 
-  const displayLabel =
-    value === "auto" && detected ? `Auto · ${detected}` : current.label;
+  const displayLabel = value === "auto" && detected ? `Auto · ${detected}` : current.label;
 
-  const menu =
-    open && pos ? (
-      <motion.div
-        key="code-lang-menu"
+  const menu = (
+      <div
         ref={menuRef}
         className="nv-code-lang-menu"
         role="listbox"
         aria-label="Code language"
-        variants={dropdownVariants}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-        transition={easeOutSoft}
         style={{
           position: "fixed",
-          top: pos.top,
-          left: pos.left,
-          width: pos.width,
-          transform: pos.openUp ? "translateY(-100%)" : undefined,
-          transformOrigin: pos.openUp ? "bottom left" : "top left",
+          top: pos?.top,
+          left: pos?.left,
+          width: pos?.width,
+          transform: pos?.openUp ? "translateY(-100%)" : undefined,
+          transformOrigin: pos?.openUp ? "bottom left" : "top left",
         }}
       >
         <div className="nv-code-lang-search">
@@ -203,9 +189,7 @@ export function CodeLanguagePicker({
             }}
             onKeyDown={onSearchKeyDown}
           />
-          {query && (
-            <kbd className="nv-code-lang-kbd">esc</kbd>
-          )}
+          {query && <kbd className="nv-code-lang-kbd">esc</kbd>}
         </div>
 
         <div className="nv-code-lang-list note-scroll" ref={listRef}>
@@ -238,9 +222,7 @@ export function CodeLanguagePicker({
                       onMouseEnter={() => setActiveIndex(i)}
                       onClick={() => select(lang.id)}
                     >
-                      {lang.id === "auto" ? (
-                        <Sparkles className="size-3 opacity-70" />
-                      ) : null}
+                      {lang.id === "auto" ? <Sparkles className="size-3 opacity-70" /> : null}
                       {lang.label}
                     </button>
                   );
@@ -258,8 +240,8 @@ export function CodeLanguagePicker({
             </>
           )}
         </div>
-      </motion.div>
-    ) : null;
+      </div>
+    );
 
   return (
     <div className="nv-code-lang-picker" ref={rootRef}>
@@ -282,7 +264,9 @@ export function CodeLanguagePicker({
 
       {mounted &&
         createPortal(
-          <AnimatePresence>{menu}</AnimatePresence>,
+          <AnimePresence show={open} kind="dropdown">
+            {menu}
+          </AnimePresence>,
           document.body,
         )}
     </div>

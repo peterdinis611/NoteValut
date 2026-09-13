@@ -4,12 +4,7 @@ import { useQuery } from "convex/react";
 import { Tag, X } from "lucide-react";
 import { KeyboardEvent, useMemo, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
-import {
-  addTagToList,
-  normalizeTag,
-  removeTagFromList,
-  tagKey,
-} from "@/lib/tags";
+import { addTagToList, normalizeTag, removeTagFromList, tagKey } from "@/lib/tags";
 import { useToast } from "./toast";
 
 type Props = {
@@ -21,32 +16,20 @@ type Props = {
   onOpenTag?: (tag: string) => void;
 };
 
-export function PageProperties({
-  tags,
-  updatedAt,
-  ownerId,
-  readOnly,
-  onChange,
-  onOpenTag,
-}: Props) {
+export function PageProperties({ tags, updatedAt, ownerId, readOnly, onChange, onOpenTag }: Props) {
   const toast = useToast();
   const [draft, setDraft] = useState("");
   const [editingTags, setEditingTags] = useState(false);
   const [suggestIndex, setSuggestIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const vaultTags = useQuery(
-    api.notes.listTags,
-    ownerId && editingTags ? { ownerId } : "skip",
-  );
+  const vaultTags = useQuery(api.notes.listTags, ownerId && editingTags ? { ownerId } : "skip");
 
   const suggestions = useMemo(() => {
     const q = tagKey(normalizeTag(draft));
     if (!vaultTags?.length) return [];
     const existing = new Set(tags.map(tagKey));
-    return vaultTags
-      .filter((t) => !existing.has(t.key) && (!q || t.key.includes(q)))
-      .slice(0, 6);
+    return vaultTags.filter((t) => !existing.has(t.key) && (!q || t.key.includes(q))).slice(0, 6);
   }, [vaultTags, draft, tags]);
 
   function addTag(raw: string) {

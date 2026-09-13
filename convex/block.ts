@@ -27,12 +27,13 @@ export const blockValidator = v.object({
     v.literal("link"),
     v.literal("pdf"),
     v.literal("file"),
+    v.literal("canvas"),
+    v.literal("math"),
+    v.literal("synced"),
   ),
   text: v.string(),
   checked: v.optional(v.boolean()),
-  calloutVariant: v.optional(
-    v.union(v.literal("info"), v.literal("tip"), v.literal("warning")),
-  ),
+  calloutVariant: v.optional(v.union(v.literal("info"), v.literal("tip"), v.literal("warning"))),
   pageId: v.optional(v.string()),
   language: v.optional(v.string()),
   url: v.optional(v.string()),
@@ -41,9 +42,7 @@ export const blockValidator = v.object({
   color: v.optional(v.string()),
   bgColor: v.optional(v.string()),
   width: v.optional(v.number()),
-  align: v.optional(
-    v.union(v.literal("left"), v.literal("center"), v.literal("right")),
-  ),
+  align: v.optional(v.union(v.literal("left"), v.literal("center"), v.literal("right"))),
   /** Nesting level for lists / todos (0–5) */
   indent: v.optional(v.number()),
   /** Todo due date (ms epoch) */
@@ -56,4 +55,8 @@ export const blockValidator = v.object({
   columnIndex: v.optional(v.number()),
   /** Total columns in the layout group (on each column block) */
   columnCount: v.optional(v.number()),
+  /** Synced block source id (shared across pages) */
+  syncedId: v.optional(v.string()),
+  /** Mentioned user id for comments / @mentions */
+  mentionUserId: v.optional(v.string()),
 });

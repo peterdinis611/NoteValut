@@ -7,21 +7,9 @@ import {
 import type { SharePermission } from "@/lib/share";
 
 /** Actions guests / owners can perform on shared content. */
-export type AppAction =
-  | "create"
-  | "read"
-  | "update"
-  | "delete"
-  | "share"
-  | "manage";
+export type AppAction = "create" | "read" | "update" | "delete" | "share" | "manage";
 
-export type AppSubjectName =
-  | "Note"
-  | "Block"
-  | "Vault"
-  | "Share"
-  | "Settings"
-  | "all";
+export type AppSubjectName = "Note" | "Block" | "Vault" | "Share" | "Settings" | "all";
 
 export type AppSubjects = InferSubjects<AppSubjectName> | "all";
 

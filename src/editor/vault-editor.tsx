@@ -81,8 +81,7 @@ export function VaultEditor({
     if (readOnly) return;
     const files = [...fileList];
     if (!files.length) return;
-    const anchor =
-      editor.focusedId ?? editor.blocks[editor.blocks.length - 1]?.id;
+    const anchor = editor.focusedId ?? editor.blocks[editor.blocks.length - 1]?.id;
     if (!anchor) return;
 
     let afterId = anchor;
@@ -94,8 +93,7 @@ export function VaultEditor({
       }
       try {
         const uploaded = await uploadFile(file);
-        const title =
-          kind === "file" ? file.name : file.name.replace(/\.[^.]+$/, "");
+        const title = kind === "file" ? file.name : file.name.replace(/\.[^.]+$/, "");
         const id = editor.commands.insertBlockAfter(afterId, kind, title);
         editor.commands.updateBlock(id, { url: uploaded.url });
         afterId = id;
@@ -155,6 +153,7 @@ export function VaultEditor({
                           readOnly={readOnly}
                           colorToolbarId={colorToolbarId}
                           setColorToolbarId={setColorToolbarId}
+                          onPasteFiles={handleFiles}
                         />
                       </div>
                     );
@@ -173,6 +172,7 @@ export function VaultEditor({
                 readOnly={readOnly}
                 colorToolbarId={colorToolbarId}
                 setColorToolbarId={setColorToolbarId}
+                onPasteFiles={handleFiles}
               />
             );
           })}
@@ -198,7 +198,7 @@ export function VaultEditor({
       )}
 
       {draggingOver && !readOnly && (
-        <div className="nv-editor-drop-hint">Drop images, PDFs, or videos</div>
+        <div className="nv-editor-drop-hint">Drop images, PDFs, Word, Excel, or videos</div>
       )}
     </div>
   );
@@ -211,6 +211,7 @@ function SortableBlockRow({
   readOnly,
   colorToolbarId,
   setColorToolbarId,
+  onPasteFiles,
 }: {
   block: Block;
   index: number;
@@ -218,6 +219,7 @@ function SortableBlockRow({
   readOnly: boolean;
   colorToolbarId: string | null;
   setColorToolbarId: (id: string | null | ((prev: string | null) => string | null)) => void;
+  onPasteFiles: (files: FileList | File[]) => void | Promise<void>;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: block.id,
@@ -261,7 +263,11 @@ function SortableBlockRow({
       onMouseLeave={() => editor.setHoveredId(null)}
     >
       {!readOnly && (
-        <div className={`nv-gutter ${showChrome ? "nv-gutter-visible" : ""}`} role="toolbar" aria-label="Block actions">
+        <div
+          className={`nv-gutter ${showChrome ? "nv-gutter-visible" : ""}`}
+          role="toolbar"
+          aria-label="Block actions"
+        >
           <button
             type="button"
             className="nv-gutter-btn"
@@ -304,9 +310,7 @@ function SortableBlockRow({
             aria-label={block.pinned ? "Unpin block" : "Pin block"}
             title={block.pinned ? "Unpin bookmark" : "Bookmark on this page"}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() =>
-              editor.commands.updateBlock(block.id, { pinned: !block.pinned })
-            }
+            onClick={() => editor.commands.updateBlock(block.id, { pinned: !block.pinned })}
           >
             <Bookmark className={`size-3.5 ${block.pinned ? "fill-current" : ""}`} />
           </button>
@@ -345,6 +349,17 @@ function SortableBlockRow({
             onTextChange: (text) => editor.handleTextChange(block, text),
             onKeyDown: (e) => editor.handleKeyDown(block, e),
             onPaste: (e) => {
+              const imageItem = [...e.clipboardData.items].find((item) =>
+                item.type.startsWith("image/"),
+              );
+              if (imageItem) {
+                const file = imageItem.getAsFile();
+                if (file) {
+                  e.preventDefault();
+                  void onPasteFiles([file]);
+                  return;
+                }
+              }
               const text = e.clipboardData.getData("text/plain");
               if (text && editor.handlePasteMarkdown(block.id, text)) {
                 e.preventDefault();
@@ -364,8 +379,8 @@ function SortableBlockRow({
             <span className="nv-hint-chip">
               <kbd>[[</kbd> link page
             </span>
-            <span className="nv-hint-chip">drop files</span>
-            <span className="nv-hint-chip">paste markdown</span>
+            <span className="nv-hint-chip">drop images / pdf / word / excel</span>
+            <span className="nv-hint-chip">paste image or markdown</span>
           </div>
         )}
 

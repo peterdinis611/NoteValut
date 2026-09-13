@@ -227,9 +227,7 @@ export function sampleSharedVault(
   const permission = overrides.permission ?? "read";
   const scope = overrides.scope ?? "vault";
   const role = permission === "write" ? ("editor" as const) : ("viewer" as const);
-  const notes =
-    overrides.notes ??
-    sampleNotes().filter((n) => !n.archived && !n.trashed);
+  const notes = overrides.notes ?? sampleNotes().filter((n) => !n.archived && !n.trashed);
   return {
     share: {
       token: "storybookshare01",
@@ -244,9 +242,7 @@ export function sampleSharedVault(
     readOnly: permission !== "write",
     settings: { sharingEnabled: true, publicReadonly: true },
     notes,
-    rootNote: overrides.noteId
-      ? (notes.find((n) => n._id === overrides.noteId) ?? null)
-      : null,
+    rootNote: overrides.noteId ? (notes.find((n) => n._id === overrides.noteId) ?? null) : null,
   };
 }
 

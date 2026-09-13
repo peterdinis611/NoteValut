@@ -2,11 +2,10 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { History, RotateCcw, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { AnimePresence } from "@/lib/anime-ui";
 import { formatRelativeTime } from "@/lib/format";
-import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
 import { useToast } from "./toast";
 
 type Props = {
@@ -33,26 +32,15 @@ export function VersionHistoryPanel({ open, onClose, noteId, readOnly = false }:
   }
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="share-overlay"
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={easeQuick}
-          onClick={onClose}
+    <AnimePresence show={open} kind="overlay">
+      <div className="share-overlay" onClick={onClose}>
+        <div
+          className="history-panel"
+          role="dialog"
+          aria-modal
+          aria-labelledby="history-title"
+          onClick={(e) => e.stopPropagation()}
         >
-          <motion.div
-            className="history-panel"
-            role="dialog"
-            aria-modal
-            aria-labelledby="history-title"
-            variants={modalVariants}
-            transition={easeOutSoft}
-            onClick={(e) => e.stopPropagation()}
-          >
             <div className="share-panel-header">
               <div>
                 <h2 id="history-title" className="flex items-center gap-2 text-base font-semibold">
@@ -81,9 +69,7 @@ export function VersionHistoryPanel({ open, onClose, noteId, readOnly = false }:
                       <p className="text-xs text-muted">
                         {formatRelativeTime(ver.createdAt)} · {ver.blockCount} blocks
                       </p>
-                      {ver.preview.trim() && (
-                        <p className="history-preview">{ver.preview}</p>
-                      )}
+                      {ver.preview.trim() && <p className="history-preview">{ver.preview}</p>}
                     </div>
                     <button
                       type="button"
@@ -98,9 +84,8 @@ export function VersionHistoryPanel({ open, onClose, noteId, readOnly = false }:
                 ))
               )}
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </div>
+      </div>
+    </AnimePresence>
   );
 }

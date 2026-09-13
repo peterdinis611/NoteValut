@@ -1,0 +1,861 @@
+.nv-land-root {
+  --paper: #fbf8f2;
+  --ink: #171412;
+  --brew: #e8611a;
+  --muted: #6d6458;
+  --line: #e6ddd0;
+  --lilac: #cbb6ee;
+  position: relative;
+  z-index: 50;
+  min-height: 100dvh;
+  width: 100%;
+  overflow-x: clip;
+  color: var(--ink);
+  background: var(--paper);
+  color-scheme: light;
+  font-family: var(--font-body), "Sora", sans-serif;
+}
+
+.nv-land {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 4vw, 1.4rem) 3.5rem;
+}
+
+.nv-land-nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 0 0.4rem;
+}
+
+.nv-land-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-size: 1.15rem;
+  color: var(--ink);
+}
+
+.nv-land-mark {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 0.35rem 0.55rem 0.35rem 0.35rem;
+  background: var(--lilac);
+  border: 1.6px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.nv-land-pill {
+  display: none;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.28rem;
+  border-radius: 999px;
+  background: #f0e9dd;
+  border: 1px solid var(--line);
+}
+
+.nv-land-pill a {
+  padding: 0.42rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.nv-land-pill a.is-active,
+.nv-land-pill a:hover {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 0 rgba(23, 20, 18, 0.06);
+}
+
+.nv-land-tools {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.nv-land-tool {
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.nv-land-avatar {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 99px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.nv-land-hero {
+  padding: 1.4rem 0 2.2rem;
+}
+
+.nv-land-hero h1 {
+  margin: 0 auto 0.4rem;
+  text-align: center;
+  font-family: var(--font-land-display), "Calistoga", "Young Serif", serif;
+  font-size: clamp(2.05rem, 9vw, 4.6rem);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  max-width: 100%;
+  overflow-wrap: balance;
+}
+
+.nv-land-hero h1 .nv-land-line {
+  display: block;
+  overflow: hidden;
+}
+
+.nv-land-hero h1 .nv-land-word {
+  display: inline-block;
+}
+
+.nv-land-hero h1 em {
+  margin-top: 0.12em;
+  font-family: var(--font-land-script), "Fraunces", serif;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--brew);
+  letter-spacing: -0.02em;
+}
+
+.nv-land-board {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: 1.2rem;
+  margin-top: 0.6rem;
+}
+
+.nv-land-col-left,
+.nv-land-col-right {
+  align-items: center;
+  text-align: center;
+}
+
+.nv-land-col-left .nv-land-stat,
+.nv-land-col-right .nv-land-blurb {
+  margin-inline: auto;
+}
+
+.nv-land-col-right .nv-land-order,
+.nv-land-col-right .nv-land-proof {
+  margin-inline: auto;
+}
+
+.nv-land-art-wrap {
+  width: min(100%, 28rem);
+  margin: 0 auto;
+  will-change: transform;
+}
+
+.nv-land-art {
+  width: 100%;
+  height: auto;
+  contain: layout paint;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.nv-land-sack {
+  width: 7.2rem;
+  height: auto;
+  display: block;
+  margin: 0 auto 0.15rem;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.nv-land-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.nv-land-stat strong {
+  display: block;
+  font-size: 1.85rem;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.nv-land-stat {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+  max-width: 11rem;
+}
+
+.nv-land-blurb {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--ink);
+  max-width: 16rem;
+}
+
+.nv-land-order {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: fit-content;
+  padding: 0.72rem 1.15rem;
+  border-radius: 0.35rem;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.nv-land-proof {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.nv-land-faces {
+  display: flex;
+}
+
+.nv-land-faces span {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  margin-left: -0.4rem;
+  border-radius: 99px;
+  border: 2px solid var(--paper);
+  background: #efe6d6;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.nv-land-faces span:first-child {
+  margin-left: 0;
+  background: var(--lilac);
+}
+
+.nv-land-faces span:nth-child(2) {
+  background: #edd3b0;
+}
+
+.nv-land-proof p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.25;
+}
+
+.nv-land-proof strong {
+  display: block;
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.nv-land-section {
+  padding: 1.2rem 0 2.4rem;
+}
+
+.nv-land-section h2 {
+  margin: 0 0 1.1rem;
+  text-align: center;
+  font-family: var(--font-land-display), "Calistoga", serif;
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+}
+
+.nv-land-bento {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.nv-land-bento article {
+  position: relative;
+  padding: 1.15rem 4.6rem 1.15rem 1.1rem;
+  border: 1.6px solid var(--ink);
+  background: #fff;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.nv-doodle {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.5rem;
+  width: 4.6rem;
+  height: auto;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.nv-land-bento span {
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  color: var(--brew);
+}
+
+.nv-land-bento h3 {
+  margin: 0.35rem 0 0;
+  font-size: 1.12rem;
+}
+
+.nv-land-bento p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.nv-land-section ol {
+  margin: 0 auto;
+  padding: 0;
+  max-width: 40rem;
+  list-style: none;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.nv-land-section li {
+  padding: 1rem 1.1rem;
+  background: #fff;
+  border: 1.6px solid var(--ink);
+}
+
+.nv-land-cta {
+  margin: 1rem 0 2rem;
+  padding: 2.4rem 1.3rem;
+  text-align: center;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.nv-land-cta h2 {
+  margin: 0;
+  font-family: var(--font-land-display), "Calistoga", serif;
+  font-size: clamp(2.2rem, 6vw, 3.4rem);
+  line-height: 0.95;
+}
+
+.nv-land-cta h2 em {
+  font-family: var(--font-land-script), Fraunces, serif;
+  font-style: italic;
+  color: var(--brew);
+}
+
+.nv-land-cta p {
+  margin: 0.85rem auto 0;
+  max-width: 32rem;
+  color: #cfc6b8;
+}
+
+.nv-land-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.7rem;
+  margin-top: 1.4rem;
+}
+
+.nv-land-cta .nv-land-order {
+  background: var(--brew);
+  color: #fff;
+}
+
+.nv-land-ghost {
+  display: inline-flex;
+  align-items: center;
+  height: 2.7rem;
+  color: #ddd4c6;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.nv-land-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 1.2rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+@media (min-width: 900px) {
+  .nv-land-pill {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    display: flex;
+    transform: translate(-50%, -50%);
+  }
+
+  .nv-land-board {
+    grid-template-columns: 0.85fr 1.4fr 0.95fr;
+    align-items: end;
+    min-height: 22rem;
+  }
+
+  .nv-land-col-left,
+  .nv-land-col-right {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .nv-land-col-left .nv-land-stat,
+  .nv-land-col-right .nv-land-blurb {
+    margin-inline: 0;
+  }
+
+  .nv-land-col-left .nv-land-sack {
+    margin-inline: 0;
+  }
+
+  .nv-land-col-right .nv-land-order,
+  .nv-land-col-right .nv-land-proof {
+    margin-inline: 0;
+  }
+
+  .nv-land-art-wrap {
+    width: 100%;
+    max-width: none;
+  }
+
+  .nv-land-art {
+    width: 100%;
+    max-width: none;
+  }
+
+  .nv-land-col-left {
+    padding-bottom: 1.4rem;
+  }
+
+  .nv-land-col-right {
+    padding-bottom: 1.8rem;
+    align-items: flex-start;
+  }
+
+  .nv-land-bento {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .nv-land-hero h1 {
+    margin-bottom: -0.4rem;
+  }
+}
+
+.nv-land-motion.nv-land-animating .nv-land-await,
+.nv-land-motion.nv-land-animating .nv-land-word,
+.nv-land-motion.nv-land-animating .nv-land-faces span,
+.nv-land-motion.nv-land-animating .nv-land-proof p {
+  opacity: 0;
+}
+
+.nv-land-motion .nv-art-arrow {
+  animation: none;
+}
+
+.nv-land-top {
+  position: fixed;
+  right: 1.2rem;
+  bottom: 1.2rem;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1.6px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  border-radius: 0.35rem;
+}
+
+.nv-land-top:hover {
+  background: var(--lilac);
+}
+
+.nv-land-top[hidden] {
+  display: none;
+}
+
+.nv-art-shadow {
+  opacity: 0.1;
+  transform-box: view-box;
+  transform-origin: 230px 352px;
+  animation: nv-shadow 4.8s ease-in-out infinite;
+}
+
+.nv-art-float {
+  transform-box: view-box;
+  transform-origin: 230px 210px;
+  animation: nv-float 4.8s ease-in-out infinite;
+}
+
+.nv-art-page-l {
+  transform-box: view-box;
+  transform-origin: 228px 200px;
+  animation: nv-page-l 6.2s ease-in-out infinite;
+}
+
+.nv-art-page-r {
+  transform-box: view-box;
+  transform-origin: 228px 188px;
+  animation: nv-page-r 6.2s ease-in-out infinite;
+}
+
+.nv-art-pen {
+  transform-box: view-box;
+  transform-origin: 332px 258px;
+  animation: nv-pen 3.4s ease-in-out infinite;
+}
+
+.nv-art-ribbon {
+  transform-box: view-box;
+  transform-origin: 318px 92px;
+  animation: nv-ribbon 3.8s ease-in-out infinite;
+}
+
+.nv-art-steam {
+  transform-box: view-box;
+  transform-origin: 350px 82px;
+  animation: nv-steam 2.6s ease-in-out infinite;
+}
+
+.nv-art-leaf {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.nv-art-leaf-a {
+  animation: nv-leaf 3.6s ease-in-out infinite;
+}
+
+.nv-art-leaf-b {
+  animation: nv-leaf 4.1s 0.4s ease-in-out infinite;
+}
+
+.nv-art-leaf-c {
+  animation: nv-leaf 3.8s 0.2s ease-in-out infinite;
+}
+
+.nv-art-drip {
+  transform-box: view-box;
+  transform-origin: 348px 244px;
+  animation: nv-drip 2.2s ease-in-out infinite;
+}
+
+.nv-art-scribble {
+  stroke-dasharray: 80;
+  animation: nv-scribble 4.4s ease-in-out infinite;
+}
+
+.nv-art-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nv-spark 2.4s ease-in-out infinite;
+}
+
+.nv-art-spark-2 {
+  animation-delay: 0.35s;
+}
+
+.nv-art-spark-3 {
+  animation-delay: 0.7s;
+}
+
+.nv-art-spark-4 {
+  animation-delay: 1.05s;
+}
+
+.nv-art-arrow {
+  stroke-dasharray: 160;
+  stroke-dashoffset: 160;
+  animation: nv-draw 1.15s 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.nv-art-plus {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nv-plus 5.5s ease-in-out infinite;
+}
+
+.nv-art-bob {
+  animation: nv-bob 3.8s ease-in-out infinite;
+}
+
+.nv-art-pulse {
+  animation: nv-pulse 2.8s ease-in-out infinite;
+}
+
+.nv-art-spin-slow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nv-spin 10s linear infinite;
+}
+
+.nv-art-node {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nv-node 2.8s ease-in-out infinite;
+}
+
+.nv-art-node-b {
+  animation-delay: 0.35s;
+}
+
+.nv-art-node-c {
+  animation-delay: 0.7s;
+}
+
+@keyframes nv-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes nv-in-left {
+  from {
+    opacity: 0;
+    transform: translate3d(-16px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes nv-in-right {
+  from {
+    opacity: 0;
+    transform: translate3d(16px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes nv-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+
+@keyframes nv-shadow {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.1;
+  }
+  50% {
+    transform: scale(0.9);
+    opacity: 0.055;
+  }
+}
+
+@keyframes nv-page-l {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-1.8deg);
+  }
+}
+
+@keyframes nv-page-r {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes nv-pen {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-5deg);
+  }
+}
+
+@keyframes nv-ribbon {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(8deg);
+  }
+}
+
+@keyframes nv-steam {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate3d(3px, -9px, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes nv-leaf {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes nv-drip {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+    opacity: 0.15;
+  }
+  55% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes nv-scribble {
+  0%,
+  100% {
+    stroke-dashoffset: 80;
+  }
+  40%,
+  70% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes nv-spark {
+  0%,
+  100% {
+    transform: scale(0.7);
+    opacity: 0.25;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+@keyframes nv-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes nv-plus {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(90deg) scale(1.06);
+  }
+}
+
+@keyframes nv-bob {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -5px, 0);
+  }
+}
+
+@keyframes nv-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes nv-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes nv-node {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -3px, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nv-land-motion .nv-land-await,
+  .nv-land-motion .nv-land-word,
+  .nv-land-motion .nv-land-faces span,
+  .nv-land-motion .nv-land-proof p,
+  .nv-land-motion.nv-land-animating .nv-land-await,
+  .nv-land-motion.nv-land-animating .nv-land-word,
+  .nv-land-motion.nv-land-animating .nv-land-faces span,
+  .nv-land-motion.nv-land-animating .nv-land-proof p {
+    opacity: 1;
+  }
+
+  .nv-art-shadow,
+  .nv-art-float,
+  .nv-art-page-l,
+  .nv-art-page-r,
+  .nv-art-pen,
+  .nv-art-ribbon,
+  .nv-art-steam,
+  .nv-art-leaf,
+  .nv-art-drip,
+  .nv-art-scribble,
+  .nv-art-spark,
+  .nv-art-arrow,
+  .nv-art-plus,
+  .nv-art-bob,
+  .nv-art-pulse,
+  .nv-art-spin-slow,
+  .nv-art-node {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+    stroke-dashoffset: 0;
+  }
+}

@@ -30,5 +30,12 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "src/stories", ".storybook", "storybook-static", "playwright-report", "test-results"]
+  "exclude": [
+    "node_modules",
+    "src/stories",
+    ".storybook",
+    "storybook-static",
+    "playwright-report",
+    "test-results"
+  ]
 }

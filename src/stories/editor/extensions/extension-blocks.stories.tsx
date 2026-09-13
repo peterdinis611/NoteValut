@@ -27,11 +27,7 @@ function Panel({ label, children }: { label: string; children: ReactNode }) {
 
 function renderExt(type: BlockType, block: Block, label?: string) {
   const ext = findExt(type);
-  return (
-    <Panel label={label ?? ext.name}>
-      {ext.render(blockRenderProps(block))}
-    </Panel>
-  );
+  return <Panel label={label ?? ext.name}>{ext.render(blockRenderProps(block))}</Panel>;
 }
 
 const meta = {
@@ -77,11 +73,7 @@ export const TodoChecked: Story = {
 
 export const TodoUnchecked: Story = {
   render: () =>
-    renderExt(
-      "todo",
-      sampleBlock("todo", "Open item", { checked: false }),
-      "todo (unchecked)",
-    ),
+    renderExt("todo", sampleBlock("todo", "Open item", { checked: false }), "todo (unchecked)"),
 };
 
 export const Bullet: Story = {
@@ -98,10 +90,7 @@ export const Quote: Story = {
 
 export const Code: Story = {
   render: () =>
-    renderExt(
-      "code",
-      sampleBlock("code", "const accent = '#e2a45a';", { language: "ts" }),
-    ),
+    renderExt("code", sampleBlock("code", "const accent = '#e2a45a';", { language: "ts" })),
 };
 
 export const CalloutInfo: Story = {
@@ -197,8 +186,7 @@ export const Table: Story = {
 };
 
 export const Toggle: Story = {
-  render: () =>
-    renderExt("toggle", sampleBlock("toggle", "Collapsed section", { checked: true })),
+  render: () => renderExt("toggle", sampleBlock("toggle", "Collapsed section", { checked: true })),
 };
 
 export const WebLink: Story = {
@@ -215,10 +203,7 @@ export const WebLink: Story = {
 
 export const Custom: Story = {
   render: () =>
-    renderExt(
-      "custom",
-      sampleBlock("custom", "Custom block body", { label: "My custom block" }),
-    ),
+    renderExt("custom", sampleBlock("custom", "Custom block body", { label: "My custom block" })),
 };
 
 /** Bonus: all StarterKit typed extensions in one scrollable gallery. */

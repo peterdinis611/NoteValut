@@ -87,12 +87,7 @@ export const Default: Story = {
 export const ReadOnly: Story = {
   render: () => (
     <div className="mx-auto max-w-2xl p-6">
-      <BlockEditor
-        blocks={sampleBlocks()}
-        onChange={fn()}
-        readOnly
-        linkablePages={[]}
-      />
+      <BlockEditor blocks={sampleBlocks()} onChange={fn()} readOnly linkablePages={[]} />
     </div>
   ),
 };

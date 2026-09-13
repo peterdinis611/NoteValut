@@ -1,15 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import {
-  Bell,
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  Sun,
-  X,
-} from "lucide-react";
-import { motion } from "motion/react";
+import { Bell, CalendarDays, ChevronLeft, ChevronRight, Sun, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -25,7 +17,7 @@ import {
   shiftMonth,
   toDailyKey,
 } from "@/lib/daily";
-import { easeOutSoft, fadeUpVariants } from "@/lib/motion";
+import { useAnimeEnter } from "@/lib/anime-ui";
 import { useToast } from "./toast";
 
 type Props = {
@@ -55,24 +47,20 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
   const [cursor, setCursor] = useState(() => monthCursorFromKey());
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [remindTime, setRemindTime] = useState("09:00");
+  const [recurrence, setRecurrence] = useState<"none" | "daily" | "weekly">("none");
   const [busy, setBusy] = useState(false);
+  const enterRef = useAnimeEnter<HTMLDivElement>("page");
   const getOrCreate = useMutation(api.notes.getOrCreateDaily);
   const scheduleReminder = useMutation(api.reminders.schedule);
   const cancelReminder = useMutation(api.reminders.cancel);
 
-  const keys = useMemo(
-    () => monthKeys(cursor.year, cursor.month),
-    [cursor.year, cursor.month],
+  const keys = useMemo(() => monthKeys(cursor.year, cursor.month), [cursor.year, cursor.month]);
+  const grid = useMemo(() => monthGridKeys(cursor.year, cursor.month), [cursor.year, cursor.month]);
+  const existing = useQuery(api.notes.listDailyKeys, ownerId ? { ownerId, keys } : "skip");
+  const scheduled = useQuery(
+    api.reminders.listScheduledForKeys,
+    ownerId ? { ownerId, keys } : "skip",
   );
-  const grid = useMemo(
-    () => monthGridKeys(cursor.year, cursor.month),
-    [cursor.year, cursor.month],
-  );
-  const existing = useQuery(api.notes.listDailyKeys, { ownerId, keys });
-  const scheduled = useQuery(api.reminders.listScheduledForKeys, {
-    ownerId,
-    keys,
-  });
 
   const agenda = useMemo(() => {
     if (!existing) return [];
@@ -90,6 +78,12 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
   function selectDay(key: string) {
     setSelectedKey(key);
     setRemindTime(defaultRemindTime(key));
+    const existingRecurrence = scheduled?.[key]?.recurrence;
+    setRecurrence(
+      existingRecurrence === "daily" || existingRecurrence === "weekly"
+        ? existingRecurrence
+        : "none",
+    );
   }
 
   async function openDay(key: string, knownId?: Id<"notes">) {
@@ -128,14 +122,18 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
         remindAt,
         noteId,
         title: formatDailyTitle(selectedKey),
+        recurrence,
+      });
+      const when = new Date(remindAt).toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       });
       toast.success(
-        `Reminder set for ${new Date(remindAt).toLocaleString(undefined, {
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}`,
+        recurrence === "none"
+          ? `Reminder set for ${when}`
+          : `Reminder set for ${when} (${recurrence})`,
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn’t set reminder");
@@ -164,23 +162,18 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
   const selectedReminder = selectedKey ? scheduled?.[selectedKey] : undefined;
 
   return (
-    <motion.div
-      className="calendar-page note-scroll"
-      initial="hidden"
-      animate="visible"
-      variants={fadeUpVariants}
-      transition={easeOutSoft}
-    >
+    <div ref={enterRef} className="calendar-page note-scroll">
       <header className="settings-header">
         <div>
           <p className="settings-kicker">
             <CalendarDays className="size-3.5" />
             Daily
           </p>
-          <h1 className="settings-title">Calendar</h1>
+          <h1 className="settings-title">
+            Daily <em>calendar</em>
+          </h1>
           <p className="settings-subtitle">
-            Select a day to open its note or set a reminder (notifies while the
-            app is open)
+            Select a day to open its note or set a reminder (notifies while the app is open)
           </p>
         </div>
         <button
@@ -196,25 +189,17 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
       <div className="calendar-layout">
         <section className="calendar-month">
           <div className="calendar-month-head">
-            <h2 className="calendar-month-title">
-              {formatMonthLabel(cursor.year, cursor.month)}
-            </h2>
+            <h2 className="calendar-month-title">{formatMonthLabel(cursor.year, cursor.month)}</h2>
             <div className="calendar-month-nav">
               <button
                 type="button"
                 className="topbar-btn"
                 aria-label="Previous month"
-                onClick={() =>
-                  setCursor((c) => shiftMonth(c.year, c.month, -1))
-                }
+                onClick={() => setCursor((c) => shiftMonth(c.year, c.month, -1))}
               >
                 <ChevronLeft className="size-4" />
               </button>
-              <button
-                type="button"
-                className="settings-btn"
-                onClick={() => goToday()}
-              >
+              <button type="button" className="settings-btn" onClick={() => goToday()}>
                 <Sun className="size-3.5" />
                 Today
               </button>
@@ -222,9 +207,7 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
                 type="button"
                 className="topbar-btn"
                 aria-label="Next month"
-                onClick={() =>
-                  setCursor((c) => shiftMonth(c.year, c.month, 1))
-                }
+                onClick={() => setCursor((c) => shiftMonth(c.year, c.month, 1))}
               >
                 <ChevronRight className="size-4" />
               </button>
@@ -260,18 +243,14 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
                     .join(" ")}
                   title={formatDailyTitle(cell.key)}
                   onClick={() => selectDay(cell.key)}
-                  onDoubleClick={() =>
-                    void openDay(cell.key, existing?.[cell.key])
-                  }
+                  onDoubleClick={() => void openDay(cell.key, existing?.[cell.key])}
                 >
                   <span className="calendar-cell-num">{cell.day}</span>
                   <span className="calendar-cell-marks">
                     <span
                       className={`calendar-cell-dot ${hasNote ? "calendar-cell-dot-on" : ""}`}
                     />
-                    {hasReminder && (
-                      <Bell className="calendar-cell-bell" aria-hidden />
-                    )}
+                    {hasReminder && <Bell className="calendar-cell-bell" aria-hidden />}
                   </span>
                 </button>
               );
@@ -282,21 +261,20 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
             <div className="calendar-remind-panel">
               <div className="calendar-remind-meta">
                 <p className="calendar-remind-label">Selected</p>
-                <p className="calendar-remind-title">
-                  {formatDailyTitle(selectedKey)}
-                </p>
+                <p className="calendar-remind-title">{formatDailyTitle(selectedKey)}</p>
                 {selectedReminder && (
                   <p className="calendar-remind-scheduled">
                     Reminder at{" "}
-                    {new Date(selectedReminder.remindAt).toLocaleString(
-                      undefined,
-                      {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      },
-                    )}
+                    {new Date(selectedReminder.remindAt).toLocaleString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    {selectedReminder.recurrence &&
+                    selectedReminder.recurrence !== "none"
+                      ? ` · ${selectedReminder.recurrence}`
+                      : ""}
                   </p>
                 )}
               </div>
@@ -308,6 +286,19 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
                     value={remindTime}
                     onChange={(e) => setRemindTime(e.target.value)}
                   />
+                </label>
+                <label className="calendar-remind-time">
+                  Repeat
+                  <select
+                    value={recurrence}
+                    onChange={(e) =>
+                      setRecurrence(e.target.value as "none" | "daily" | "weekly")
+                    }
+                  >
+                    <option value="none">Once</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                  </select>
                 </label>
                 <button
                   type="button"
@@ -332,9 +323,7 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
                   type="button"
                   className="settings-btn"
                   disabled={busy}
-                  onClick={() =>
-                    void openDay(selectedKey, existing?.[selectedKey])
-                  }
+                  onClick={() => void openDay(selectedKey, existing?.[selectedKey])}
                 >
                   Open note
                 </button>
@@ -377,17 +366,15 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
                         weekday: "short",
                         day: "numeric",
                       }) ?? item.key}
-                      {item.reminder && (
-                        <Bell className="calendar-agenda-bell" aria-hidden />
-                      )}
+                      {item.reminder && <Bell className="calendar-agenda-bell" aria-hidden />}
                     </span>
                     <span className="calendar-agenda-title">{item.title}</span>
                     {item.reminder && (
                       <span className="calendar-agenda-remind-at">
-                        {new Date(item.reminder.remindAt).toLocaleTimeString(
-                          undefined,
-                          { hour: "2-digit", minute: "2-digit" },
-                        )}
+                        {new Date(item.reminder.remindAt).toLocaleTimeString(undefined, {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </span>
                     )}
                   </button>
@@ -397,6 +384,6 @@ export function CalendarPage({ ownerId, onClose, onNavigate }: Props) {
           )}
         </aside>
       </div>
-    </motion.div>
+    </div>
   );
 }

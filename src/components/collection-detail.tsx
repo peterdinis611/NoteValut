@@ -5,6 +5,7 @@ import {
   FileText,
   FolderOpen,
   Grid3X3,
+  LayoutGrid,
   LayoutList,
   Lock,
   Plus,
@@ -13,20 +14,14 @@ import {
   Table2,
   Trash2,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
-import {
-  type Block,
-  blocksToPlainText,
-  defaultBlocks,
-  migrateContentToBlocks,
-} from "@/lib/blocks";
+import { useAnimeEnter } from "@/lib/anime-ui";
+import { type Block, blocksToPlainText, defaultBlocks, migrateContentToBlocks } from "@/lib/blocks";
 import { getLabelColor, LABEL_COLORS } from "@/lib/colors";
 import { formatRelativeTime } from "@/lib/format";
 import { isFolder } from "@/lib/item-kinds";
-import { easeQuick, pageVariants } from "@/lib/motion";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { PAGE_TEMPLATES } from "@/lib/templates";
 import { useVaultAccess } from "@/context/vault-access";
@@ -65,12 +60,10 @@ export function CollectionDetail({
   const [folderBlocks, setFolderBlocks] = useState<Block[]>(defaultBlocks());
   const [shareOpen, setShareOpen] = useState(false);
   const customTemplates = useCustomTemplates();
-  const templateOptions = useMemo(
-    () => [...customTemplates, ...PAGE_TEMPLATES],
-    [customTemplates],
-  );
+  const templateOptions = useMemo(() => [...customTemplates, ...PAGE_TEMPLATES], [customTemplates]);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
+  const panelRef = useAnimeEnter<HTMLDivElement>("page", tab);
 
   const readOnly = globalReadOnly || !canUpdate || !!folder.isLocked;
   const label = getLabelColor(folder.color);
@@ -136,14 +129,14 @@ export function CollectionDetail({
             void updateNote({
               id: folder._id,
               coverColor: cover,
-              coverImage: cover ? null : folder.coverImage ?? null,
+              coverImage: cover ? null : (folder.coverImage ?? null),
             })
           }
           onSetCoverImage={(url) =>
             void updateNote({
               id: folder._id,
               coverImage: url,
-              coverColor: url ? null : folder.coverColor ?? null,
+              coverColor: url ? null : (folder.coverColor ?? null),
             })
           }
           onError={(msg) => toast.error(msg)}
@@ -176,7 +169,11 @@ export function CollectionDetail({
             </p>
           </div>
           {canShare && (
-            <button type="button" className="vault-btn-secondary" onClick={() => setShareOpen(true)}>
+            <button
+              type="button"
+              className="vault-btn-secondary"
+              onClick={() => setShareOpen(true)}
+            >
               <Share2 className="size-4" />
               Share
             </button>
@@ -197,17 +194,9 @@ export function CollectionDetail({
         </div>
       </div>
 
-      <AnimatePresence mode="wait">
+      <div ref={panelRef} key={tab}>
         {tab === "overview" && (
-          <motion.div
-            key="overview"
-            className="collection-panel"
-            variants={pageVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={easeQuick}
-          >
+          <div className="collection-panel">
             <section className="collection-section">
               <h3 className="collection-section-title">Collection notes</h3>
               <p className="collection-section-desc">
@@ -238,26 +227,26 @@ export function CollectionDetail({
                 ))}
               </div>
             </section>
-          </motion.div>
+          </div>
         )}
 
         {tab === "contents" && (
-          <motion.div
-            key="contents"
-            className="collection-panel"
-            variants={pageVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={easeQuick}
-          >
+          <div className="collection-panel">
             {!readOnly && (
               <div className="collection-view-toolbar">
-                <button type="button" className="vault-btn-primary" onClick={() => onCreateEntry(folder._id, folder.defaultTemplateId ?? "blank")}>
+                <button
+                  type="button"
+                  className="vault-btn-primary"
+                  onClick={() => onCreateEntry(folder._id, folder.defaultTemplateId ?? "blank")}
+                >
                   <Plus className="size-4" />
                   New entry
                 </button>
-                <button type="button" className="vault-btn-secondary" onClick={() => onCreateCollection(folder._id)}>
+                <button
+                  type="button"
+                  className="vault-btn-secondary"
+                  onClick={() => onCreateCollection(folder._id)}
+                >
                   <FolderOpen className="size-4" />
                   Sub-collection
                 </button>
@@ -286,6 +275,16 @@ export function CollectionDetail({
                   >
                     <Table2 className="size-4" />
                   </button>
+                  <button
+                    type="button"
+                    className={viewMode === "gallery" ? "view-toggle-active" : ""}
+                    onClick={() =>
+                      !readOnly && updateNote({ id: folder._id, viewMode: "gallery" })
+                    }
+                    title="Gallery"
+                  >
+                    <LayoutGrid className="size-4" />
+                  </button>
                 </div>
               </div>
             )}
@@ -301,6 +300,18 @@ export function CollectionDetail({
               <div className="folder-grid">
                 {children.map((child) => (
                   <ChildCard
+                    key={child._id}
+                    child={child}
+                    readOnly={readOnly}
+                    onNavigate={onNavigate}
+                    onTrash={() => handleTrashChild(child._id)}
+                  />
+                ))}
+              </div>
+            ) : viewMode === "gallery" ? (
+              <div className="collection-gallery">
+                {children.map((child) => (
+                  <GalleryCard
                     key={child._id}
                     child={child}
                     readOnly={readOnly}
@@ -352,19 +363,11 @@ export function CollectionDetail({
                 ))}
               </div>
             )}
-          </motion.div>
+          </div>
         )}
 
         {tab === "settings" && (
-          <motion.div
-            key="settings"
-            className="collection-panel"
-            variants={pageVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={easeQuick}
-          >
+          <div className="collection-panel">
             <SettingRow label="Sort contents by">
               <select
                 className="share-select"
@@ -388,9 +391,7 @@ export function CollectionDetail({
                 className="share-select"
                 value={folder.defaultTemplateId ?? "blank"}
                 disabled={readOnly}
-                onChange={(e) =>
-                  updateNote({ id: folder._id, defaultTemplateId: e.target.value })
-                }
+                onChange={(e) => updateNote({ id: folder._id, defaultTemplateId: e.target.value })}
               >
                 {templateOptions.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -409,9 +410,7 @@ export function CollectionDetail({
                   onChange={async (e) => {
                     try {
                       await updateNote({ id: folder._id, isLocked: e.target.checked });
-                      toast.success(
-                        e.target.checked ? "Collection locked" : "Collection unlocked",
-                      );
+                      toast.success(e.target.checked ? "Collection locked" : "Collection unlocked");
                     } catch {
                       toast.error("Couldn’t update lock");
                     }
@@ -433,9 +432,9 @@ export function CollectionDetail({
                 </button>
               </SettingRow>
             )}
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </div>
 
       <SharePanel
         ownerId={ownerId}
@@ -459,7 +458,11 @@ function TabBtn({
   children: React.ReactNode;
 }) {
   return (
-    <button type="button" className={`collection-tab ${active ? "collection-tab-active" : ""}`} onClick={onClick}>
+    <button
+      type="button"
+      className={`collection-tab ${active ? "collection-tab-active" : ""}`}
+      onClick={onClick}
+    >
       {children}
     </button>
   );
@@ -521,6 +524,65 @@ function ChildCard({
   );
 }
 
+function GalleryCard({
+  child,
+  readOnly,
+  onNavigate,
+  onTrash,
+}: {
+  child: Doc<"notes">;
+  readOnly?: boolean;
+  onNavigate: (id: Id<"notes">) => void;
+  onTrash: () => void;
+}) {
+  const hasImage = !!child.coverImage;
+  const hasColor = !!child.coverColor;
+
+  return (
+    <div className="collection-gallery-card-wrap">
+      <button
+        type="button"
+        className="collection-gallery-card"
+        onClick={() => onNavigate(child._id)}
+      >
+        <div
+          className={`collection-gallery-media ${!hasImage && !hasColor ? "is-empty" : ""}`}
+          style={
+            hasImage
+              ? { backgroundImage: `url(${child.coverImage})` }
+              : hasColor
+                ? undefined
+                : { background: getLabelColor(child.color).hex }
+          }
+        >
+          {hasColor && !hasImage && (
+            <div className={`collection-gallery-gradient bg-gradient-to-br ${child.coverColor}`} />
+          )}
+          {!hasImage && !hasColor && (
+            <span className="collection-gallery-fallback-icon">{child.icon || "📝"}</span>
+          )}
+        </div>
+        <div className="collection-gallery-meta">
+          <span className="collection-gallery-title">{child.title || "Untitled"}</span>
+          <span className="collection-gallery-sub">
+            {isFolder(child) ? "Collection" : "Entry"} · {formatRelativeTime(child.updatedAt)}
+          </span>
+        </div>
+      </button>
+      {!readOnly && (
+        <button
+          type="button"
+          className="collection-gallery-trash"
+          aria-label="Move to bin"
+          onClick={onTrash}
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 const STATUS_OPTIONS = ["", "Todo", "Doing", "Done", "Blocked"] as const;
 
 function CollectionTable({
@@ -554,7 +616,10 @@ function CollectionTable({
         const st = item.status || "";
         if (statusFilter === "none" ? st !== "" : st !== statusFilter) return false;
       }
-      if (tagFilter && !(item.tags ?? []).some((t) => t.toLowerCase() === tagFilter.toLowerCase())) {
+      if (
+        tagFilter &&
+        !(item.tags ?? []).some((t) => t.toLowerCase() === tagFilter.toLowerCase())
+      ) {
         return false;
       }
       return true;
@@ -617,9 +682,7 @@ function CollectionTable({
                     className="db-table-select"
                     value={item.status ?? ""}
                     disabled={readOnly || isFolder(item)}
-                    onChange={(e) =>
-                      onUpdate(item._id, { status: e.target.value || null })
-                    }
+                    onChange={(e) => onUpdate(item._id, { status: e.target.value || null })}
                   >
                     {STATUS_OPTIONS.map((s) => (
                       <option key={s || "none"} value={s}>

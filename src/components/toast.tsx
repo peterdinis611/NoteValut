@@ -1,21 +1,18 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
-import {
-  CheckCircle2,
-  Info,
-  X,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, Info, X, XCircle } from "lucide-react";
 import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { easeOutSoft } from "@/lib/motion";
+import { playAnime } from "@/lib/anime-ui";
 
 type ToastKind = "success" | "error" | "info";
 
@@ -39,6 +36,39 @@ const ICONS = {
   info: Info,
 };
 
+function ToastCard({ toast, onGone }: { toast: ToastItem; onGone: (id: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const closingRef = useRef(false);
+  const Icon = ICONS[toast.kind];
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (el) void playAnime(el, "toast", "enter");
+  }, []);
+
+  function close() {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    const el = ref.current;
+    void (el ? playAnime(el, "toast", "exit") : Promise.resolve()).then(() => onGone(toast.id));
+  }
+
+  useEffect(() => {
+    const t = window.setTimeout(close, 3200);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  return (
+    <div ref={ref} className={`toast toast-${toast.kind}`} role="status">
+      <Icon className="toast-icon size-4" />
+      <span className="toast-message">{toast.message}</span>
+      <button type="button" className="toast-close" aria-label="Dismiss" onClick={close}>
+        <X className="size-3.5" />
+      </button>
+    </div>
+  );
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
@@ -46,14 +76,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const push = useCallback(
-    (message: string, kind: ToastKind) => {
-      const id = crypto.randomUUID();
-      setToasts((prev) => [...prev.slice(-3), { id, message, kind }]);
-      window.setTimeout(() => dismiss(id), 3200);
-    },
-    [dismiss],
-  );
+  const push = useCallback((message: string, kind: ToastKind) => {
+    const id = crypto.randomUUID();
+    setToasts((prev) => [...prev.slice(-3), { id, message, kind }]);
+  }, []);
 
   const api = useMemo<ToastApi>(
     () => ({
@@ -68,34 +94,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={api}>
       {children}
       <div className="toast-viewport" aria-live="polite" aria-relevant="additions">
-        <AnimatePresence initial={false}>
-          {toasts.map((toast) => {
-            const Icon = ICONS[toast.kind];
-            return (
-              <motion.div
-                key={toast.id}
-                className={`toast toast-${toast.kind}`}
-                role="status"
-                initial={{ opacity: 0, y: 12, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                transition={easeOutSoft}
-                layout
-              >
-                <Icon className="toast-icon size-4" />
-                <span className="toast-message">{toast.message}</span>
-                <button
-                  type="button"
-                  className="toast-close"
-                  aria-label="Dismiss"
-                  onClick={() => dismiss(toast.id)}
-                >
-                  <X className="size-3.5" />
-                </button>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
+        {toasts.map((toast) => (
+          <ToastCard key={toast.id} toast={toast} onGone={dismiss} />
+        ))}
       </div>
     </ToastContext.Provider>
   );

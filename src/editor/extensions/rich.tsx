@@ -2,6 +2,7 @@
 
 import { ExternalLink, Link2, Plus, Trash2 } from "lucide-react";
 import { emptyTable } from "@/lib/blocks";
+import { detectEmbed } from "@/lib/embed-detect";
 import { Extension } from "../create-extension";
 import type { BlockRenderProps } from "../types";
 import { PdfBlockView } from "../components/pdf-block-view";
@@ -162,7 +163,7 @@ export const FileBlock = Extension({
       id: "file",
       type: "file",
       label: "Office file",
-      description: "Word, Excel, or PowerPoint attachment",
+      description: "Word, Excel, or PowerPoint with in-note preview",
       icon: "📎",
       keywords: [
         "file",
@@ -178,6 +179,7 @@ export const FileBlock = Extension({
         "ppt",
         "attachment",
         "document",
+        "preview",
       ],
       group: "Media",
     },
@@ -203,6 +205,7 @@ export const WebLink = Extension({
   render: (props) => {
     const url = props.block.url ?? "";
     const title = props.block.label || props.block.text || "Link";
+    const embed = url ? detectEmbed(url) : null;
     let host = "";
     try {
       host = url ? new URL(url).hostname.replace(/^www\./, "") : "";
@@ -211,16 +214,14 @@ export const WebLink = Extension({
     }
 
     return (
-      <div className="nv-weblink">
+      <div className={`nv-weblink ${embed ? `nv-weblink-${embed.provider}` : ""}`}>
         {!props.readOnly && (
           <div className="nv-weblink-fields">
             <input
               className="nv-weblink-input"
-              placeholder="https://"
+              placeholder="https://github.com/… · notion.so · linear.app"
               value={url}
-              onChange={(e) =>
-                props.commands.updateBlock(props.block.id, { url: e.target.value })
-              }
+              onChange={(e) => props.commands.updateBlock(props.block.id, { url: e.target.value })}
               onFocus={props.onFocus}
             />
             <input
@@ -237,24 +238,36 @@ export const WebLink = Extension({
             />
           </div>
         )}
-        {url ? (
+        {url && embed ? (
           <a
             className="nv-weblink-card"
             href={url}
             target="_blank"
             rel="noopener noreferrer"
+            style={{ borderColor: `color-mix(in srgb, ${embed.accent} 35%, var(--border))` }}
           >
-            <span className="nv-weblink-icon">
-              <Link2 className="size-4" />
+            <span
+              className="nv-weblink-icon"
+              style={{
+                background: `color-mix(in srgb, ${embed.accent} 18%, transparent)`,
+                color: embed.accent === "#ebebea" ? "var(--foreground)" : embed.accent,
+              }}
+            >
+              {embed.provider === "generic" ? (
+                <Link2 className="size-4" />
+              ) : (
+                <span className="nv-weblink-provider">{embed.label.slice(0, 2)}</span>
+              )}
             </span>
             <span className="nv-weblink-meta">
-              <span className="nv-weblink-title">{title}</span>
-              <span className="nv-weblink-host">{host}</span>
+              <span className="nv-weblink-badge">{embed.label}</span>
+              <span className="nv-weblink-title">{props.block.label || embed.title || title}</span>
+              <span className="nv-weblink-host">{embed.subtitle || host}</span>
             </span>
             <ExternalLink className="size-3.5 text-muted" />
           </a>
         ) : (
-          <div className="nv-weblink-empty">Paste a URL to create a bookmark</div>
+          <div className="nv-weblink-empty">Paste a GitHub, Notion, Linear, or any URL</div>
         )}
       </div>
     );

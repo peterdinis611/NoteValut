@@ -1,7 +1,13 @@
+import path from "path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Parent folder has another lockfile — pin Turbopack to this app root
+  // so @swc/helpers and other deps resolve correctly.
+  turbopack: {
+    root: path.join(__dirname),
+  },
   // Keep Tailwind's native Oxide binary out of the Turbopack bundle —
   // bundling it breaks dlopen ("file exists, but is not a Mach-O file").
   serverExternalPackages: [
@@ -18,7 +24,6 @@ const nextConfig: NextConfig = {
     "@tailwindcss/oxide-win32-arm64-msvc",
   ],
   transpilePackages: [
-    "motion",
     "@embedpdf/core",
     "@embedpdf/engines",
     "@embedpdf/plugin-document-manager",
@@ -28,7 +33,7 @@ const nextConfig: NextConfig = {
     "@embedpdf/plugin-zoom",
   ],
   experimental: {
-    optimizePackageImports: ["lucide-react", "motion"],
+    optimizePackageImports: ["lucide-react"],
   },
 };
 

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { assertCanAccessNote, requireOwner } from "./lib/auth";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
@@ -80,14 +80,10 @@ export const search = query({
     const limit = Math.min(args.limit ?? 24, 48);
     const hits = await ctx.db
       .query("notes")
-      .withSearchIndex("search_body", (s) =>
-        s.search("searchText", q).eq("ownerId", args.ownerId),
-      )
+      .withSearchIndex("search_body", (s) => s.search("searchText", q).eq("ownerId", args.ownerId))
       .take(limit * 2);
 
-    return hits
-      .filter((n) => !n.trashed && !n.archived)
-      .slice(0, limit);
+    return hits.filter((n) => !n.trashed && !n.archived).slice(0, limit);
   },
 });
 
@@ -159,9 +155,7 @@ export const listTrashed = query({
       .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
       .collect();
 
-    return notes
-      .filter((n) => n.trashed)
-      .sort((a, b) => (b.trashedAt ?? 0) - (a.trashedAt ?? 0));
+    return notes.filter((n) => n.trashed).sort((a, b) => (b.trashedAt ?? 0) - (a.trashedAt ?? 0));
   },
 });
 
@@ -175,9 +169,7 @@ export const listArchived = query({
       .order("desc")
       .collect();
 
-    return notes
-      .filter((n) => n.archived && !n.trashed)
-      .sort((a, b) => b.updatedAt - a.updatedAt);
+    return notes.filter((n) => n.archived && !n.trashed).sort((a, b) => b.updatedAt - a.updatedAt);
   },
 });
 
@@ -324,7 +316,9 @@ export const create = mutation({
     const now = Date.now();
     const kind = args.kind ?? "page";
     const isFolder = kind === "folder";
-    const blocks = isFolder ? undefined : (args.blocks ?? [{ id: newId(), type: "paragraph", text: "" }]);
+    const blocks = isFolder
+      ? undefined
+      : (args.blocks ?? [{ id: newId(), type: "paragraph", text: "" }]);
     const content = blocks ? blocks.map((b) => b.text).join("\n") : "";
     const title = args.title ?? (isFolder ? "New collection" : "Untitled");
     const tags = assertTags(args.tags ?? []);
@@ -379,11 +373,9 @@ export const update = mutation({
     color: v.optional(v.union(v.string(), v.null())),
     description: v.optional(v.union(v.string(), v.null())),
     viewMode: v.optional(
-      v.union(v.literal("grid"), v.literal("list"), v.literal("table")),
+      v.union(v.literal("grid"), v.literal("list"), v.literal("table"), v.literal("gallery")),
     ),
-    sortMode: v.optional(
-      v.union(v.literal("updated"), v.literal("name"), v.literal("kind")),
-    ),
+    sortMode: v.optional(v.union(v.literal("updated"), v.literal("name"), v.literal("kind"))),
     defaultTemplateId: v.optional(v.union(v.string(), v.null())),
     isLocked: v.optional(v.boolean()),
     status: v.optional(v.union(v.string(), v.null())),
@@ -391,10 +383,22 @@ export const update = mutation({
     pinned: v.optional(v.boolean()),
     archived: v.optional(v.boolean()),
     parentId: v.optional(v.union(v.id("notes"), v.null())),
+    fontFamily: v.optional(v.union(v.string(), v.null())),
+    fontUrl: v.optional(v.union(v.string(), v.null())),
+    /** If set and note.updatedAt is newer, reject with conflict. */
+    expectedUpdatedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { id, ...patch } = args;
+    const { id, expectedUpdatedAt, ...patch } = args;
     const existing = await assertCanAccessNote(ctx, id);
+    if (
+      expectedUpdatedAt !== undefined &&
+      existing.updatedAt > expectedUpdatedAt + 50
+    ) {
+      throw new Error(
+        `CONFLICT:${existing.updatedAt}:${existing.title || "Untitled"}`,
+      );
+    }
     if (existing.isLocked && patch.isLocked !== false) {
       const allowed = ["isLocked", "pinned"];
       const keys = Object.keys(patch).filter((k) => patch[k as keyof typeof patch] !== undefined);
@@ -424,24 +428,21 @@ export const update = mutation({
     if (patch.pinned !== undefined) updates.pinned = patch.pinned;
     if (patch.archived !== undefined) updates.archived = patch.archived;
     if (patch.parentId !== undefined) updates.parentId = patch.parentId ?? undefined;
+    if (patch.fontFamily !== undefined) updates.fontFamily = patch.fontFamily ?? undefined;
+    if (patch.fontUrl !== undefined) updates.fontUrl = patch.fontUrl ?? undefined;
 
     const nextTitle = (updates.title as string | undefined) ?? existing.title;
     const nextContent = (updates.content as string | undefined) ?? existing.content;
-    const nextBlocks =
-      (updates.blocks as typeof existing.blocks | undefined) ?? existing.blocks;
+    const nextBlocks = (updates.blocks as typeof existing.blocks | undefined) ?? existing.blocks;
     const nextFolderBlocks =
-      (updates.folderBlocks as typeof existing.folderBlocks | undefined) ??
-      existing.folderBlocks;
+      (updates.folderBlocks as typeof existing.folderBlocks | undefined) ?? existing.folderBlocks;
     const nextDescription =
       updates.description !== undefined
         ? (updates.description as string | undefined)
         : existing.description;
     const nextStatus =
-      updates.status !== undefined
-        ? (updates.status as string | undefined)
-        : existing.status;
-    const nextTags =
-      (updates.tags as string[] | undefined) ?? existing.tags;
+      updates.status !== undefined ? (updates.status as string | undefined) : existing.status;
+    const nextTags = (updates.tags as string[] | undefined) ?? existing.tags;
 
     updates.searchText = buildNoteSearchText({
       title: nextTitle,
@@ -466,8 +467,7 @@ export const update = mutation({
         patch.blocks === undefined ||
         JSON.stringify(patch.blocks) === JSON.stringify(existing.blocks ?? []);
       const tagsSame =
-        patch.tags === undefined ||
-        JSON.stringify(patch.tags) === JSON.stringify(existing.tags);
+        patch.tags === undefined || JSON.stringify(patch.tags) === JSON.stringify(existing.tags);
 
       if (!(titleSame && contentSame && blocksSame && tagsSame)) {
         await snapshotNote(ctx, id);
@@ -512,12 +512,7 @@ export const move = mutation({
 
     const parentKey = args.parentId ?? null;
     const siblings = ownerNotes
-      .filter(
-        (n) =>
-          n._id !== args.id &&
-          !n.trashed &&
-          (n.parentId ?? null) === parentKey,
-      )
+      .filter((n) => n._id !== args.id && !n.trashed && (n.parentId ?? null) === parentKey)
       .sort(compareSidebarOrder);
 
     const orderedIds: Id<"notes">[] = [];
@@ -598,11 +593,159 @@ export const listBacklinks = query({
         title: n.title,
         icon: n.icon,
         updatedAt: n.updatedAt,
-        count:
-          n.blocks?.filter((b) => b.type === "pagelink" && b.pageId === target)
-            .length ?? 0,
+        count: n.blocks?.filter((b) => b.type === "pagelink" && b.pageId === target).length ?? 0,
       }))
       .sort((a, b) => b.updatedAt - a.updatedAt);
+  },
+});
+
+/**
+ * Unlinked mentions: other notes whose plain text contains this note’s title
+ * but do not yet have a pagelink to it.
+ */
+export const listUnlinkedMentions = query({
+  args: {
+    ownerId: v.string(),
+    noteId: v.id("notes"),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const target = await ctx.db.get(args.noteId);
+    if (!target || target.ownerId !== args.ownerId) return [];
+    const title = target.title.trim();
+    if (title.length < 3) return [];
+
+    const needle = title.toLowerCase();
+    const notes = await ctx.db
+      .query("notes")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+
+    const hits: Array<{
+      _id: typeof args.noteId;
+      title: string;
+      icon: string;
+      updatedAt: number;
+      snippet: string;
+    }> = [];
+
+    for (const n of notes) {
+      if (n._id === args.noteId || n.trashed || n.kind === "folder") continue;
+      const alreadyLinked = n.blocks?.some(
+        (b) => b.type === "pagelink" && b.pageId === (args.noteId as string),
+      );
+      if (alreadyLinked) continue;
+
+      const hay = (n.searchText || `${n.title} ${n.content}`).toLowerCase();
+      const idx = hay.indexOf(needle);
+      if (idx < 0) continue;
+
+      const start = Math.max(0, idx - 40);
+      const end = Math.min(hay.length, idx + needle.length + 40);
+      hits.push({
+        _id: n._id,
+        title: n.title,
+        icon: n.icon,
+        updatedAt: n.updatedAt,
+        snippet: hay.slice(start, end).trim(),
+      });
+    }
+
+    return hits.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 40);
+  },
+});
+
+/** All media/file attachments across the vault. */
+export const listAttachments = query({
+  args: { ownerId: v.string() },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const notes = await ctx.db
+      .query("notes")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+
+    const mediaTypes = new Set(["image", "pdf", "video", "file"]);
+    const items: Array<{
+      noteId: typeof notes[0]["_id"];
+      noteTitle: string;
+      blockId: string;
+      type: string;
+      url: string;
+      label: string;
+      updatedAt: number;
+    }> = [];
+
+    for (const n of notes) {
+      if (n.trashed || n.archived) continue;
+      for (const b of n.blocks ?? []) {
+        if (!mediaTypes.has(b.type) || !b.url) continue;
+        items.push({
+          noteId: n._id,
+          noteTitle: n.title || "Untitled",
+          blockId: b.id,
+          type: b.type,
+          url: b.url,
+          label: b.label || b.text || b.type,
+          updatedAt: n.updatedAt,
+        });
+      }
+      if (n.coverImage) {
+        items.push({
+          noteId: n._id,
+          noteTitle: n.title || "Untitled",
+          blockId: `cover-${n._id}`,
+          type: "cover",
+          url: n.coverImage,
+          label: "Cover",
+          updatedAt: n.updatedAt,
+        });
+      }
+    }
+
+    return items.sort((a, b) => b.updatedAt - a.updatedAt);
+  },
+});
+
+/**
+ * Append a pagelink from `fromNoteId` → `toNoteId` (for unlinked mentions).
+ */
+export const appendPagelink = mutation({
+  args: {
+    ownerId: v.string(),
+    fromNoteId: v.id("notes"),
+    toNoteId: v.id("notes"),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const from = await ctx.db.get(args.fromNoteId);
+    const to = await ctx.db.get(args.toNoteId);
+    if (!from || from.ownerId !== args.ownerId) throw new Error("Not found");
+    if (!to || to.ownerId !== args.ownerId) throw new Error("Not found");
+    if (from.blocks?.some((b) => b.type === "pagelink" && b.pageId === (args.toNoteId as string))) {
+      return from._id;
+    }
+    const link = {
+      id: crypto.randomUUID(),
+      type: "pagelink" as const,
+      text: to.title || "Untitled",
+      pageId: args.toNoteId as string,
+    };
+    const blocks = [...(from.blocks ?? []), link];
+    await ctx.db.patch(args.fromNoteId, {
+      blocks,
+      updatedAt: Date.now(),
+      searchText: buildNoteSearchText({
+        title: from.title,
+        content: from.content,
+        description: from.description,
+        status: from.status,
+        tags: from.tags,
+        blocks,
+        folderBlocks: from.folderBlocks,
+      }),
+    });
+    return from._id;
   },
 });
 
@@ -785,11 +928,9 @@ const importNoteValidator = v.object({
   color: v.optional(v.string()),
   description: v.optional(v.string()),
   viewMode: v.optional(
-    v.union(v.literal("grid"), v.literal("list"), v.literal("table")),
+    v.union(v.literal("grid"), v.literal("list"), v.literal("table"), v.literal("gallery")),
   ),
-  sortMode: v.optional(
-    v.union(v.literal("updated"), v.literal("name"), v.literal("kind")),
-  ),
+  sortMode: v.optional(v.union(v.literal("updated"), v.literal("name"), v.literal("kind"))),
   defaultTemplateId: v.optional(v.string()),
   isLocked: v.optional(v.boolean()),
   status: v.optional(v.string()),
@@ -967,7 +1108,12 @@ export const seedDemo = mutation({
       color: "teal",
       description: "Quick captures land here",
       folderBlocks: [
-        { id: newId(), type: "callout", text: "Drop quick ideas here via Quick Capture ⚡", calloutVariant: "tip" },
+        {
+          id: newId(),
+          type: "callout",
+          text: "Drop quick ideas here via Quick Capture ⚡",
+          calloutVariant: "tip",
+        },
         { id: newId(), type: "paragraph", text: "This collection auto-receives captured entries." },
       ],
       viewMode: "list",
@@ -991,8 +1137,17 @@ export const seedDemo = mutation({
       description: "Projects and meetings",
       folderBlocks: [
         { id: newId(), type: "heading2", text: "Work collection" },
-        { id: newId(), type: "paragraph", text: "Organize project entries, meeting notes, and sprint boards." },
-        { id: newId(), type: "todo", text: "Share this collection as read-only with your team", checked: false },
+        {
+          id: newId(),
+          type: "paragraph",
+          text: "Organize project entries, meeting notes, and sprint boards.",
+        },
+        {
+          id: newId(),
+          type: "todo",
+          text: "Share this collection as read-only with your team",
+          checked: false,
+        },
       ],
       viewMode: "grid",
       sortMode: "kind",
@@ -1016,7 +1171,12 @@ export const seedDemo = mutation({
           type: "paragraph",
           text: "Organize ideas with Collections (folders), Entries (notes), and a powerful block editor — your own space, not a clone.",
         },
-        { id: newId(), type: "callout", text: "Type / to insert blocks. Try callouts, tasks, and vault links!", calloutVariant: "tip" },
+        {
+          id: newId(),
+          type: "callout",
+          text: "Type / to insert blocks. Try callouts, tasks, and vault links!",
+          calloutVariant: "tip",
+        },
         { id: newId(), type: "heading2", text: "Quick tips" },
         { id: newId(), type: "bullet", text: "Use Collections to group related entries" },
         { id: newId(), type: "bullet", text: "Hit Quick Capture (bottom-right) for fast notes" },
@@ -1040,7 +1200,11 @@ export const seedDemo = mutation({
       content: "",
       blocks: [
         { id: newId(), type: "heading2", text: "Sprint goal" },
-        { id: newId(), type: "paragraph", text: "Ship the vault redesign with folders and templates." },
+        {
+          id: newId(),
+          type: "paragraph",
+          text: "Ship the vault redesign with folders and templates.",
+        },
         { id: newId(), type: "heading2", text: "Tasks" },
         { id: newId(), type: "todo", text: "Review collections UI", checked: true },
         { id: newId(), type: "todo", text: "Test quick capture", checked: false },
@@ -1060,9 +1224,7 @@ export const seedDemo = mutation({
       ownerId: args.ownerId,
       title: "Quick idea",
       content: "Add keyboard shortcuts overlay",
-      blocks: [
-        { id: newId(), type: "paragraph", text: "Add keyboard shortcuts overlay" },
-      ],
+      blocks: [{ id: newId(), type: "paragraph", text: "Add keyboard shortcuts overlay" }],
       icon: "💡",
       parentId: inboxId,
       kind: "page",
@@ -1117,9 +1279,7 @@ export const listDailyKeys = query({
     for (const key of args.keys) {
       const note = await ctx.db
         .query("notes")
-        .withIndex("by_owner_daily", (q) =>
-          q.eq("ownerId", args.ownerId).eq("dailyKey", key),
-        )
+        .withIndex("by_owner_daily", (q) => q.eq("ownerId", args.ownerId).eq("dailyKey", key))
         .first();
       if (note && !note.trashed) found[key] = note._id;
     }
@@ -1134,56 +1294,83 @@ export const getOrCreateDaily = mutation({
   },
   handler: async (ctx, args) => {
     await requireOwner(ctx, args.ownerId);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(args.dailyKey)) {
-      throw new Error("Invalid daily key");
-    }
-
-    const existing = await ctx.db
-      .query("notes")
-      .withIndex("by_owner_daily", (q) =>
-        q.eq("ownerId", args.ownerId).eq("dailyKey", args.dailyKey),
-      )
-      .first();
-
-    if (existing && !existing.trashed) return existing._id;
-
-    if (existing?.trashed) {
-      await ctx.db.patch(existing._id, {
-        trashed: false,
-        trashedAt: undefined,
-        archived: false,
-        updatedAt: Date.now(),
-      });
-      return existing._id;
-    }
-
-    const now = Date.now();
-    return await ctx.db.insert("notes", {
-      ownerId: args.ownerId,
-      title: formatDailyTitleServer(args.dailyKey),
-      content: "",
-      blocks: [
-        { id: newId(), type: "heading2", text: "Focus" },
-        { id: newId(), type: "todo", text: "", checked: false },
-        { id: newId(), type: "todo", text: "", checked: false },
-        { id: newId(), type: "heading2", text: "Log" },
-        { id: newId(), type: "paragraph", text: "" },
-        { id: newId(), type: "heading2", text: "Reflection" },
-        {
-          id: newId(),
-          type: "callout",
-          text: "One thing I learned…",
-          calloutVariant: "tip",
-        },
-      ],
-      icon: "☀️",
-      kind: "page",
-      pinned: false,
-      archived: false,
-      trashed: false,
-      tags: ["daily"],
-      dailyKey: args.dailyKey,
-      updatedAt: now,
-    });
+    return await createDailyNote(ctx, args.ownerId, args.dailyKey);
   },
 });
+
+/** Used by reminder fire (no Clerk identity on scheduler). */
+export const getOrCreateDailyInternal = internalMutation({
+  args: {
+    ownerId: v.string(),
+    dailyKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await createDailyNote(ctx, args.ownerId, args.dailyKey);
+  },
+});
+
+async function createDailyNote(
+  ctx: { db: MutationCtx["db"] },
+  ownerId: string,
+  dailyKey: string,
+) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dailyKey)) {
+    throw new Error("Invalid daily key");
+  }
+
+  const existing = await ctx.db
+    .query("notes")
+    .withIndex("by_owner_daily", (q) => q.eq("ownerId", ownerId).eq("dailyKey", dailyKey))
+    .first();
+
+  if (existing && !existing.trashed) return existing._id;
+
+  if (existing?.trashed) {
+    await ctx.db.patch(existing._id, {
+      trashed: false,
+      trashedAt: undefined,
+      archived: false,
+      updatedAt: Date.now(),
+    });
+    return existing._id;
+  }
+
+  const now = Date.now();
+  const blocks = [
+    { id: newId(), type: "heading2" as const, text: "Focus" },
+    { id: newId(), type: "todo" as const, text: "", checked: false },
+    { id: newId(), type: "todo" as const, text: "", checked: false },
+    { id: newId(), type: "heading2" as const, text: "Log" },
+    { id: newId(), type: "paragraph" as const, text: "" },
+    { id: newId(), type: "heading2" as const, text: "Reflection" },
+    {
+      id: newId(),
+      type: "callout" as const,
+      text: "One thing I learned…",
+      calloutVariant: "tip" as const,
+    },
+  ];
+  const title = formatDailyTitleServer(dailyKey);
+  const searchText = buildNoteSearchText({
+    title,
+    content: "",
+    tags: ["daily"],
+    blocks,
+  });
+
+  return await ctx.db.insert("notes", {
+    ownerId,
+    title,
+    content: "",
+    blocks,
+    icon: "☀️",
+    kind: "page",
+    pinned: false,
+    archived: false,
+    trashed: false,
+    tags: ["daily"],
+    dailyKey,
+    searchText,
+    updatedAt: now,
+  });
+}

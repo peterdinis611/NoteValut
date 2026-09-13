@@ -4,8 +4,10 @@ import { useMutation, useQuery } from "convex/react";
 import {
   ArrowRight,
   CalendarClock,
+  Flame,
   FolderOpen,
   ImageIcon,
+  LayoutTemplate,
   Loader2,
   Network,
   Plus,
@@ -14,8 +16,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { motion } from "motion/react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { countOpenTasks, countOverdueTasks } from "@/lib/blocks";
@@ -24,14 +25,10 @@ import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { useVaultUpload } from "@/hooks/use-vault-upload";
 import { formatRelativeTime } from "@/lib/format";
 import { isFolder } from "@/lib/item-kinds";
-import {
-  easeOutSoft,
-  fadeUpVariants,
-  staggerContainer,
-  staggerItem,
-} from "@/lib/motion";
+import { playFolioPageMotion } from "@/lib/folio-page-motion";
 import { PAGE_TEMPLATES } from "@/lib/templates";
 import { DailyCalendar } from "./daily-calendar";
+import { FocusModeToggle } from "./focus-mode-toggle";
 import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
 
@@ -44,6 +41,7 @@ type Props = {
   onOpenGraph?: () => void;
   onOpenCalendar?: () => void;
   onOpenDueInbox?: () => void;
+  onBrowseTemplates?: () => void;
 };
 
 function plural(n: number, one: string, many: string) {
@@ -59,22 +57,42 @@ export function VaultHome({
   onOpenGraph,
   onOpenCalendar,
   onOpenDueInbox,
+  onBrowseTemplates,
 }: Props) {
   const toast = useToast();
   const [shareOpen, setShareOpen] = useState(false);
   const [bgUploading, setBgUploading] = useState(false);
   const bgFileRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const { uploadFile } = useVaultUpload();
   const updateSettings = useMutation(api.vaultSettings.update);
+  const getOrCreateDaily = useMutation(api.notes.getOrCreateDaily);
   const customTemplates = useCustomTemplates();
   const templates = useMemo(
     () => [...customTemplates, ...PAGE_TEMPLATES.filter((t) => t.id !== "blank")],
     [customTemplates],
   );
-  const stats = useQuery(api.notes.getVaultStats, { ownerId });
-  const notes = useQuery(api.notes.list, { ownerId });
-  const vaultSettings = useQuery(api.vaultSettings.get, { ownerId });
+  const stats = useQuery(api.notes.getVaultStats, ownerId ? { ownerId } : "skip");
+  const streak = useQuery(api.vaultStats.get, ownerId ? { ownerId } : "skip");
+  const notes = useQuery(api.notes.list, ownerId ? { ownerId } : "skip");
+  const vaultSettings = useQuery(api.vaultSettings.get, ownerId ? { ownerId } : "skip");
   const backgroundImage = vaultSettings?.backgroundImage;
+  const autoDailyDone = useRef(false);
+
+  useEffect(() => {
+    if (!vaultSettings?.autoDailyNote || autoDailyDone.current) return;
+    autoDailyDone.current = true;
+    const dailyKey = new Date().toISOString().slice(0, 10);
+    void getOrCreateDaily({ ownerId, dailyKey }).catch(() => {
+      autoDailyDone.current = false;
+    });
+  }, [vaultSettings?.autoDailyNote, ownerId, getOrCreateDaily]);
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    return playFolioPageMotion(root);
+  }, []);
 
   async function uploadBackground(file: File | null) {
     if (!file) return;
@@ -111,26 +129,21 @@ export function VaultHome({
       .slice(0, 8) ?? [];
 
   const openTaskEntries =
-    notes
-      ?.filter((n) => !isFolder(n) && countOpenTasks(n.blocks) > 0)
-      .slice(0, 5) ?? [];
+    notes?.filter((n) => !isFolder(n) && countOpenTasks(n.blocks) > 0).slice(0, 5) ?? [];
 
   const dueTasks = useMemo(
     () => collectDueTasks(notes, Date.now(), { includeLater: false }).slice(0, 8),
     [notes],
   );
   const overdueCount = useMemo(
-    () =>
-      notes?.reduce((sum, n) => sum + (isFolder(n) ? 0 : countOverdueTasks(n.blocks)), 0) ?? 0,
+    () => notes?.reduce((sum, n) => sum + (isFolder(n) ? 0 : countOverdueTasks(n.blocks)), 0) ?? 0,
     [notes],
   );
 
   return (
-    <motion.div
+    <div
+      ref={rootRef}
       className={`vault-home note-scroll ${backgroundImage ? "vault-home-has-bg" : ""}`}
-      initial="hidden"
-      animate="visible"
-      variants={staggerContainer}
       style={
         backgroundImage
           ? ({ "--vault-bg-image": `url(${backgroundImage})` } as React.CSSProperties)
@@ -140,7 +153,7 @@ export function VaultHome({
       <div className="vault-home-glow" aria-hidden />
       {backgroundImage && <div className="vault-home-bg" aria-hidden />}
 
-      <motion.header className="vault-home-hero" variants={fadeUpVariants} transition={easeOutSoft}>
+      <header className="vault-home-hero nv-folio-await">
         <div className="vault-home-bg-actions">
           <input
             ref={bgFileRef}
@@ -163,7 +176,11 @@ export function VaultHome({
             ) : (
               <Upload className="size-3.5" />
             )}
-            {bgUploading ? "Uploading…" : backgroundImage ? "Change background" : "Vault background"}
+            {bgUploading
+              ? "Uploading…"
+              : backgroundImage
+                ? "Change background"
+                : "Vault background"}
           </button>
           {backgroundImage && (
             <button
@@ -177,24 +194,26 @@ export function VaultHome({
             </button>
           )}
         </div>
-        <p className="vault-home-kicker" data-tour="vault-home">Your knowledge vault</p>
-        <h1 className="vault-home-title">NoteVault</h1>
+        <p className="vault-home-kicker" data-tour="vault-home">
+          Today’s desk
+        </p>
+        <h1 className="vault-home-title">
+          Your Daily <em>Pages</em>
+        </h1>
         <p className="vault-home-subtitle">
-          Capture ideas and organize them into collections — your workspace, your structure.
+          Handwritten thinking, made from pages you actually keep — not another dump of tabs.
         </p>
 
         <div className="vault-home-actions">
-          <motion.button
+          <button
             type="button"
             className="vault-btn-primary"
             data-tour="new-entry"
             onClick={() => onCreateEntry()}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
           >
             <Plus className="size-4" />
             New entry
-          </motion.button>
+          </button>
           <button type="button" className="vault-link-btn" onClick={onCreateCollection}>
             <FolderOpen className="size-3.5" />
             Collection
@@ -232,38 +251,60 @@ export function VaultHome({
             )}
           </p>
         )}
-      </motion.header>
+      </header>
 
-      <motion.div variants={fadeUpVariants} transition={easeOutSoft}>
+      <div className="nv-folio-await">
         <div className="vault-calendar-block" data-tour="daily-notes">
           <DailyCalendar ownerId={ownerId} onOpenNote={onNavigate} />
           {onOpenCalendar && (
-            <button
-              type="button"
-              className="vault-calendar-open"
-              onClick={onOpenCalendar}
-            >
+            <button type="button" className="vault-calendar-open" onClick={onOpenCalendar}>
               <CalendarClock className="size-3.5" />
               Open calendar
               <ArrowRight className="size-3.5" />
             </button>
           )}
         </div>
-      </motion.div>
+      </div>
 
       <div className="vault-home-body">
-        <motion.section className="vault-section" variants={fadeUpVariants} transition={easeOutSoft}>
+        <section className="vault-section vault-widgets nv-folio-await">
+          <div className="vault-widget-row">
+            <div className="vault-widget vault-widget-streak">
+              <Flame className="size-4 text-accent" />
+              <div>
+                <p className="vault-widget-label">Writing streak</p>
+                <p className="vault-widget-value">
+                  {streak?.currentStreak ?? 0}
+                  <span className="vault-widget-unit">
+                    {(streak?.currentStreak ?? 0) === 1 ? " day" : " days"}
+                  </span>
+                </p>
+                {(streak?.longestStreak ?? 0) > 0 && (
+                  <p className="vault-widget-hint">
+                    Best {streak!.longestStreak} · keep showing up
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="vault-widget vault-widget-focus">
+              <FocusModeToggle className="vault-focus-cta" label="Focus mode" />
+              <p className="vault-widget-hint">Hide chrome — write only</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="vault-section nv-folio-await">
           <div className="vault-section-head">
             <h2 className="vault-section-title">Continue</h2>
           </div>
           {recent.length === 0 ? (
             <p className="vault-empty">No entries yet — start with a blank page or a template.</p>
           ) : (
-            <motion.ul className="vault-row-list" variants={staggerContainer}>
+            <ul className="vault-row-list">
               {recent.map((entry) => {
                 const tasks = countOpenTasks(entry.blocks);
                 return (
-                  <motion.li key={entry._id} variants={staggerItem}>
+                  <li key={entry._id}>
                     <button
                       type="button"
                       className="vault-row"
@@ -281,26 +322,22 @@ export function VaultHome({
                       <span className="vault-row-meta">{formatRelativeTime(entry.updatedAt)}</span>
                       <ArrowRight className="vault-row-arrow size-3.5" />
                     </button>
-                  </motion.li>
+                  </li>
                 );
               })}
-            </motion.ul>
+            </ul>
           )}
-        </motion.section>
+        </section>
 
         {dueTasks.length > 0 && (
-          <motion.section className="vault-section" variants={fadeUpVariants} transition={easeOutSoft}>
+          <section className="vault-section nv-folio-await">
             <div className="vault-section-head">
               <h2 className="vault-section-title">
                 <CalendarClock className="inline size-4 mr-1.5 opacity-70" />
                 Due soon
               </h2>
               {onOpenDueInbox && (
-                <button
-                  type="button"
-                  className="vault-section-link"
-                  onClick={onOpenDueInbox}
-                >
+                <button type="button" className="vault-section-link" onClick={onOpenDueInbox}>
                   Open inbox
                   <ArrowRight className="size-3.5" />
                 </button>
@@ -333,11 +370,11 @@ export function VaultHome({
                 </li>
               ))}
             </ul>
-          </motion.section>
+          </section>
         )}
 
         {openTaskEntries.length > 0 && (
-          <motion.section className="vault-section" variants={fadeUpVariants} transition={easeOutSoft}>
+          <section className="vault-section nv-folio-await">
             <div className="vault-section-head">
               <h2 className="vault-section-title">Needs attention</h2>
             </div>
@@ -361,12 +398,19 @@ export function VaultHome({
                 );
               })}
             </ul>
-          </motion.section>
+          </section>
         )}
 
-        <motion.section className="vault-section" variants={fadeUpVariants} transition={easeOutSoft}>
+        <section className="vault-section nv-folio-await">
           <div className="vault-section-head">
             <h2 className="vault-section-title">Start from</h2>
+            {onBrowseTemplates && (
+              <button type="button" className="vault-section-link" onClick={onBrowseTemplates}>
+                <LayoutTemplate className="size-3.5" />
+                Browse templates
+                <ArrowRight className="size-3.5" />
+              </button>
+            )}
           </div>
           <div className="vault-template-row">
             {templates.map((template) => (
@@ -381,7 +425,7 @@ export function VaultHome({
               </button>
             ))}
           </div>
-        </motion.section>
+        </section>
       </div>
 
       <SharePanel
@@ -391,6 +435,6 @@ export function VaultHome({
         scope="vault"
         title="NoteVault"
       />
-    </motion.div>
+    </div>
   );
 }

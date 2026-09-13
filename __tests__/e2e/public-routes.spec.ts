@@ -1,14 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Public routes", () => {
-  test("sign-in page shows NoteVault branding and Clerk form", async ({
-    page,
-  }) => {
+  test("sign-in page shows NoteVault branding and Clerk form", async ({ page }) => {
     await page.goto("/sign-in");
     await expect(page.getByText("NoteVault").first()).toBeVisible();
-    await expect(
-      page.getByText("Your personal knowledge vault"),
-    ).toBeVisible();
+    await expect(page.getByText(/private desk for notes|Sign in/i).first()).toBeVisible();
     // Clerk mounts an iframe or form root — wait for interactive shell
     await expect(page.locator(".clerk-auth-page")).toBeVisible();
   });
@@ -16,20 +12,15 @@ test.describe("Public routes", () => {
   test("sign-up page shows create-account shell", async ({ page }) => {
     await page.goto("/sign-up");
     await expect(page.getByText("NoteVault").first()).toBeVisible();
-    await expect(page.getByText("Create your vault account")).toBeVisible();
+    await expect(page.getByText(/Create account|Open a vault/i).first()).toBeVisible();
     await expect(page.locator(".clerk-auth-page")).toBeVisible();
   });
 
   test("not-authorized page renders status + home action", async ({ page }) => {
     await page.goto("/not-authorized");
     await expect(page.getByRole("heading", { name: "Not authorized" })).toBeVisible();
-    await expect(
-      page.getByText(/don’t have access|don't have access/i),
-    ).toBeVisible();
-    await expect(page.getByRole("link", { name: /back to vault/i })).toHaveAttribute(
-      "href",
-      "/",
-    );
+    await expect(page.getByText(/don’t have access|don't have access/i)).toBeVisible();
+    await expect(page.getByRole("link", { name: /back to vault/i })).toHaveAttribute("href", "/");
   });
 
   test("unknown protected route sends guests to sign-in", async ({ page }) => {

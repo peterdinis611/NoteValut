@@ -38,8 +38,7 @@ export function PushNotificationSettings({ ownerId }: Props) {
       toast.error("Push isn’t supported in this browser");
       return;
     }
-    const key =
-      vapidKey || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || null;
+    const key = vapidKey || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || null;
     if (!key) {
       toast.error("VAPID public key missing — set VAPID_PUBLIC_KEY on Convex");
       return;

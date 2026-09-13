@@ -38,9 +38,5 @@ export function buildNoteSearchText(input: {
     }
   }
 
-  return parts
-    .join("\n")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 32_000);
+  return parts.join("\n").replace(/\s+/g, " ").trim().slice(0, 32_000);
 }

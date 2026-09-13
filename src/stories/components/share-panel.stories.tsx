@@ -1,11 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { fn } from "storybook/test";
-import {
-  noteId,
-  ownerId,
-  sampleShares,
-  sampleVaultSettings,
-} from "../../../.storybook/fixtures";
+import { noteId, ownerId, sampleShares, sampleVaultSettings } from "../../../.storybook/fixtures";
 import { SharePanel } from "@/components/share-panel";
 
 const meta = {

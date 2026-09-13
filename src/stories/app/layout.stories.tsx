@@ -29,7 +29,12 @@ export const WithChildren: Story = {
   args: {
     children: (
       <main className="p-8">
-        <h1 className="font-[family-name:var(--font-display)] text-2xl">NoteVault</h1>
+        <h1
+          className="text-2xl"
+          style={{ fontFamily: "var(--font-land-display), Calistoga, Georgia, serif" }}
+        >
+          NoteVault
+        </h1>
         <p className="mt-2 text-sm text-muted">
           Layout story — real `layout.tsx` also mounts ClerkProvider, ConvexClientProvider, and
           PwaRegister.

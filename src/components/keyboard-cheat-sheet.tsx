@@ -1,10 +1,9 @@
 "use client";
 
 import { Keyboard, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { easeOutSoft, modalVariants, overlayVariants } from "@/lib/motion";
+import { AnimePresence } from "@/lib/anime-ui";
 
 type Shortcut = { keys: string; action: string };
 type Group = { title: string; items: Shortcut[] };
@@ -45,9 +44,7 @@ const GROUPS: Group[] = [
   },
   {
     title: "Headings",
-    items: [
-      { keys: "⌘ ⌥ 1–6", action: "Set heading level" },
-    ],
+    items: [{ keys: "⌘ ⌥ 1–6", action: "Set heading level" }],
   },
 ];
 
@@ -72,34 +69,33 @@ export function KeyboardCheatSheet({ open, onClose }: Props) {
   if (typeof document === "undefined") return null;
 
   return createPortal(
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="shortcuts-overlay"
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={{ duration: 0.15 }}
+    <AnimePresence show={open} kind="overlay">
+      <div className="shortcuts-overlay">
+        <button
+          type="button"
+          className="shortcuts-backdrop"
+          aria-label="Close"
+          onClick={onClose}
+        />
+        <div
+          className="shortcuts-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Keyboard shortcuts"
         >
-          <button type="button" className="shortcuts-backdrop" aria-label="Close" onClick={onClose} />
-          <motion.div
-            className="shortcuts-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Keyboard shortcuts"
-            variants={modalVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={easeOutSoft}
-          >
             <header className="shortcuts-head">
               <div className="shortcuts-title-row">
                 <Keyboard className="size-4 text-accent" />
-                <h2 className="shortcuts-title">Keyboard shortcuts</h2>
+                <h2 className="shortcuts-title">
+                  Keyboard <em>shortcuts</em>
+                </h2>
               </div>
-              <button type="button" className="shortcuts-close" aria-label="Close" onClick={onClose}>
+              <button
+                type="button"
+                className="shortcuts-close"
+                aria-label="Close"
+                onClick={onClose}
+              >
                 <X className="size-4" />
               </button>
             </header>
@@ -118,10 +114,9 @@ export function KeyboardCheatSheet({ open, onClose }: Props) {
                 </section>
               ))}
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>,
+        </div>
+      </div>
+    </AnimePresence>,
     document.body,
   );
 }

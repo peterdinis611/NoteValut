@@ -1,11 +1,10 @@
 "use client";
 
 import { Eye, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { VaultEditor } from "@/editor";
+import { AnimePresence } from "@/lib/anime-ui";
 import type { Block } from "@/lib/blocks";
-import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
 
 export type PreviewableTemplate = {
   id: string;
@@ -23,6 +22,10 @@ type Props = {
 };
 
 export function TemplatePreviewDialog({ template, onClose }: Props) {
+  const lastTemplate = useRef(template);
+  if (template) lastTemplate.current = template;
+  const preview = lastTemplate.current;
+
   useEffect(() => {
     if (!template) return;
     function onKey(e: KeyboardEvent) {
@@ -33,44 +36,31 @@ export function TemplatePreviewDialog({ template, onClose }: Props) {
   }, [template, onClose]);
 
   return (
-    <AnimatePresence>
-      {template && (
-        <motion.div
-          className="share-overlay"
-          onClick={onClose}
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={easeQuick}
-        >
-          <motion.div
+    <AnimePresence show={!!template} kind="overlay">
+      <div className="share-overlay" onClick={onClose}>
+        {preview ? (
+          <div
             className="template-preview-dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="template-preview-title"
             onClick={(e) => e.stopPropagation()}
-            variants={modalVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={easeOutSoft}
           >
             <header className="template-preview-header">
               <div className="min-w-0 flex-1">
                 <p className="template-preview-kicker">
                   <Eye className="size-3.5" />
                   Template preview
-                  {template.builtIn ? " · Built-in" : " · Custom"}
+                  {preview.builtIn ? " · Built-in" : " · Custom"}
                 </p>
                 <h2 id="template-preview-title" className="template-preview-title">
-                  <span aria-hidden>{template.icon}</span>
-                  {template.name}
+                  <span aria-hidden>{preview.icon}</span>
+                  {preview.name}
                 </h2>
-                <p className="template-preview-desc">{template.description}</p>
-                {template.tags && template.tags.length > 0 && (
+                <p className="template-preview-desc">{preview.description}</p>
+                {preview.tags && preview.tags.length > 0 && (
                   <div className="template-preview-tags">
-                    {template.tags.map((tag) => (
+                    {preview.tags.map((tag) => (
                       <span key={tag} className="template-preview-tag">
                         {tag}
                       </span>
@@ -89,15 +79,11 @@ export function TemplatePreviewDialog({ template, onClose }: Props) {
             </header>
 
             <div className="template-preview-body note-scroll">
-              <VaultEditor
-                blocks={template.blocks}
-                onChange={() => {}}
-                readOnly
-              />
+              <VaultEditor blocks={preview.blocks} onChange={() => {}} readOnly />
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          </div>
+        ) : null}
+      </div>
+    </AnimePresence>
   );
 }

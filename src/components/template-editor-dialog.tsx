@@ -1,13 +1,12 @@
 "use client";
 
 import { Plus, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { IconPicker } from "@/components/icon-picker";
 import { VaultEditor } from "@/editor";
+import { AnimePresence } from "@/lib/anime-ui";
 import { createBlock, type Block } from "@/lib/blocks";
 import { createCustomTemplate } from "@/lib/create-custom-template";
-import { easeOutSoft, easeQuick, modalVariants, overlayVariants } from "@/lib/motion";
 
 type Props = {
   open: boolean;
@@ -62,29 +61,15 @@ export function TemplateEditorDialog({ open, onClose, onSaved }: Props) {
   }
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="share-overlay"
-          onClick={onClose}
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={easeQuick}
+    <AnimePresence show={open} kind="overlay">
+      <div className="share-overlay" onClick={onClose}>
+        <div
+          className="template-editor-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="template-editor-title"
+          onClick={(e) => e.stopPropagation()}
         >
-          <motion.div
-            className="template-editor-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="template-editor-title"
-            onClick={(e) => e.stopPropagation()}
-            variants={modalVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={easeOutSoft}
-          >
             <header className="template-preview-header">
               <div className="min-w-0 flex-1">
                 <p className="template-preview-kicker">
@@ -98,12 +83,7 @@ export function TemplateEditorDialog({ open, onClose, onSaved }: Props) {
                   Define starter blocks for new pages from the create menu
                 </p>
               </div>
-              <button
-                type="button"
-                className="settings-close"
-                onClick={onClose}
-                aria-label="Close"
-              >
+              <button type="button" className="settings-close" onClick={onClose} aria-label="Close">
                 <X className="size-4" />
               </button>
             </header>
@@ -163,9 +143,8 @@ export function TemplateEditorDialog({ open, onClose, onSaved }: Props) {
                 Save template
               </button>
             </footer>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </div>
+      </div>
+    </AnimePresence>
   );
 }

@@ -63,9 +63,11 @@ export function readOwnerRecord(): OwnerRecord {
   const existing = ownerCollection.get("owner");
   if (existing) return existing;
   getOwnerId();
-  return ownerCollection.get("owner") ?? {
-    id: "owner",
-    ownerId: getOwnerId(),
-    updatedAt: Date.now(),
-  };
+  return (
+    ownerCollection.get("owner") ?? {
+      id: "owner",
+      ownerId: getOwnerId(),
+      updatedAt: Date.now(),
+    }
+  );
 }

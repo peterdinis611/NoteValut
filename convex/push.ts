@@ -1,9 +1,5 @@
 import { v } from "convex/values";
-import {
-  internalMutation,
-  mutation,
-  query,
-} from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireOwner } from "./lib/auth";
 
 /** Public VAPID key for client PushManager.subscribe. */

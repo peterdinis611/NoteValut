@@ -39,7 +39,10 @@ export function PageBreadcrumbs({ noteId, onNavigate, compact }: Props) {
   if (crumbs.length <= 1) return null;
 
   return (
-    <nav aria-label="Breadcrumb" className="mb-2 flex flex-wrap items-center gap-1 text-sm text-muted">
+    <nav
+      aria-label="Breadcrumb"
+      className="mb-2 flex flex-wrap items-center gap-1 text-sm text-muted"
+    >
       {crumbs.map((crumb, index) => {
         const isLast = index === crumbs.length - 1;
         return (

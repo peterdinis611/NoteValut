@@ -11,7 +11,6 @@ import {
   Link2,
   Trash2,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import {
   useEffect,
   useRef,
@@ -22,7 +21,8 @@ import {
 import { ImageViewer } from "@/components/image-viewer";
 import { MediaUploadButton } from "@/components/media-upload-button";
 import { useToast } from "@/components/toast";
-import { easeOutSoft, dropdownVariants } from "@/lib/motion";
+import { AnimePresence } from "@/lib/anime-ui";
+import { useVaultUpload } from "@/hooks/use-vault-upload";
 import type { BlockRenderProps } from "../types";
 
 const MIN_WIDTH = 25;
@@ -30,6 +30,7 @@ const MAX_WIDTH = 100;
 
 export function ImageBlockView(props: BlockRenderProps) {
   const toast = useToast();
+  const { uploadFile } = useVaultUpload();
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selected, setSelected] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -37,6 +38,8 @@ export function ImageBlockView(props: BlockRenderProps) {
   const [editingCaption, setEditingCaption] = useState(false);
   const [urlDraft, setUrlDraft] = useState(props.block.url ?? "");
   const [broken, setBroken] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -48,8 +51,7 @@ export function ImageBlockView(props: BlockRenderProps) {
   const alt = caption.trim() || "Image";
   const width = clampWidth(dragWidth ?? props.block.width ?? 100);
   const align = props.block.align ?? "center";
-  const showChrome =
-    !props.readOnly && (selected || hovered || editingUrl || editingCaption);
+  const showChrome = !props.readOnly && (selected || hovered || editingUrl || editingCaption);
 
   useEffect(() => {
     setUrlDraft(props.block.url ?? "");
@@ -144,6 +146,29 @@ export function ImageBlockView(props: BlockRenderProps) {
     window.addEventListener("pointerup", onUp);
   }
 
+  async function attachImage(file: File) {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Drop an image file");
+      return;
+    }
+    setUploading(true);
+    try {
+      const uploaded = await uploadFile(file);
+      props.commands.updateBlock(props.block.id, {
+        url: uploaded.url,
+        text: props.block.text || file.name.replace(/\.[^.]+$/, ""),
+      });
+      props.onFocus();
+      setBroken(false);
+      toast.success("Image uploaded");
+    } catch {
+      toast.error("Couldn’t upload image");
+    } finally {
+      setUploading(false);
+      setDragging(false);
+    }
+  }
+
   async function downloadImage() {
     if (!url) return;
     try {
@@ -160,16 +185,49 @@ export function ImageBlockView(props: BlockRenderProps) {
     }
   }
 
+  const dropHandlers = props.readOnly
+    ? {}
+    : {
+        onDragEnter: (e: React.DragEvent) => {
+          if ([...e.dataTransfer.types].includes("Files")) {
+            e.preventDefault();
+            setDragging(true);
+          }
+        },
+        onDragOver: (e: React.DragEvent) => {
+          if ([...e.dataTransfer.types].includes("Files")) {
+            e.preventDefault();
+            setDragging(true);
+          }
+        },
+        onDragLeave: () => setDragging(false),
+        onDrop: (e: React.DragEvent) => {
+          const file = e.dataTransfer.files?.[0];
+          if (!file) return;
+          e.preventDefault();
+          e.stopPropagation();
+          void attachImage(file);
+        },
+      };
+
   if (!url) {
     return (
-      <div className="nv-image nv-image-empty-wrap" onFocus={props.onFocus}>
+      <div
+        className={`nv-image nv-image-empty-wrap ${dragging ? "nv-image-dropping" : ""}`}
+        onFocus={props.onFocus}
+        {...dropHandlers}
+      >
         <div className="nv-image-empty">
           <span className="nv-image-empty-icon">
             <ImageIcon className="size-5" />
           </span>
           <div className="nv-image-empty-copy">
-            <p className="nv-image-empty-title">Add an image</p>
-            <p className="nv-image-empty-hint">Upload a file or paste an image URL</p>
+            <p className="nv-image-empty-title">
+              {uploading ? "Uploading…" : dragging ? "Drop image to upload" : "Add an image"}
+            </p>
+            <p className="nv-image-empty-hint">
+              Drop a file, upload, paste from clipboard, or add a URL
+            </p>
           </div>
         </div>
         {!props.readOnly && (
@@ -177,9 +235,13 @@ export function ImageBlockView(props: BlockRenderProps) {
             <div className="nv-media-upload-row">
               <MediaUploadButton
                 accept="image/*"
-                label="Upload image"
-                onUploaded={(next) => {
-                  props.commands.updateBlock(props.block.id, { url: next });
+                label={uploading ? "Uploading…" : "Upload image"}
+                disabled={uploading}
+                onUploaded={(next, file) => {
+                  props.commands.updateBlock(props.block.id, {
+                    url: next,
+                    text: props.block.text || file.name.replace(/\.[^.]+$/, ""),
+                  });
                   props.onFocus();
                 }}
                 onError={(msg) => toast.error(msg)}
@@ -213,138 +275,124 @@ export function ImageBlockView(props: BlockRenderProps) {
   return (
     <div
       ref={rootRef}
-      className={`nv-image nv-image-align-${align}`}
+      className={`nv-image nv-image-align-${align} ${dragging ? "nv-image-dropping" : ""}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => {
         if (!selected && !editingUrl && !editingCaption) setHovered(false);
       }}
       onFocus={props.onFocus}
+      {...dropHandlers}
     >
       <div
         ref={wrapRef}
         className={`nv-image-shell ${showChrome ? "nv-image-shell-active" : ""} ${selected ? "nv-image-shell-selected" : ""}`}
         style={{ width: `${width}%` }}
       >
-        <AnimatePresence>
-          {showChrome && (
-            <motion.div
-              className="nv-image-toolbar"
-              variants={dropdownVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              transition={easeOutSoft}
-              onMouseDown={(e) => e.preventDefault()}
-            >
-              <div className="nv-image-toolbar-group">
-                <Tool label="Full screen" onClick={() => setViewerOpen(true)}>
-                  <Expand className="size-3.5" />
-                </Tool>
-                <Tool label="Download" onClick={() => void downloadImage()}>
-                  <Download className="size-3.5" />
-                </Tool>
-              </div>
-              <span className="nv-image-toolbar-sep" />
-              <div className="nv-image-toolbar-group">
-                <Tool
-                  label="Align left"
-                  active={align === "left"}
-                  onClick={() => setAlign("left")}
-                >
-                  <AlignLeft className="size-3.5" />
-                </Tool>
-                <Tool
-                  label="Align center"
-                  active={align === "center"}
-                  onClick={() => setAlign("center")}
-                >
-                  <AlignCenter className="size-3.5" />
-                </Tool>
-                <Tool
-                  label="Align right"
-                  active={align === "right"}
-                  onClick={() => setAlign("right")}
-                >
-                  <AlignRight className="size-3.5" />
-                </Tool>
-              </div>
-              <span className="nv-image-toolbar-sep" />
-              <div className="nv-image-toolbar-group">
-                <Tool
-                  label="Caption"
-                  active={editingCaption || !!caption.trim()}
-                  onClick={() => {
-                    setSelected(true);
-                    setEditingCaption(true);
-                  }}
-                >
-                  <Captions className="size-3.5" />
-                </Tool>
-                <Tool
-                  label="Replace link"
-                  active={editingUrl}
-                  onClick={() => {
-                    setSelected(true);
-                    setEditingUrl((v) => !v);
-                  }}
-                >
-                  <Link2 className="size-3.5" />
-                </Tool>
-                <Tool label="Reset width" onClick={() => commitWidth(100)}>
-                  <span className="nv-image-toolbar-pct">{Math.round(width)}%</span>
-                </Tool>
-              </div>
-              <span className="nv-image-toolbar-sep" />
-              <Tool
-                label="Delete"
-                danger
-                onClick={() => props.commands.deleteBlock(props.block.id)}
-              >
-                <Trash2 className="size-3.5" />
+        <AnimePresence show={showChrome} kind="dropdown">
+          <div className="nv-image-toolbar" onMouseDown={(e) => e.preventDefault()}>
+            <div className="nv-image-toolbar-group">
+              <Tool label="Full screen" onClick={() => setViewerOpen(true)}>
+                <Expand className="size-3.5" />
               </Tool>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {editingUrl && !props.readOnly && (
-            <motion.div
-              className="nv-image-url-bar nv-image-url-bar-overlay"
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.15 }}
-            >
-              <Link2 className="size-3.5 shrink-0 opacity-50" />
-              <input
-                ref={urlRef}
-                className="nv-image-url-inline"
-                placeholder="https://… image URL"
-                value={urlDraft}
-                onChange={(e) => setUrlDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    applyUrl(urlDraft);
-                  }
-                  if (e.key === "Escape") {
-                    e.preventDefault();
-                    setUrlDraft(url);
-                    setEditingUrl(false);
-                  }
-                }}
-              />
-              <button
-                type="button"
-                className="nv-image-url-apply"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => applyUrl(urlDraft)}
+              <Tool label="Download" onClick={() => void downloadImage()}>
+                <Download className="size-3.5" />
+              </Tool>
+              <span className="nv-image-replace">
+                <MediaUploadButton
+                  accept="image/*"
+                  label="Replace"
+                  onUploaded={(next, file) => {
+                    props.commands.updateBlock(props.block.id, {
+                      url: next,
+                      text: props.block.text || file.name.replace(/\.[^.]+$/, ""),
+                    });
+                    setBroken(false);
+                    toast.success("Image replaced");
+                  }}
+                  onError={(msg) => toast.error(msg)}
+                />
+              </span>
+            </div>
+            <span className="nv-image-toolbar-sep" />
+            <div className="nv-image-toolbar-group">
+              <Tool label="Align left" active={align === "left"} onClick={() => setAlign("left")}>
+                <AlignLeft className="size-3.5" />
+              </Tool>
+              <Tool
+                label="Align center"
+                active={align === "center"}
+                onClick={() => setAlign("center")}
               >
-                Save
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                <AlignCenter className="size-3.5" />
+              </Tool>
+              <Tool label="Align right" active={align === "right"} onClick={() => setAlign("right")}>
+                <AlignRight className="size-3.5" />
+              </Tool>
+            </div>
+            <span className="nv-image-toolbar-sep" />
+            <div className="nv-image-toolbar-group">
+              <Tool
+                label="Caption"
+                active={editingCaption || !!caption.trim()}
+                onClick={() => {
+                  setSelected(true);
+                  setEditingCaption(true);
+                }}
+              >
+                <Captions className="size-3.5" />
+              </Tool>
+              <Tool
+                label="Replace link"
+                active={editingUrl}
+                onClick={() => {
+                  setSelected(true);
+                  setEditingUrl((v) => !v);
+                }}
+              >
+                <Link2 className="size-3.5" />
+              </Tool>
+              <Tool label="Reset width" onClick={() => commitWidth(100)}>
+                <span className="nv-image-toolbar-pct">{Math.round(width)}%</span>
+              </Tool>
+            </div>
+            <span className="nv-image-toolbar-sep" />
+            <Tool label="Delete" danger onClick={() => props.commands.deleteBlock(props.block.id)}>
+              <Trash2 className="size-3.5" />
+            </Tool>
+          </div>
+        </AnimePresence>
+
+        <AnimePresence show={editingUrl && !props.readOnly} kind="dropdown">
+          <div className="nv-image-url-bar nv-image-url-bar-overlay">
+            <Link2 className="size-3.5 shrink-0 opacity-50" />
+            <input
+              ref={urlRef}
+              className="nv-image-url-inline"
+              placeholder="https://… image URL"
+              value={urlDraft}
+              onChange={(e) => setUrlDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  applyUrl(urlDraft);
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setUrlDraft(url);
+                  setEditingUrl(false);
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="nv-image-url-apply"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => applyUrl(urlDraft)}
+            >
+              Save
+            </button>
+          </div>
+        </AnimePresence>
 
         <button
           type="button"
@@ -397,7 +445,9 @@ export function ImageBlockView(props: BlockRenderProps) {
         {(editingCaption || caption.trim() || (showChrome && selected)) && (
           <div className="nv-image-caption-wrap">
             {props.readOnly ? (
-              caption.trim() ? <p className="nv-image-caption">{caption}</p> : null
+              caption.trim() ? (
+                <p className="nv-image-caption">{caption}</p>
+              ) : null
             ) : (
               <input
                 ref={captionRef}

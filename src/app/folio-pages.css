@@ -1,0 +1,583 @@
+/* Folio language — match the landing desk on every other screen. */
+
+:root {
+  --folio-border: 1.6px solid var(--foreground);
+  --folio-shadow: 4px 4px 0 var(--foreground);
+  --folio-shadow-sm: 3px 3px 0 var(--foreground);
+  --folio-radius: 0.35rem;
+}
+
+.app-main {
+  background: var(--background);
+}
+
+.sidebar {
+  background: var(--sidebar);
+  border-right: var(--folio-border);
+}
+
+.sidebar-slot-mobile .sidebar {
+  box-shadow: 8px 0 0 color-mix(in srgb, var(--foreground) 22%, transparent);
+}
+
+.sidebar-reopen-btn {
+  border: var(--folio-border);
+  background: var(--panel);
+  color: var(--foreground);
+  border-radius: var(--folio-radius);
+  box-shadow: var(--folio-shadow-sm);
+}
+
+.quick-capture-fab {
+  border: var(--folio-border);
+  border-radius: var(--folio-radius);
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--folio-shadow);
+}
+
+.sidebar-search {
+  border-radius: var(--folio-radius);
+  border: 1.4px solid color-mix(in srgb, var(--foreground) 28%, transparent);
+  background: var(--panel);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--foreground) 45%, transparent);
+}
+.sidebar-search:hover,
+.sidebar-search:focus {
+  background: var(--panel);
+  border-color: var(--foreground);
+  box-shadow: 2px 2px 0 var(--foreground);
+}
+
+.sidebar-search-wrap:focus-within .sidebar-search-icon {
+  color: var(--accent);
+}
+
+.cover-image-input,
+.settings-css-editor,
+.settings-input,
+.settings-gf-input {
+  background: var(--panel) !important;
+  border: 1.4px solid color-mix(in srgb, var(--foreground) 22%, transparent);
+  color: var(--foreground);
+  border-radius: var(--folio-radius);
+}
+
+/* Page titles — Calistoga + Fraunces italic, landing kicker */
+.vault-home-kicker,
+.settings-kicker,
+.status-kicker,
+.auth-gate-kicker {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.settings-title,
+.status-title,
+.graph-title,
+.share-lock h1,
+.quick-capture-title {
+  font-family: var(--font-land-display), "Calistoga", "Young Serif", serif;
+  font-weight: 400;
+  letter-spacing: -0.035em;
+}
+
+.vault-home-title em,
+.settings-title em,
+.status-title em,
+.graph-title em,
+.share-lock h1 em {
+  font-family: var(--font-land-script), "Fraunces", serif;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.settings-title {
+  font-size: clamp(2.1rem, 4vw, 2.85rem);
+  line-height: 0.95;
+}
+
+.settings-close {
+  border: var(--folio-border);
+  background: var(--panel);
+  box-shadow: 2px 2px 0 var(--foreground);
+  border-radius: var(--folio-radius);
+}
+
+.settings-section {
+  padding: 1.15rem 1.1rem 1.2rem;
+  border: var(--folio-border);
+  background: #fff;
+  background: var(--panel);
+  box-shadow: var(--folio-shadow);
+  border-bottom: var(--folio-border);
+  margin-bottom: 1.15rem;
+  padding-bottom: 1.2rem;
+}
+
+.settings-theme-card,
+.settings-btn,
+.vault-template-chip,
+.vault-link-btn {
+  border-radius: var(--folio-radius);
+}
+
+.settings-theme-card {
+  border: var(--folio-border);
+  background: var(--panel);
+  box-shadow: 3px 3px 0 var(--foreground);
+}
+.settings-theme-card-active {
+  background: color-mix(in srgb, var(--lilac) 55%, var(--panel));
+  border-color: var(--foreground);
+}
+
+.settings-btn {
+  border: 1.4px solid var(--foreground);
+  background: var(--panel);
+  box-shadow: 2px 2px 0 var(--foreground);
+}
+.settings-btn:hover {
+  background: var(--lilac);
+  border-color: var(--foreground);
+}
+
+.vault-btn-primary,
+.status-btn-primary,
+.clerk-primary-btn,
+.share-lock-form button,
+.nv-folio-btn {
+  border-radius: var(--folio-radius) !important;
+  background: var(--foreground) !important;
+  color: var(--background) !important;
+  border: 1.6px solid var(--foreground) !important;
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--foreground) 55%, var(--accent)) !important;
+  font-weight: 650 !important;
+}
+.vault-btn-primary:hover,
+.status-btn-primary:hover,
+.nv-folio-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--foreground) 55%, var(--accent)) !important;
+}
+
+.status-btn {
+  border-radius: var(--folio-radius);
+  border: var(--folio-border);
+  background: var(--panel);
+  box-shadow: var(--folio-shadow-sm);
+}
+.status-btn:hover {
+  background: var(--lilac);
+  border-color: var(--foreground);
+}
+
+/* Status / loading / 404 / error */
+.status-page,
+.status-page-error {
+  background: var(--background);
+}
+
+.status-glow {
+  display: none;
+}
+
+.status-shell {
+  border-radius: var(--folio-radius);
+  border: var(--folio-border);
+  background: var(--panel);
+  box-shadow: 6px 6px 0 var(--foreground);
+  backdrop-filter: none;
+  padding: 1.6rem 1.4rem 1.7rem;
+}
+
+.status-page-compact .status-shell {
+  border: var(--folio-border);
+  background: var(--panel);
+  box-shadow: var(--folio-shadow);
+  padding: 1.15rem 1.1rem 1.25rem;
+}
+
+.status-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.85rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-size: 0.95rem;
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.status-logo-mark {
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 0.35rem 0.55rem 0.35rem 0.35rem;
+  background: var(--lilac);
+  border: 1.6px solid var(--foreground);
+  box-shadow: 2px 2px 0 var(--foreground);
+}
+
+.status-title {
+  font-size: clamp(1.85rem, 4.4vw, 2.55rem);
+  line-height: 0.95;
+  max-width: none;
+}
+
+.status-preview {
+  border-radius: var(--folio-radius);
+  border: var(--folio-border);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+  color: var(--foreground);
+}
+
+.status-detail-body {
+  border-radius: var(--folio-radius);
+  border: var(--folio-border);
+  background: var(--background);
+}
+
+.status-detail-stack {
+  border-radius: var(--folio-radius);
+  border: 1.4px solid var(--foreground);
+  background: var(--background);
+  color: var(--muted);
+}
+
+.status-detail-copy {
+  border-radius: var(--folio-radius);
+  border: 1.4px solid var(--foreground);
+  background: var(--panel);
+}
+
+/* Vault home — same desk as the shop */
+.vault-home {
+  max-width: 48rem;
+  padding: 2.6rem 1.6rem 5rem;
+}
+
+.vault-home-glow {
+  display: none;
+}
+
+.vault-home-hero {
+  border-bottom: var(--folio-border);
+  padding-bottom: 1.6rem;
+  margin-bottom: 2rem;
+}
+
+.vault-home-title {
+  font-size: clamp(2.6rem, 7vw, 4.1rem);
+}
+
+.vault-link-btn {
+  border: 1.4px solid var(--foreground);
+  background: var(--panel);
+  padding: 0.42rem 0.7rem;
+  box-shadow: 2px 2px 0 var(--foreground);
+  color: var(--foreground);
+}
+.vault-link-btn:hover {
+  background: var(--lilac);
+  color: var(--foreground);
+}
+
+.vault-home-meta {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.vault-section {
+  padding: 1.05rem 1rem 1.1rem;
+  border: var(--folio-border);
+  background: var(--panel);
+  box-shadow: var(--folio-shadow);
+}
+
+.vault-home-body {
+  gap: 1rem;
+}
+
+.vault-section-title {
+  font-family: var(--font-land-display), "Calistoga", serif;
+  font-size: 1.15rem;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  text-transform: none;
+  color: var(--foreground);
+}
+
+.vault-row {
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  padding: 0.65rem 0.15rem;
+}
+.vault-row:hover {
+  background: color-mix(in srgb, var(--lilac) 28%, transparent);
+}
+
+.vault-template-chip {
+  border: 1.4px solid var(--foreground);
+  background: var(--panel);
+  box-shadow: 2px 2px 0 var(--foreground);
+  border-radius: var(--folio-radius);
+}
+.vault-template-chip:hover {
+  background: var(--lilac);
+  border-color: var(--foreground);
+}
+
+.vault-row-badge-overdue,
+.vault-meta-overdue {
+  color: #c43c1a;
+}
+
+/* Calendar / tags / due share the settings header */
+.calendar-page,
+.tags-hub,
+.due-inbox {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.due-inbox-tab,
+.due-inbox-item,
+.tags-cloud button,
+.calendar-month {
+  border-radius: var(--folio-radius);
+}
+
+.due-inbox-tab {
+  border: 1.4px solid color-mix(in srgb, var(--foreground) 22%, transparent);
+  background: var(--panel);
+}
+.due-inbox-tab-active {
+  border-color: var(--foreground);
+  background: var(--lilac);
+  box-shadow: 2px 2px 0 var(--foreground);
+}
+
+.due-inbox-item {
+  border: var(--folio-border);
+  background: var(--panel);
+  box-shadow: 3px 3px 0 var(--foreground);
+}
+
+/* Share password gate */
+.share-lock {
+  position: relative;
+  z-index: 40;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 2rem 1.25rem;
+  text-align: left;
+  background: var(--background);
+}
+
+.share-lock-plate {
+  width: min(26rem, 100%);
+  padding: 1.5rem 1.35rem 1.45rem;
+  border: var(--folio-border);
+  background: var(--panel);
+  box-shadow: 6px 6px 0 var(--foreground);
+}
+
+.share-lock h1 {
+  margin: 0.35rem 0 0;
+  font-size: clamp(2.2rem, 8vw, 3.1rem);
+  line-height: 0.95;
+}
+
+.share-lock p {
+  margin: 0.7rem 0 0;
+}
+
+.share-lock-form {
+  justify-content: stretch;
+  margin-top: 1.1rem;
+}
+
+.share-lock-form input {
+  flex: 1;
+  min-width: 0;
+  border-radius: var(--folio-radius);
+  border: var(--folio-border);
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.share-lock-form button {
+  padding: 0.55rem 1rem;
+}
+
+/* Overlays — ink plates, not smoky glass */
+.cmd-overlay,
+.quick-capture-overlay,
+.graph-backdrop {
+  background: color-mix(in srgb, var(--foreground) 28%, transparent);
+}
+
+.cmd-palette,
+.quick-capture-modal,
+.graph-panel,
+.toast,
+.share-panel,
+.move-dialog,
+.shortcuts-panel {
+  border-radius: var(--folio-radius) !important;
+  border: var(--folio-border) !important;
+  background: var(--panel) !important;
+  box-shadow: 6px 6px 0 var(--foreground) !important;
+  backdrop-filter: none;
+}
+
+.shortcuts-backdrop {
+  background: color-mix(in srgb, var(--foreground) 28%, transparent);
+}
+
+.shortcuts-title,
+.share-panel-title,
+.quick-capture-title {
+  font-family: var(--font-land-display), "Calistoga", serif;
+  font-weight: 400;
+}
+
+.shortcuts-title em {
+  font-family: var(--font-land-script), "Fraunces", serif;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.vault-bg-btn,
+.vault-calendar-open {
+  border-radius: var(--folio-radius);
+  border: 1.4px solid var(--foreground);
+  background: var(--panel);
+  box-shadow: 2px 2px 0 var(--foreground);
+  color: var(--foreground);
+  backdrop-filter: none;
+}
+.vault-bg-btn:hover:not(:disabled),
+.vault-calendar-open:hover {
+  background: var(--lilac);
+  color: var(--foreground);
+}
+
+.vault-calendar-block {
+  padding: 1rem;
+  border: var(--folio-border);
+  background: var(--panel);
+  box-shadow: var(--folio-shadow);
+  margin-bottom: 1rem;
+}
+
+.vault-calendar-open {
+  padding: 0.4rem 0.7rem;
+}
+
+.notevault-driver-popover.driver-popover {
+  background: var(--panel) !important;
+  border: var(--folio-border) !important;
+  border-radius: var(--folio-radius) !important;
+  box-shadow: 6px 6px 0 var(--foreground) !important;
+  backdrop-filter: none;
+}
+
+.notevault-driver-popover .nv-tour-kicker {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  letter-spacing: 0.28em;
+}
+
+.notevault-driver-popover .driver-popover-title {
+  font-family: var(--font-land-display), "Calistoga", serif;
+}
+
+.notevault-driver-popover .driver-popover-next-btn {
+  background: var(--foreground) !important;
+  color: var(--background) !important;
+  border: 1.4px solid var(--foreground) !important;
+  box-shadow: 2px 2px 0 var(--accent);
+}
+
+.notevault-driver-popover .driver-popover-prev-btn {
+  border: 1.4px solid var(--foreground) !important;
+  background: var(--panel) !important;
+}
+
+.nv-preload {
+  border: var(--folio-border);
+  background: var(--panel);
+  box-shadow: var(--folio-shadow);
+}
+
+.nv-preload-glow {
+  display: none;
+}
+
+.nv-folio-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+}
+
+.graph-panel {
+  background: var(--background) !important;
+}
+
+.graph-title {
+  font-size: 1.35rem;
+}
+
+.toast-error .toast-icon {
+  color: #c43c1a;
+}
+.toast-info .toast-icon {
+  color: var(--accent);
+}
+
+.clerk-social-btn {
+  box-shadow: 2px 2px 0 var(--foreground) !important;
+}
+
+.clerk-primary-btn:hover {
+  background: color-mix(in srgb, var(--foreground) 88%, var(--accent)) !important;
+}
+
+.nv-folio-motion .auth-gate-kicker,
+.nv-folio-motion .auth-gate-title,
+.nv-folio-motion .auth-gate-lede,
+.nv-folio-motion .auth-gate-desk {
+  animation: none;
+}
+
+.nv-folio-motion.nv-folio-animating .nv-folio-await {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nv-folio-motion .nv-folio-await,
+  .nv-folio-motion.nv-folio-animating .nv-folio-await {
+    opacity: 1;
+  }
+
+  .vault-btn-primary:hover,
+  .status-btn-primary:hover,
+  .nv-folio-btn:hover {
+    transform: none;
+  }
+}

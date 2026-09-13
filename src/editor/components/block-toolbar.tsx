@@ -1,9 +1,8 @@
 "use client";
 
 import { Highlighter, Paintbrush } from "lucide-react";
-import { motion } from "motion/react";
 import { HIGHLIGHT_COLORS, TEXT_COLORS } from "@/lib/colors";
-import { easeOutSoft, dropdownVariants } from "@/lib/motion";
+import { useAnimeEnter } from "@/lib/anime-ui";
 
 type Props = {
   color?: string;
@@ -34,18 +33,16 @@ export function canColorBlock(type: string) {
 }
 
 export function BlockToolbar({ color, bgColor, onColor, onBgColor }: Props) {
+  const enterRef = useAnimeEnter<HTMLDivElement>("dropdown");
   const activeColor = color && color !== "default" ? color : "default";
   const activeBg = bgColor && bgColor !== "none" ? bgColor : "none";
 
   return (
-    <motion.div
+    <div
+      ref={enterRef}
       className="nv-toolbar"
       role="toolbar"
       aria-label="Text style"
-      variants={dropdownVariants}
-      initial="hidden"
-      animate="visible"
-      transition={easeOutSoft}
       onMouseDown={(e) => e.preventDefault()}
     >
       <div className="nv-toolbar-row">
@@ -103,6 +100,6 @@ export function BlockToolbar({ color, bgColor, onColor, onBgColor }: Props) {
           })}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

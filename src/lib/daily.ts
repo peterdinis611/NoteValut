@@ -72,9 +72,7 @@ export function formatMonthLabel(year: number, month: number): string {
 /** All YYYY-MM-DD keys in a month (0-based month). */
 export function monthKeys(year: number, month: number): string[] {
   const days = new Date(year, month + 1, 0).getDate();
-  return Array.from({ length: days }, (_, i) =>
-    toDailyKey(new Date(year, month, i + 1)),
-  );
+  return Array.from({ length: days }, (_, i) => toDailyKey(new Date(year, month, i + 1)));
 }
 
 export type MonthGridCell = {

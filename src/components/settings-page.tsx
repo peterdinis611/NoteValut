@@ -15,9 +15,8 @@ import {
   Type,
   X,
 } from "lucide-react";
-import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import {
   MAX_FONT_BYTES,
@@ -34,17 +33,16 @@ import {
 import { removeCustomTemplate } from "@/db/templates-collection";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { useVaultSettings } from "@/hooks/use-vault-settings";
-import { importMarkdownFiles } from "@/lib/import-notes";
+import { importMarkdownFiles, importZipVault } from "@/lib/import-notes";
 import { startVaultTour } from "@/lib/onboarding";
-import { easeOutSoft, fadeUpVariants } from "@/lib/motion";
+import { useAnimeEnter } from "@/lib/anime-ui";
 import { listDefaultTemplates } from "@/lib/templates";
 import { parseVaultBackupFile } from "@/lib/vault-backup";
-import {
-  TemplatePreviewDialog,
-  type PreviewableTemplate,
-} from "./template-preview-dialog";
+import { applyThemePack, downloadThemePack, parseThemePack } from "@/lib/theme-pack";
+import { TemplatePreviewDialog, type PreviewableTemplate } from "./template-preview-dialog";
 import { TemplateEditorDialog } from "./template-editor-dialog";
 import { PushNotificationSettings } from "./push-notification-settings";
+import { GoogleFontsPicker } from "./google-fonts-picker";
 import { useToast } from "./toast";
 
 const MAX_CSS_BYTES = 100_000;
@@ -58,20 +56,17 @@ type Props = {
   onStartTour?: () => void;
 };
 
-export function SettingsPage({
-  ownerId,
-  onClose,
-  onExport,
-  onExportMarkdown,
-  onStartTour,
-}: Props) {
+export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onStartTour }: Props) {
   const toast = useToast();
   const settings = useVaultSettings();
   const templates = useCustomTemplates();
   const importVault = useMutation(api.notes.importVault);
   const reindexSearch = useMutation(api.notes.reindexSearch);
+  const vaultRemote = useQuery(api.vaultSettings.get, ownerId ? { ownerId } : "skip");
+  const updateVaultRemote = useMutation(api.vaultSettings.update);
   const fileRef = useRef<HTMLInputElement>(null);
   const fontFileRef = useRef<HTMLInputElement>(null);
+  const themePackRef = useRef<HTMLInputElement>(null);
   const backupFileRef = useRef<HTMLInputElement>(null);
   const mdImportRef = useRef<HTMLInputElement>(null);
   const [cssDraft, setCssDraft] = useState(settings.customCss);
@@ -80,11 +75,10 @@ export function SettingsPage({
   const [fontUrlDraft, setFontUrlDraft] = useState(settings.fontUrl ?? "");
   const [fontDragging, setFontDragging] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [importSource, setImportSource] = useState<"markdown" | "obsidian" | "notion">(
-    "markdown",
-  );
+  const [importSource, setImportSource] = useState<"markdown" | "obsidian" | "notion">("markdown");
   const [preview, setPreview] = useState<PreviewableTemplate | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const enterRef = useAnimeEnter<HTMLDivElement>("page");
 
   useEffect(() => {
     setCssDraft(settings.customCss);
@@ -195,7 +189,16 @@ export function SettingsPage({
     if (!files?.length) return;
     setImporting(true);
     try {
-      const drafts = await importMarkdownFiles(files, importSource);
+      const list = [...files];
+      const zips = list.filter((f) => /\.zip$/i.test(f.name) || f.type === "application/zip");
+      const mds = list.filter((f) => !zips.includes(f));
+      const drafts = [
+        ...(mds.length ? await importMarkdownFiles(mds, importSource) : []),
+        ...(
+          await Promise.all(zips.map((z) => importZipVault(z)))
+        ).flat(),
+      ];
+      if (!drafts.length) throw new Error("No Markdown files found");
       const result = await importVault({
         ownerId,
         notes: drafts.map((n) => ({
@@ -212,7 +215,9 @@ export function SettingsPage({
           updatedAt: n.updatedAt,
         })),
       });
-      toast.success(`Imported ${result.imported} Markdown pages (${importSource})`);
+      toast.success(
+        `Imported ${result.imported} pages${zips.length ? " (incl. ZIP)" : ` (${importSource})`}`,
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn’t import Markdown");
     } finally {
@@ -221,25 +226,24 @@ export function SettingsPage({
   }
 
   return (
-    <motion.div
-      className="settings-page note-scroll"
-      initial="hidden"
-      animate="visible"
-      variants={fadeUpVariants}
-      transition={easeOutSoft}
-    >
+    <div ref={enterRef} className="settings-page note-scroll">
       <header className="settings-header">
         <div>
           <p className="settings-kicker">
             <Settings2 className="size-3.5" />
             Workspace
           </p>
-          <h1 className="settings-title">Settings</h1>
-          <p className="settings-subtitle">
-            Themes, fonts, custom CSS, and vault preferences
-          </p>
+          <h1 className="settings-title">
+            Vault <em>settings</em>
+          </h1>
+          <p className="settings-subtitle">Themes, fonts, custom CSS, and vault preferences</p>
         </div>
-        <button type="button" className="settings-close" onClick={onClose} aria-label="Close settings">
+        <button
+          type="button"
+          className="settings-close"
+          onClick={onClose}
+          aria-label="Close settings"
+        >
           <X className="size-4" />
         </button>
       </header>
@@ -281,31 +285,28 @@ export function SettingsPage({
         </div>
 
         <div className="settings-theme-grid">
-          {(Object.values(THEME_PRESETS) as (typeof THEME_PRESETS)[keyof typeof THEME_PRESETS][]).map(
-            (preset) => {
-              const active = settings.themeId === preset.id;
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  className={`settings-theme-card ${active ? "settings-theme-card-active" : ""}`}
-                  onClick={() => {
-                    setThemePreset(preset.id);
-                    toast.success(`${preset.label} theme`);
-                  }}
-                >
-                  <span
-                    className="settings-theme-swatch"
-                    style={{ background: preset.swatch }}
-                  />
-                  <span className="settings-theme-meta">
-                    <span className="settings-theme-name">{preset.label}</span>
-                    <span className="settings-theme-desc">{preset.description}</span>
-                  </span>
-                </button>
-              );
-            },
-          )}
+          {(
+            Object.values(THEME_PRESETS) as (typeof THEME_PRESETS)[keyof typeof THEME_PRESETS][]
+          ).map((preset) => {
+            const active = settings.themeId === preset.id;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                className={`settings-theme-card ${active ? "settings-theme-card-active" : ""}`}
+                onClick={() => {
+                  setThemePreset(preset.id);
+                  toast.success(`${preset.label} theme`);
+                }}
+              >
+                <span className="settings-theme-swatch" style={{ background: preset.swatch }} />
+                <span className="settings-theme-meta">
+                  <span className="settings-theme-name">{preset.label}</span>
+                  <span className="settings-theme-desc">{preset.description}</span>
+                </span>
+              </button>
+            );
+          })}
           <button
             type="button"
             className={`settings-theme-card ${
@@ -349,11 +350,7 @@ export function SettingsPage({
           }}
         >
           <div className="settings-css-toolbar">
-            <button
-              type="button"
-              className="settings-btn"
-              onClick={() => fileRef.current?.click()}
-            >
+            <button type="button" className="settings-btn" onClick={() => fileRef.current?.click()}>
               <FileUp className="size-3.5" />
               Upload .css
             </button>
@@ -366,7 +363,7 @@ export function SettingsPage({
               onClick={() => {
                 clearCustomTheme();
                 setCssDraft("");
-                toast.success("Reset to Copper ink");
+                toast.success("Reset to Folio");
               }}
             >
               <RotateCcw className="size-3.5" />
@@ -387,7 +384,7 @@ export function SettingsPage({
           <textarea
             className="settings-css-editor"
             spellCheck={false}
-            placeholder={`:root {\n  --accent: #e2a45a;\n  --background: #141210;\n}`}
+            placeholder={`:root {\n  --accent: #e8611a;\n  --background: #fbf8f2;\n}`}
             value={cssDraft}
             onChange={(e) => setCssDraft(e.target.value)}
             rows={10}
@@ -396,6 +393,50 @@ export function SettingsPage({
             Override CSS variables like <code>--accent</code>, <code>--background</code>,{" "}
             <code>--sidebar</code>, <code>--panel</code>, <code>--muted</code>.
           </p>
+          <div className="settings-css-toolbar" style={{ marginTop: "0.35rem" }}>
+            <button
+              type="button"
+              className="settings-btn"
+              onClick={() => {
+                downloadThemePack();
+                toast.success("Theme pack downloaded");
+              }}
+            >
+              <FileText className="size-3.5" />
+              Export theme pack
+            </button>
+            <button
+              type="button"
+              className="settings-btn settings-btn-ghost"
+              onClick={() => themePackRef.current?.click()}
+            >
+              Import theme pack
+            </button>
+            <input
+              ref={themePackRef}
+              type="file"
+              accept="application/json,.json"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                void (async () => {
+                  try {
+                    const text = await file.text();
+                    const pack = parseThemePack(JSON.parse(text));
+                    applyThemePack(pack);
+                    setCssDraft(pack.customCss);
+                    setFontFamilyDraft(pack.font.family ?? "");
+                    setFontUrlDraft(pack.font.url ?? "");
+                    toast.success("Theme pack applied");
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : "Invalid theme pack");
+                  }
+                })();
+              }}
+            />
+          </div>
         </div>
       </section>
 
@@ -404,7 +445,7 @@ export function SettingsPage({
           <Type className="size-4 text-accent" />
           <div>
             <h2>Custom font</h2>
-            <p>Upload a font file or link a stylesheet (Google Fonts CSS)</p>
+            <p>Pick from Google Fonts, upload a file, or paste a CSS URL</p>
           </div>
         </div>
 
@@ -428,12 +469,23 @@ export function SettingsPage({
             if (file) void loadFontFile(file);
           }}
         >
+          <GoogleFontsPicker
+            onPick={(family, cssUrl) => {
+              setFontFamilyDraft(family);
+              setFontUrlDraft(cssUrl);
+              setCustomFontFromUrl(family, cssUrl);
+              toast.success(`Font “${family}” applied`);
+            }}
+          />
+
+          <div className="settings-font-or">or upload a file</div>
+
           <label className="settings-field">
             <span>Font family name</span>
             <input
               className="settings-input"
               value={fontFamilyDraft}
-              placeholder="e.g. Inter, Space Grotesk"
+              placeholder="e.g. Young Serif, Sora"
               onChange={(e) => setFontFamilyDraft(e.target.value)}
             />
           </label>
@@ -454,7 +506,7 @@ export function SettingsPage({
                 clearCustomFont();
                 setFontFamilyDraft("");
                 setFontUrlDraft("");
-                toast.success("Default Geist font restored");
+                toast.success("Default vault font restored");
               }}
             >
               <RotateCcw className="size-3.5" />
@@ -507,8 +559,8 @@ export function SettingsPage({
           </p>
           <p className="settings-hint">
             Supported files: <code>.woff2</code>, <code>.woff</code>, <code>.ttf</code>,{" "}
-            <code>.otf</code> (max 1.5 MB). For Google Fonts, paste the CSS2 URL and use the
-            exact family name.
+            <code>.otf</code> (max 1.5 MB). Font catalog uses Convex <code>search</code> +{" "}
+            <code>ensure</code> (24h cache).
           </p>
         </div>
       </section>
@@ -561,8 +613,8 @@ export function SettingsPage({
           />
         </div>
         <p className="settings-hint">
-          Export includes pages and collections (not trash). Markdown dumps pages as
-          one file. Import merges as new items and remaps parent links.
+          Export includes pages and collections (not trash). Markdown dumps pages as one file.
+          Import merges as new items and remaps parent links.
         </p>
         <div className="settings-css-toolbar" style={{ marginTop: "0.75rem" }}>
           <button
@@ -573,9 +625,7 @@ export function SettingsPage({
               void (async () => {
                 try {
                   const res = await reindexSearch({ ownerId });
-                  toast.success(
-                    `Search index updated (${res.updated}/${res.total} notes)`,
-                  );
+                  toast.success(`Search index updated (${res.updated}/${res.total} notes)`);
                 } catch {
                   toast.error("Couldn’t rebuild search index");
                 }
@@ -596,6 +646,35 @@ export function SettingsPage({
           </div>
         </div>
         <PushNotificationSettings ownerId={ownerId} />
+        <label className="share-switch" style={{ marginTop: "0.85rem" }}>
+          <span className="share-switch-copy">
+            <span className="share-switch-label">Auto-create today’s daily note</span>
+            <span className="share-switch-hint">
+              Creates Focus / Log / Reflection when you open the vault
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={Boolean(vaultRemote?.autoDailyNote)}
+            disabled={vaultRemote === undefined}
+            onChange={(e) => {
+              void updateVaultRemote({
+                ownerId,
+                autoDailyNote: e.target.checked,
+              }).then(
+                () =>
+                  toast.success(
+                    e.target.checked
+                      ? "Daily notes will auto-create"
+                      : "Auto daily notes off",
+                  ),
+                () => toast.error("Couldn’t update setting"),
+              );
+            }}
+          />
+          <span className="share-switch-track" aria-hidden />
+        </label>
       </section>
 
       <section className="settings-section">
@@ -632,12 +711,12 @@ export function SettingsPage({
             onClick={() => mdImportRef.current?.click()}
           >
             <FileUp className="size-3.5" />
-            {importing ? "Importing…" : "Choose .md files"}
+            {importing ? "Importing…" : "Choose .md / .zip"}
           </button>
           <input
             ref={mdImportRef}
             type="file"
-            accept=".md,.markdown,.txt,text/markdown,text/plain"
+            accept=".md,.markdown,.txt,.zip,text/markdown,text/plain,application/zip"
             multiple
             className="sr-only"
             onChange={(e) => {
@@ -648,9 +727,9 @@ export function SettingsPage({
           />
         </div>
         <p className="settings-hint">
-          Obsidian: reads YAML frontmatter and <code>[[wikilinks]]</code>. Notion: picks
-          exported Markdown pages (export as Markdown &amp; CSV, then select the .md files).
-          Each file becomes a new page.
+          Obsidian: reads YAML frontmatter and <code>[[wikilinks]]</code>. Notion: picks exported
+          Markdown pages (export as Markdown &amp; CSV, then select the .md files). ZIP: extracts
+          nested .md paths into titles. Each file becomes a new page.
         </p>
       </section>
 
@@ -704,11 +783,7 @@ export function SettingsPage({
               <p>Saved page templates stored in TanStack DB</p>
             </div>
           </div>
-          <button
-            type="button"
-            className="settings-btn"
-            onClick={() => setCreateOpen(true)}
-          >
+          <button type="button" className="settings-btn" onClick={() => setCreateOpen(true)}>
             <Plus className="size-3.5" />
             New template
           </button>
@@ -768,6 +843,6 @@ export function SettingsPage({
         onClose={() => setCreateOpen(false)}
         onSaved={(name) => toast.success(`Template “${name}” created`)}
       />
-    </motion.div>
+    </div>
   );
 }

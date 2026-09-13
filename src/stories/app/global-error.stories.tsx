@@ -1,9 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { fn } from "storybook/test";
-import {
-  LottieStatus,
-  errorStatusDetails,
-} from "@/components/lottie-status";
+import { LottieStatus, errorStatusDetails } from "@/components/lottie-status";
 
 /**
  * Real `global-error.tsx` renders nested `<html><body>`, which breaks Storybook’s

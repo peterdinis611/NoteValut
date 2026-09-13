@@ -12,10 +12,8 @@ function SetupRequiredUi() {
         <p className="text-2xl font-semibold">NoteVault</p>
         <p className="text-sm text-muted">
           Connect Convex to get started. Run{" "}
-          <code className="rounded bg-panel px-1.5 py-0.5 text-foreground">
-            npx convex dev
-          </code>{" "}
-          and add{" "}
+          <code className="rounded bg-panel px-1.5 py-0.5 text-foreground">npx convex dev</code> and
+          add{" "}
           <code className="rounded bg-panel px-1.5 py-0.5 text-foreground">
             NEXT_PUBLIC_CONVEX_URL
           </code>{" "}

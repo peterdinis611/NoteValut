@@ -1,26 +1,32 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
-import { AnimatePresence, motion } from "motion/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { PanelLeft } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { VaultAccessProvider } from "@/context/vault-access";
-import { toDailyKey } from "@/lib/daily";
-import { easeQuick, pageVariants, sidebarSpring } from "@/lib/motion";
-import { getTemplate } from "@/lib/templates";
-import { downloadVaultMarkdown } from "@/lib/export-vault-md";
-import { startVaultTour } from "@/lib/onboarding";
-import { downloadVaultBackup } from "@/lib/vault-backup";
 import { useOwnerId } from "@/hooks/use-owner-id";
 import { useVaultSettings } from "@/hooks/use-vault-settings";
+import { AnimePresence, useAnimeEnter, useAnimePresence } from "@/lib/anime-ui";
+import { toDailyKey } from "@/lib/daily";
+import { downloadVaultMarkdown } from "@/lib/export-vault-md";
+import { hasSeenVaultTour, startVaultTour } from "@/lib/onboarding";
+import { getTemplate } from "@/lib/templates";
+import { downloadVaultBackup } from "@/lib/vault-backup";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { CalendarPage } from "./calendar-page";
-import { CommandIcons, CommandPalette, type CommandAction } from "./command-palette";
+import { type CommandAction, CommandIcons, CommandPalette } from "./command-palette";
+import { ConnectionStatus } from "./connection-status";
 import { DueInbox } from "./due-inbox";
-import { KeyboardCheatSheet } from "./keyboard-cheat-sheet";
+import { FocusModeBoot } from "./focus-mode-toggle";
+import { toggleFocusMode } from "@/lib/focus-mode";
 import { GraphView } from "./graph-view";
+import { AttachmentsBrowser } from "./attachments-browser";
+import { InboxTriage } from "./inbox-triage";
+import { TemplatesMarketplace } from "./templates-marketplace";
+import { KeyboardCheatSheet } from "./keyboard-cheat-sheet";
 import { LottieStatus } from "./lottie-status";
+import { MobileBottomNav } from "./mobile-bottom-nav";
 import { NoteEditor } from "./note-editor";
 import { QuickCapture, QuickCaptureFab } from "./quick-capture";
 import { ReminderListener } from "./reminder-listener";
@@ -48,17 +54,19 @@ function useIsMobile(breakpoint = 768) {
 
 export function NoteVaultApp() {
   const ownerId = useOwnerId();
+  const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth();
   const toast = useToast();
   const isMobile = useIsMobile();
   useVaultSettings();
   const seedDemo = useMutation(api.notes.seedDemo);
   const createNote = useMutation(api.notes.create);
   const getOrCreateDaily = useMutation(api.notes.getOrCreateDaily);
+  const canQuery = Boolean(ownerId && isAuthenticated);
   const notes = useQuery(
     api.notes.list,
-    ownerId ? { ownerId, includeArchived: true } : "skip",
+    canQuery ? { ownerId: ownerId!, includeArchived: true } : "skip",
   );
-  const exportData = useQuery(api.notes.exportVault, ownerId ? { ownerId } : "skip");
+  const exportData = useQuery(api.notes.exportVault, canQuery ? { ownerId: ownerId! } : "skip");
   const [activeId, setActiveId] = useState<Id<"notes"> | null>(null);
   const [seeded, setSeeded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -71,15 +79,40 @@ export function NoteVaultApp() {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
+  const [shareSignal, setShareSignal] = useState(0);
+  const [noteShareSignal, setNoteShareSignal] = useState(0);
+  const [noteMoveSignal, setNoteMoveSignal] = useState(0);
+  const [notePublishSignal, setNotePublishSignal] = useState(0);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+  const [inboxTriageOpen, setInboxTriageOpen] = useState(false);
+  const tourBooted = useRef(false);
 
   useEffect(() => {
     setSidebarOpen(!isMobile);
   }, [isMobile]);
 
+  /** First-login Folio tour — once home + sidebar targets exist. */
   useEffect(() => {
-    if (!ownerId || seeded) return;
-    seedDemo({ ownerId }).then(() => setSeeded(true));
-  }, [ownerId, seeded, seedDemo]);
+    if (!canQuery || tourBooted.current || hasSeenVaultTour()) return;
+    if (showSettings || showTags || showCalendar || showDueInbox || activeId) return;
+
+    tourBooted.current = true;
+    const boot = window.setTimeout(() => {
+      setSidebarOpen(true);
+      window.setTimeout(() => startVaultTour(), 450);
+    }, 1100);
+    return () => window.clearTimeout(boot);
+  }, [canQuery, showSettings, showTags, showCalendar, showDueInbox, activeId]);
+
+  useEffect(() => {
+    if (!canQuery || seeded) return;
+    void seedDemo({ ownerId: ownerId! })
+      .then(() => setSeeded(true))
+      .catch(() => {
+        /* auth race — retry next mount */
+      });
+  }, [canQuery, ownerId, seeded, seedDemo]);
 
   useEffect(() => {
     if (!activeId || !notes) return;
@@ -187,9 +220,7 @@ export function NoteVaultApp() {
         clearPanels();
         setActiveId(id);
         if (isMobile) setSidebarOpen(false);
-        toast.success(
-          template.id === "blank" ? "Entry created" : `Created from ${template.name}`,
-        );
+        toast.success(template.id === "blank" ? "Entry created" : `Created from ${template.name}`);
       } catch {
         toast.error("Couldn’t create entry");
       }
@@ -301,9 +332,20 @@ export function NoteVaultApp() {
         id: "tags",
         label: "Browse tags",
         icon: CommandIcons.tags,
-        keywords: ["tag", "filter"],
+        keywords: ["tag", "filter", "#"],
         run: () => {
           openTags();
+        },
+      },
+      {
+        id: "share",
+        label: "Share vault",
+        hint: "Create or manage share links",
+        icon: CommandIcons.share,
+        keywords: ["invite", "link", "public", "collaborate"],
+        run: () => {
+          setSidebarOpen(true);
+          setShareSignal((n) => n + 1);
         },
       },
       {
@@ -365,20 +407,80 @@ export function NoteVaultApp() {
         keywords: ["graph", "links", "backlinks", "network"],
         run: () => setGraphOpen(true),
       },
+      {
+        id: "attachments",
+        label: "Attachments browser",
+        hint: "Images, PDFs, videos, files",
+        icon: CommandIcons.attachments,
+        keywords: ["media", "files", "images", "pdf"],
+        run: () => setAttachmentsOpen(true),
+      },
+      {
+        id: "templates",
+        label: "Browse templates",
+        hint: "Template marketplace",
+        icon: CommandIcons.templates,
+        keywords: ["template", "starter", "marketplace"],
+        run: () => setTemplatesOpen(true),
+      },
+      {
+        id: "inbox-triage",
+        label: "Inbox triage",
+        hint: "Clear the Inbox collection",
+        icon: CommandIcons.inbox,
+        keywords: ["inbox", "triage", "process"],
+        run: () => setInboxTriageOpen(true),
+      },
+      {
+        id: "focus-mode",
+        label: "Toggle focus mode",
+        hint: "Hide sidebar & chrome",
+        icon: CommandIcons.focus,
+        keywords: ["focus", "zen", "distraction"],
+        run: () => toggleFocusMode(),
+      },
+      ...(activeId
+        ? [
+            {
+              id: "publish",
+              label: "Publish page",
+              hint: "Public web page",
+              icon: CommandIcons.share,
+              keywords: ["publish", "web", "public"],
+              run: () => setNotePublishSignal((n) => n + 1),
+            } satisfies CommandAction,
+            {
+              id: "move",
+              label: "Move page",
+              hint: "Change collection",
+              icon: CommandIcons.collection,
+              keywords: ["move", "parent", "folder"],
+              run: () => setNoteMoveSignal((n) => n + 1),
+            } satisfies CommandAction,
+            {
+              id: "share-note",
+              label: "Share page",
+              hint: "Invite with a link",
+              icon: CommandIcons.share,
+              keywords: ["share", "invite", "link"],
+              run: () => setNoteShareSignal((n) => n + 1),
+            } satisfies CommandAction,
+          ]
+        : []),
     ],
-    [clearPanels, handleCreateEntry, handleCreateCollection, handleExport, handleExportMarkdown, openToday, openTags, openCalendar, openDueInbox],
+    [
+      clearPanels,
+      handleCreateEntry,
+      handleCreateCollection,
+      handleExport,
+      handleExportMarkdown,
+      openToday,
+      openTags,
+      openCalendar,
+      openDueInbox,
+      activeId,
+    ],
   );
-
-  if (!ownerId) {
-    return (
-      <LottieStatus
-        compact
-        variant="loading"
-        title="Loading workspace…"
-        description="Preparing your local vault identity."
-      />
-    );
-  }
 
   const panel: MainPanel = showSettings
     ? "settings"
@@ -391,174 +493,213 @@ export function NoteVaultApp() {
           : activeId
             ? "note"
             : "home";
+  const pageKey = panel === "note" ? String(activeId ?? "note") : panel;
+  const viewRef = useAnimeEnter<HTMLDivElement>("page", pageKey);
+  const side = useAnimePresence<HTMLDivElement>(sidebarOpen, isMobile ? "drawer" : "slot");
+
+  if (!ownerId || convexAuthLoading) {
+    return (
+      <LottieStatus
+        compact
+        variant="loading"
+        title="Loading workspace…"
+        description="Preparing your vault identity."
+      />
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <LottieStatus
+        compact
+        variant="error"
+        title="Vault session not linked"
+        description="Clerk is signed in, but Convex did not get a JWT. Create a Clerk JWT template named “convex” (aud: convex), then refresh or sign out and back in."
+      />
+    );
+  }
 
   return (
     <VaultAccessProvider isOwner role="owner">
       <SoftErrorBoundary>
-        <ReminderListener
-          ownerId={ownerId}
-          onOpenNote={(id) => selectNote(id as Id<"notes">)}
-        />
+        {canQuery ? (
+          <ReminderListener ownerId={ownerId} onOpenNote={(id) => selectNote(id as Id<"notes">)} />
+        ) : null}
       </SoftErrorBoundary>
-      <div className={`app-shell ${isMobile ? "app-shell-mobile" : ""} ${sidebarOpen ? "app-shell-sidebar-open" : ""}`}>
-        <AnimatePresence initial={false}>
-          {isMobile && sidebarOpen && (
-            <motion.button
+      <div
+        className={`app-shell ${isMobile ? "app-shell-mobile" : ""} ${sidebarOpen ? "app-shell-sidebar-open" : ""}`}
+      >
+        <FocusModeBoot />
+        <AnimePresence show={isMobile && sidebarOpen} kind="overlay">
+          <button
+            type="button"
+            className="sidebar-backdrop"
+            aria-label="Close sidebar"
+            onClick={() => setSidebarOpen(false)}
+          />
+        </AnimePresence>
+        {side.mounted ? (
+          <Sidebar
+            slotRef={side.ref}
+            ownerId={ownerId}
+            activeId={activeId}
+            settingsActive={showSettings}
+            tagsActive={showTags}
+            calendarActive={showCalendar}
+            dueActive={showDueInbox}
+            mobile={isMobile}
+            onSelect={selectNote}
+            onGoHome={() => {
+              clearPanels();
+              setActiveId(null);
+              if (isMobile) setSidebarOpen(false);
+            }}
+            onOpenSettings={() => {
+              setActiveId(null);
+              setShowTags(false);
+              setShowCalendar(false);
+              setShowDueInbox(false);
+              setFocusTag(null);
+              setShowSettings(true);
+              if (isMobile) setSidebarOpen(false);
+            }}
+            onOpenTags={() => openTags()}
+            onOpenCalendar={openCalendar}
+            onOpenDueInbox={openDueInbox}
+            onCollapse={() => setSidebarOpen(false)}
+            onCreateEntry={handleCreateEntry}
+            onCreateCollection={handleCreateCollection}
+            onQuickCapture={() => setQuickCaptureOpen(true)}
+            onBrowseTemplates={() => setTemplatesOpen(true)}
+            openShareSignal={shareSignal}
+          />
+        ) : null}
+        <main className={`app-main ${isMobile ? "app-main-mobile-nav" : ""}`}>
+          {isMobile && (
+            <div className="app-conn-bar">
+              <ConnectionStatus />
+            </div>
+          )}
+          <AnimePresence show={!sidebarOpen} kind="pop">
+            <button
               type="button"
-              className="sidebar-backdrop"
-              aria-label="Close sidebar"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              onClick={() => setSidebarOpen(false)}
-            />
-          )}
-          {sidebarOpen && (
-            <Sidebar
-              ownerId={ownerId}
-              activeId={activeId}
-              settingsActive={showSettings}
-              tagsActive={showTags}
-              calendarActive={showCalendar}
-              dueActive={showDueInbox}
-              mobile={isMobile}
-              onSelect={selectNote}
-              onGoHome={() => {
-                clearPanels();
-                setActiveId(null);
-                if (isMobile) setSidebarOpen(false);
-              }}
-              onOpenSettings={() => {
-                setActiveId(null);
-                setShowTags(false);
-                setShowCalendar(false);
-                setShowDueInbox(false);
-                setFocusTag(null);
-                setShowSettings(true);
-                if (isMobile) setSidebarOpen(false);
-              }}
-              onOpenTags={() => openTags()}
-              onOpenCalendar={openCalendar}
-              onOpenDueInbox={openDueInbox}
-              onCollapse={() => setSidebarOpen(false)}
-              onCreateEntry={handleCreateEntry}
-              onCreateCollection={handleCreateCollection}
-              onQuickCapture={() => setQuickCaptureOpen(true)}
-            />
-          )}
-        </AnimatePresence>
-        <main className="app-main">
-          <AnimatePresence>
-            {!sidebarOpen && (
-              <motion.button
-                type="button"
-                className="sidebar-reopen-btn"
-                onClick={() => setSidebarOpen(true)}
-                aria-label="Open sidebar"
-                initial={{ opacity: 0, x: -10, scale: 0.9 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: -8, scale: 0.92 }}
-                transition={sidebarSpring}
-                whileHover={{ scale: 1.06 }}
-                whileTap={{ scale: 0.94 }}
-              >
-                <PanelLeft className="size-4" />
-              </motion.button>
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={panel === "note" ? activeId : panel}
-              className="app-main-view"
-              variants={pageVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              transition={easeQuick}
+              className="sidebar-reopen-btn"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open sidebar"
             >
-              {panel === "settings" ? (
-                <SettingsPage
-                  ownerId={ownerId}
-                  onClose={() => setShowSettings(false)}
-                  onExport={handleExport}
-                  onExportMarkdown={handleExportMarkdown}
-                  onStartTour={() => {
-                    clearPanels();
-                    setActiveId(null);
-                    setSidebarOpen(true);
-                    window.setTimeout(() => startVaultTour(), 400);
-                  }}
-                />
-              ) : panel === "tags" ? (
-                <TagsHub
-                  ownerId={ownerId}
-                  initialTag={focusTag}
-                  onClose={() => {
-                    setShowTags(false);
-                    setFocusTag(null);
-                  }}
-                  onNavigate={selectNote}
-                />
-              ) : panel === "due" ? (
-                <DueInbox
-                  ownerId={ownerId}
-                  onClose={() => setShowDueInbox(false)}
-                  onNavigate={selectNote}
-                />
-              ) : panel === "calendar" ? (
-                <SoftErrorBoundary
-                  fallback={
-                    <LottieStatus
-                      compact
-                      variant="error"
-                      title="Calendar unavailable"
-                      description="Reminders aren’t synced yet. Run convex deploy / npx convex dev, then try again."
-                      actions={[
-                        {
-                          label: "Back to vault",
-                          onClick: () => setShowCalendar(false),
-                          primary: true,
-                        },
-                      ]}
-                    />
-                  }
-                >
-                  <CalendarPage
-                    ownerId={ownerId}
-                    onClose={() => setShowCalendar(false)}
-                    onNavigate={selectNote}
+              <PanelLeft className="size-4" />
+            </button>
+          </AnimePresence>
+
+          <div ref={viewRef} className="app-main-view">
+            {panel === "settings" ? (
+              <SettingsPage
+                ownerId={ownerId}
+                onClose={() => setShowSettings(false)}
+                onExport={handleExport}
+                onExportMarkdown={handleExportMarkdown}
+                onStartTour={() => {
+                  clearPanels();
+                  setActiveId(null);
+                  setSidebarOpen(true);
+                  window.setTimeout(() => startVaultTour(), 400);
+                }}
+              />
+            ) : panel === "tags" ? (
+              <TagsHub
+                ownerId={ownerId}
+                initialTag={focusTag}
+                onClose={() => {
+                  setShowTags(false);
+                  setFocusTag(null);
+                }}
+                onNavigate={selectNote}
+              />
+            ) : panel === "due" ? (
+              <DueInbox
+                ownerId={ownerId}
+                onClose={() => setShowDueInbox(false)}
+                onNavigate={selectNote}
+              />
+            ) : panel === "calendar" ? (
+              <SoftErrorBoundary
+                fallback={
+                  <LottieStatus
+                    compact
+                    variant="error"
+                    title="Calendar unavailable"
+                    description="Reminders aren’t synced yet. Run convex deploy / npx convex dev, then try again."
+                    actions={[
+                      {
+                        label: "Back to vault",
+                        onClick: () => setShowCalendar(false),
+                        primary: true,
+                      },
+                    ]}
                   />
-                </SoftErrorBoundary>
-              ) : panel === "note" && activeId ? (
-                <NoteEditor
-                  noteId={activeId}
+                }
+              >
+                <CalendarPage
                   ownerId={ownerId}
+                  onClose={() => setShowCalendar(false)}
                   onNavigate={selectNote}
-                  onToggleSidebar={() => setSidebarOpen(true)}
-                  sidebarCollapsed={!sidebarOpen || isMobile}
-                  onCreateEntry={handleCreateEntry}
-                  onCreateCollection={handleCreateCollection}
-                  onOpenTag={(tag) => openTags(tag)}
                 />
-              ) : (
-                <VaultHome
-                  ownerId={ownerId}
-                  onNavigate={selectNote}
-                  onCreateEntry={(templateId) => handleCreateEntry(undefined, templateId)}
-                  onCreateCollection={() => handleCreateCollection()}
-                  onQuickCapture={() => setQuickCaptureOpen(true)}
-                  onOpenGraph={() => setGraphOpen(true)}
-                  onOpenCalendar={openCalendar}
-                  onOpenDueInbox={openDueInbox}
-                />
-              )}
-            </motion.div>
-          </AnimatePresence>
+              </SoftErrorBoundary>
+            ) : panel === "note" && activeId ? (
+              <NoteEditor
+                noteId={activeId}
+                ownerId={ownerId}
+                onNavigate={selectNote}
+                onToggleSidebar={() => setSidebarOpen(true)}
+                sidebarCollapsed={!sidebarOpen || isMobile}
+                onCreateEntry={handleCreateEntry}
+                onCreateCollection={handleCreateCollection}
+                onOpenTag={(tag) => openTags(tag)}
+                openShareSignal={noteShareSignal}
+                openMoveSignal={noteMoveSignal}
+                openPublishSignal={notePublishSignal}
+              />
+            ) : (
+              <VaultHome
+                ownerId={ownerId}
+                onNavigate={selectNote}
+                onCreateEntry={(templateId) => handleCreateEntry(undefined, templateId)}
+                onCreateCollection={() => handleCreateCollection()}
+                onQuickCapture={() => setQuickCaptureOpen(true)}
+                onOpenGraph={() => setGraphOpen(true)}
+                onOpenCalendar={openCalendar}
+                onOpenDueInbox={openDueInbox}
+                onBrowseTemplates={() => setTemplatesOpen(true)}
+              />
+            )}
+          </div>
 
           <ScrollToTop resetKey={panel === "note" ? activeId : panel} />
-          <QuickCaptureFab onClick={() => setQuickCaptureOpen(true)} />
+          {!isMobile && <QuickCaptureFab onClick={() => setQuickCaptureOpen(true)} />}
+          {isMobile && (
+            <MobileBottomNav
+              active={
+                cmdOpen
+                  ? "search"
+                  : showDueInbox
+                    ? "due"
+                    : sidebarOpen
+                      ? "menu"
+                      : panel === "home"
+                        ? "home"
+                        : "home"
+              }
+              onHome={() => {
+                clearPanels();
+                setActiveId(null);
+                setSidebarOpen(false);
+              }}
+              onSearch={() => setCmdOpen(true)}
+              onCapture={() => setQuickCaptureOpen(true)}
+              onDue={() => openDueInbox()}
+              onMenu={() => setSidebarOpen((v) => !v)}
+            />
+          )}
           <QuickCapture
             ownerId={ownerId}
             open={quickCaptureOpen}
@@ -571,6 +712,7 @@ export function NoteVaultApp() {
             notes={notes?.filter((n) => !n.archived && !n.trashed)}
             actions={cmdActions}
             onNavigate={selectNote}
+            onOpenTag={(tag) => openTags(tag)}
             ownerId={ownerId}
           />
           <KeyboardCheatSheet open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
@@ -579,6 +721,25 @@ export function NoteVaultApp() {
             onClose={() => setGraphOpen(false)}
             notes={notes}
             onNavigate={selectNote}
+          />
+          <TemplatesMarketplace
+            open={templatesOpen}
+            onClose={() => setTemplatesOpen(false)}
+            onApply={(templateId) => void handleCreateEntry(undefined, templateId)}
+          />
+          <AttachmentsBrowser
+            ownerId={ownerId}
+            open={attachmentsOpen}
+            onClose={() => setAttachmentsOpen(false)}
+            onNavigate={selectNote}
+          />
+          <InboxTriage
+            ownerId={ownerId}
+            notes={notes}
+            open={inboxTriageOpen}
+            onClose={() => setInboxTriageOpen(false)}
+            onNavigate={selectNote}
+            onOpenToday={() => void openToday()}
           />
         </main>
       </div>

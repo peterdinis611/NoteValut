@@ -106,39 +106,52 @@ export const PageLink = Extension({
   ],
   render: (props) => {
     const linked = props.linkablePages.find((p) => p._id === props.block.pageId);
+    const open = () => {
+      if (linked && props.onNavigate) props.onNavigate(linked._id);
+    };
     return (
-      <div className="nv-pagelink">
-        <select
-          className="nv-pagelink-select"
-          disabled={props.readOnly}
-          value={props.block.pageId ?? ""}
-          onChange={(e) => {
-            const page = props.linkablePages.find((p) => p._id === e.target.value);
-            props.commands.updateBlock(props.block.id, {
-              pageId: e.target.value || undefined,
-              text: page?.title ?? props.block.text,
-            });
-          }}
-          onFocus={props.onFocus}
-        >
-          <option value="">Select entry…</option>
-          {props.linkablePages.map((p) => (
-            <option key={p._id} value={p._id}>
-              {p.icon} {p.title || "Untitled"}
-            </option>
-          ))}
-        </select>
-        {linked && props.onNavigate && (
+      <div className={`nv-pagelink ${linked ? "nv-pagelink-ready" : ""}`}>
+        {!props.readOnly && (
+          <select
+            className="nv-pagelink-select"
+            value={props.block.pageId ?? ""}
+            onChange={(e) => {
+              const page = props.linkablePages.find((p) => p._id === e.target.value);
+              props.commands.updateBlock(props.block.id, {
+                pageId: e.target.value || undefined,
+                text: page?.title ?? props.block.text,
+              });
+            }}
+            onFocus={props.onFocus}
+          >
+            <option value="">Select entry…</option>
+            {props.linkablePages.map((p) => (
+              <option key={p._id} value={p._id}>
+                {p.icon} {p.title || "Untitled"}
+              </option>
+            ))}
+          </select>
+        )}
+        {linked ? (
           <button
             type="button"
             className="nv-pagelink-open"
-            onClick={() => props.onNavigate?.(linked._id)}
+            onClick={open}
+            title="Open linked page"
           >
+            <span className="nv-pagelink-wiki" aria-hidden>
+              [[
+            </span>
             <span>{linked.icon}</span>
             <span className="truncate">{linked.title || "Untitled"}</span>
+            <span className="nv-pagelink-wiki" aria-hidden>
+              ]]
+            </span>
             <ArrowRight className="size-3.5" />
           </button>
-        )}
+        ) : props.readOnly ? (
+          <div className="nv-pagelink-empty">Broken wiki link</div>
+        ) : null}
       </div>
     );
   },

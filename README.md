@@ -112,7 +112,28 @@ npm run build
 | `npm run build` | Next production build |
 | `npm run build:vercel` | `convex deploy` + Next build (Vercel) |
 | `npm run deploy:convex` | Deploy Convex only |
-| `npm test` | Vitest |
+| `npm run lint` | Biome check (lint + format) |
+| `npm run format` | Biome format (write) |
+| `npm run check` | Biome check with safe fixes |
+| `npm run lint:eslint` | ESLint (Next + Storybook) |
+| `npm test` / `npm run test:e2e` | Playwright e2e (chromium) |
+| `npm run test:e2e:all` | Chromium + Firefox + WebKit |
+| `npm run test:e2e:firefox` / `:webkit` / `:mobile` | Single browser / Pixel 5 |
+| `npm run test:e2e:ui` | Playwright UI mode |
+| `npm run test:e2e:storybook` | Storybook smoke (opt-in) |
+| `npm run test:stress` | Playwright stress (public routes, opt-in) |
+| `npm run test:stress:heavy` | Higher concurrency / iterations |
+| `npm run playwright:install` | Install Chromium, Firefox, WebKit |
+
+### Stress tuning
+
+| Env | Default | Meaning |
+|-----|---------|---------|
+| `STRESS_ITERATIONS` | `24` | Requests per burst test |
+| `STRESS_CONCURRENCY` | `8` | Max parallel browser contexts |
+| `STRESS_P95_MS` | `8000` | p95 latency budget |
+| `STRESS_MEAN_MS` | `4000` | Mean latency budget |
+| `STRESS_MAX_FAIL_RATE` | `0.05` | Max allowed failure rate |
 
 ## Environment
 

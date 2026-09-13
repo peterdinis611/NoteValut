@@ -1,4 +1,8 @@
-import type { ReactNode, KeyboardEvent as ReactKeyboardEvent, ClipboardEvent as ReactClipboardEvent } from "react";
+import type {
+  ReactNode,
+  KeyboardEvent as ReactKeyboardEvent,
+  ClipboardEvent as ReactClipboardEvent,
+} from "react";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import type { Block, BlockType, CalloutVariant } from "@/lib/blocks";
 
@@ -11,6 +15,10 @@ export type SlashCommandDef = {
   keywords: string[];
   calloutVariant?: CalloutVariant;
   group?: string;
+  /** Initial language for code blocks (e.g. mermaid) */
+  language?: string;
+  /** Seed body text when inserting from slash */
+  seedText?: string;
 };
 
 export type EditorCommands = {
@@ -40,6 +48,8 @@ export type EditorCommands = {
         | "layoutGroupId"
         | "columnIndex"
         | "columnCount"
+        | "syncedId"
+        | "mentionUserId"
       >
     >,
   ) => void;
@@ -76,7 +86,11 @@ export type BlockRenderProps = {
 
 export type KeyboardShortcutMap = Record<
   string,
-  (ctx: { block: Block; event: ReactKeyboardEvent<HTMLElement>; commands: EditorCommands }) => boolean
+  (ctx: {
+    block: Block;
+    event: ReactKeyboardEvent<HTMLElement>;
+    commands: EditorCommands;
+  }) => boolean
 >;
 
 export type Extension = {

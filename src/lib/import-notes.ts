@@ -1,8 +1,4 @@
-import {
-  createBlock,
-  markdownToBlocks,
-  type Block,
-} from "@/lib/blocks";
+import { createBlock, markdownToBlocks, type Block } from "@/lib/blocks";
 import { normalizeTags } from "@/lib/tags";
 
 export type ImportedNoteDraft = {
@@ -98,11 +94,13 @@ export function normalizeNotionMarkdown(md: string): string {
 }
 
 function titleFromFilename(name: string): string {
-  return name
-    .replace(/\.(md|markdown|txt)$/i, "")
-    .replace(/^\d{8,14}[-_]?/, "")
-    .replace(/[-_]+/g, " ")
-    .trim() || "Untitled";
+  return (
+    name
+      .replace(/\.(md|markdown|txt)$/i, "")
+      .replace(/^\d{8,14}[-_]?/, "")
+      .replace(/[-_]+/g, " ")
+      .trim() || "Untitled"
+  );
 }
 
 function titleFromBody(body: string, fallback: string): string {
@@ -152,18 +150,14 @@ export function markdownFileToDraft(
   };
 }
 
-export function detectImportSource(
-  filenames: string[],
-): "markdown" | "obsidian" | "notion" {
+export function detectImportSource(filenames: string[]): "markdown" | "obsidian" | "notion" {
   const joined = filenames.join(" ").toLowerCase();
   if (joined.includes("obsidian") || filenames.some((f) => f.includes(".obsidian"))) {
     return "obsidian";
   }
   if (joined.includes("notion")) return "notion";
   // Heuristic: many exports with UUID-ish names → Notion
-  const uuidish = filenames.filter((f) =>
-    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/i.test(f),
-  ).length;
+  const uuidish = filenames.filter((f) => /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/i.test(f)).length;
   if (uuidish >= 2) return "notion";
   return "markdown";
 }
@@ -172,8 +166,9 @@ export async function importMarkdownFiles(
   files: FileList | File[],
   sourceHint?: "markdown" | "obsidian" | "notion",
 ): Promise<ImportedNoteDraft[]> {
-  const list = [...files].filter((f) =>
-    /\.(md|markdown|txt)$/i.test(f.name) || f.type === "text/markdown" || f.type === "text/plain",
+  const list = [...files].filter(
+    (f) =>
+      /\.(md|markdown|txt)$/i.test(f.name) || f.type === "text/markdown" || f.type === "text/plain",
   );
   if (!list.length) throw new Error("No Markdown files found");
 
@@ -183,6 +178,35 @@ export async function importMarkdownFiles(
   for (const file of list) {
     const raw = await file.text();
     drafts.push(markdownFileToDraft(file.name, raw, source));
+  }
+
+  return drafts;
+}
+
+/**
+ * Import a ZIP vault export: extract `.md` files, using path as title prefix (MVP flat).
+ */
+export async function importZipVault(file: File): Promise<ImportedNoteDraft[]> {
+  const JSZip = (await import("jszip")).default;
+  const zip = await JSZip.loadAsync(file);
+  const names = Object.keys(zip.files).filter(
+    (n) => !zip.files[n].dir && /\.(md|markdown|txt)$/i.test(n) && !n.startsWith("__MACOSX"),
+  );
+  if (!names.length) throw new Error("No Markdown files found in ZIP");
+
+  const source = detectImportSource(names);
+  const drafts: ImportedNoteDraft[] = [];
+
+  for (const path of names.sort()) {
+    const entry = zip.files[path];
+    const raw = await entry.async("text");
+    const base = path.split("/").pop() || path;
+    const folderParts = path.split("/").slice(0, -1).filter((p) => p && p !== ".");
+    const draft = markdownFileToDraft(base, raw, source);
+    if (folderParts.length) {
+      draft.title = `${folderParts.join(" / ")} / ${draft.title}`;
+    }
+    drafts.push(draft);
   }
 
   return drafts;

@@ -46,10 +46,7 @@ export function saveCustomBlockTemplate(template: CustomBlockTemplate) {
   };
 
   for (const existing of customBlocksCollection.values()) {
-    if (
-      existing.id !== next.id &&
-      existing.label.toLowerCase() === next.label.toLowerCase()
-    ) {
+    if (existing.id !== next.id && existing.label.toLowerCase() === next.label.toLowerCase()) {
       customBlocksCollection.delete(existing.id);
     }
   }

@@ -19,14 +19,7 @@ export default meta;
 type Story = StoryObj;
 
 export const Open: Story = {
-  render: () => (
-    <QuickCapture
-      ownerId={ownerId}
-      open
-      onClose={fn()}
-      onCreated={fn()}
-    />
-  ),
+  render: () => <QuickCapture ownerId={ownerId} open onClose={fn()} onCreated={fn()} />,
 };
 
 export const Fab: Story = {

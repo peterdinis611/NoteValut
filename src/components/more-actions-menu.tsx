@@ -17,9 +17,8 @@ import {
   Smile,
   SmilePlus,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { dropdownVariants, easeOutSoft } from "@/lib/motion";
+import { AnimePresence } from "@/lib/anime-ui";
 import { UiTooltip } from "./ui-tooltip";
 
 export type MoreActionItem = {
@@ -70,17 +69,8 @@ export function MoreActionsMenu({ items }: Props) {
         </button>
       </UiTooltip>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            className="more-actions-menu"
-            role="menu"
-            variants={dropdownVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={easeOutSoft}
-          >
+      <AnimePresence show={open} kind="dropdown">
+        <div className="more-actions-menu" role="menu">
             <p className="more-actions-label">More actions</p>
             {items.map((item) => (
               <button
@@ -98,9 +88,8 @@ export function MoreActionsMenu({ items }: Props) {
                 <span>{item.label}</span>
               </button>
             ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      </AnimePresence>
     </div>
   );
 }
