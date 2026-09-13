@@ -158,14 +158,14 @@ export function NoteEditor({
       }
 
       try {
+        // Online saves are last-write-wins. expectedUpdatedAt is only for offline flush.
         await updateNote({
           id: noteId,
           ...payload,
-          expectedUpdatedAt: note.updatedAt,
         });
         setSaveState("saved");
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "";
+        const msg = err instanceof Error ? err.message : String(err);
         if (msg.includes("CONFLICT:")) {
           const { pushConflict, parseConflictError } = await import("@/lib/offline-queue");
           const conflict = parseConflictError(msg);

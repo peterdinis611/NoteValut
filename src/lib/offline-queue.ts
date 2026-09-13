@@ -151,10 +151,10 @@ export function parseConflictError(message: string): {
   serverUpdatedAt: number;
   title: string;
 } | null {
-  if (!message.startsWith("CONFLICT:")) return null;
-  const parts = message.split(":");
-  const serverUpdatedAt = Number(parts[1]);
-  const title = parts.slice(2).join(":") || "Untitled";
+  const match = /CONFLICT:(\d+):([\s\S]*)/.exec(message);
+  if (!match) return null;
+  const serverUpdatedAt = Number(match[1]);
+  const title = (match[2] ?? "").trim() || "Untitled";
   if (!Number.isFinite(serverUpdatedAt)) return null;
   return { serverUpdatedAt, title };
 }

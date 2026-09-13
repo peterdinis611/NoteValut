@@ -11,7 +11,7 @@ export const clerkAppearance = {
     logoPlacement: "none" as const,
   },
   variables: {
-    colorPrimary: "#e8611a",
+    colorPrimary: "#c4480e",
     colorBackground: "#fffaf3",
     colorInputBackground: "#fbf8f2",
     colorInputText: "#171412",

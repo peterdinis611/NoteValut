@@ -5,19 +5,21 @@
 :root {
   --background: #fbf8f2;
   --foreground: #171412;
-  --sidebar: #f3ead8;
-  --panel: #fffaf3;
-  --hover: rgba(23, 20, 18, 0.055);
-  --hover-strong: rgba(232, 97, 26, 0.12);
-  --border: rgba(23, 20, 18, 0.12);
-  --muted: #6d6458;
-  --accent: #e8611a;
-  --accent-soft: rgba(232, 97, 26, 0.14);
-  --accent-bright: #e8611a;
+  --sidebar: #efe4d0;
+  --panel: #fffdf8;
+  --hover: rgba(23, 20, 18, 0.065);
+  --hover-strong: rgba(196, 72, 14, 0.14);
+  --border: rgba(23, 20, 18, 0.16);
+  --muted: #5a5248;
+  --accent: #c4480e;
+  --accent-soft: rgba(196, 72, 14, 0.11);
+  --accent-bright: #a83c0b;
   --accent-ink: #fffaf2;
   --topbar: #fbf8f2;
-  --grid-line: rgba(23, 20, 18, 0.05);
-  --lilac: #cbb6ee;
+  --grid-line: rgba(23, 20, 18, 0.045);
+  --lilac: #b9a3e6;
+  --live: #3d6b38;
+  --live-soft: rgba(61, 107, 56, 0.14);
   color-scheme: light;
 }
 
@@ -43,8 +45,8 @@ body {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--accent) 42%, transparent);
-  color: var(--accent-ink);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: var(--foreground);
 }
 
 /* Paper grain + faint folio grid */
@@ -450,13 +452,10 @@ body {
   color: color-mix(in srgb, var(--foreground) 72%, transparent);
 }
 .sidebar-link-active {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--accent) 16%, transparent),
-    color-mix(in srgb, var(--accent) 6%, transparent) 70%
-  ) !important;
-  color: color-mix(in srgb, var(--foreground) 96%, transparent);
-  box-shadow: inset 2px 0 0 var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel)) !important;
+  color: var(--foreground);
+  box-shadow: inset 2.5px 0 0 var(--accent);
+  font-weight: 550;
 }
 .sidebar-link-active svg {
   color: var(--accent-bright);
@@ -657,12 +656,8 @@ body {
   background: color-mix(in srgb, var(--foreground) 5%, transparent);
 }
 .sidebar-item-active {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--accent) 14%, transparent),
-    color-mix(in srgb, var(--accent) 4%, transparent) 75%
-  ) !important;
-  box-shadow: inset 2px 0 0 var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel)) !important;
+  box-shadow: inset 2.5px 0 0 var(--accent);
 }
 
 .sidebar-item-btn {
@@ -748,12 +743,8 @@ body {
 }
 .sidebar-tree-row:has(.sidebar-item-active),
 .sidebar-tree-row:has(.sidebar-item-selected) {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--accent) 14%, transparent),
-    color-mix(in srgb, var(--accent) 4%, transparent) 75%
-  );
-  box-shadow: inset 2px 0 0 var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  box-shadow: inset 2.5px 0 0 var(--accent);
 }
 
 .sidebar-tree-toggle {
@@ -3729,26 +3720,27 @@ body {
   background: color-mix(in srgb, var(--foreground) 2%, transparent);
 }
 .nv-row-focused {
-  background: color-mix(in srgb, var(--accent) 4%, color-mix(in srgb, var(--foreground) 2%, transparent));
-  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--lilac) 18%, transparent);
+  box-shadow: inset 2.5px 0 0 color-mix(in srgb, var(--foreground) 55%, var(--lilac));
 }
 .nv-row-pinned:not(.nv-row-focused) {
-  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: inset 2.5px 0 0 color-mix(in srgb, var(--foreground) 28%, transparent);
 }
 .nv-row-empty {
   margin-top: 0.15rem;
 }
 .nv-row-empty .nv-content {
   border-radius: 0.55rem;
-  border: 1px dashed color-mix(in srgb, var(--border) 85%, transparent);
-  background: color-mix(in srgb, var(--panel) 35%, transparent);
+  border: 1.4px dashed color-mix(in srgb, var(--foreground) 22%, transparent);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
   padding: 0.65rem 0.85rem 0.55rem;
   transition: border-color 0.14s, background 0.14s, box-shadow 0.14s;
 }
 .nv-row-empty.nv-row-focused .nv-content {
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
-  background: color-mix(in srgb, var(--accent) 5%, var(--panel));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--foreground) 45%, transparent);
+  border-style: solid;
+  background: var(--panel);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--foreground) 18%, transparent);
 }
 .nv-row-dragging {
   background: color-mix(in srgb, var(--panel) 85%, transparent);
@@ -3779,9 +3771,9 @@ body {
   opacity: 1;
   pointer-events: auto;
   transform: translateX(0);
-  border-color: color-mix(in srgb, var(--border) 90%, transparent);
-  background: color-mix(in srgb, var(--sidebar) 88%, #000);
-  box-shadow: 0 8px 22px rgb(0 0 0 / 0.28);
+  border-color: color-mix(in srgb, var(--foreground) 18%, transparent);
+  background: var(--panel);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--foreground) 22%, transparent);
 }
 .nv-gutter-sep {
   width: 1px;
@@ -4007,20 +3999,22 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.2rem 0.45rem;
+  padding: 0.22rem 0.5rem;
   border-radius: 0.35rem;
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+  border: 1.3px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+  background: var(--panel);
   font-size: 0.6875rem;
-  color: color-mix(in srgb, var(--foreground) 38%, transparent);
+  color: var(--muted);
   letter-spacing: 0.01em;
+  box-shadow: 1.5px 1.5px 0 color-mix(in srgb, var(--foreground) 12%, transparent);
 }
 .nv-hint-chip kbd {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 0.65rem;
-  font-weight: 600;
-  color: color-mix(in srgb, var(--accent) 75%, white);
-  background: var(--accent-soft);
+  font-weight: 650;
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--lilac) 45%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
   border-radius: 0.25rem;
   padding: 0.05rem 0.28rem;
 }
@@ -4043,13 +4037,11 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-radius: 0.85rem;
-  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
-  background: color-mix(in srgb, var(--sidebar) 92%, #000);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.4),
-    0 22px 56px rgb(0 0 0 / 0.55);
-  backdrop-filter: blur(14px);
+  border-radius: 0.55rem;
+  border: 1.6px solid var(--foreground);
+  background: var(--panel);
+  box-shadow: 5px 5px 0 var(--foreground);
+  backdrop-filter: none;
 }
 
 .nv-slash-head {
@@ -4085,11 +4077,12 @@ body {
 
 .nv-slash-query-pill {
   border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: color-mix(in srgb, var(--lilac) 40%, var(--panel));
+  color: var(--foreground);
+  border: 1px solid color-mix(in srgb, var(--foreground) 16%, transparent);
   padding: 0.12rem 0.5rem;
   font-size: 0.6875rem;
-  font-weight: 500;
+  font-weight: 600;
   max-width: 8rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4144,8 +4137,8 @@ body {
   background: color-mix(in srgb, var(--foreground) 4%, transparent);
 }
 .nv-slash-item-active {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--lilac) 28%, var(--panel));
+  border-color: color-mix(in srgb, var(--foreground) 35%, transparent);
 }
 
 .nv-slash-icon {
@@ -4155,19 +4148,19 @@ body {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 0.5rem;
-  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
-  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  border-radius: 0.45rem;
+  border: 1.3px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+  background: var(--panel);
 }
-.nv-slash-tone-basic { color: #cbd5e1; }
-.nv-slash-tone-headings { color: #fcd34d; background: rgba(252, 211, 77, 0.08); }
-.nv-slash-tone-lists { color: #86efac; background: rgba(134, 239, 172, 0.08); }
-.nv-slash-tone-callouts { color: #7dd3fc; background: rgba(125, 211, 252, 0.08); }
-.nv-slash-tone-media { color: #c4b5fd; background: rgba(196, 181, 253, 0.08); }
-.nv-slash-tone-yours { color: var(--accent); background: var(--accent-soft); }
+.nv-slash-tone-basic { color: var(--foreground); }
+.nv-slash-tone-headings { color: #8a5a12; background: color-mix(in srgb, #e8c36a 28%, var(--panel)); }
+.nv-slash-tone-lists { color: #2f5e32; background: color-mix(in srgb, var(--live) 14%, var(--panel)); }
+.nv-slash-tone-callouts { color: #2a5f7a; background: color-mix(in srgb, #7eb8d4 22%, var(--panel)); }
+.nv-slash-tone-media { color: #5a3f8a; background: color-mix(in srgb, var(--lilac) 35%, var(--panel)); }
+.nv-slash-tone-yours { color: var(--accent-bright); background: var(--accent-soft); }
 
 .nv-slash-item-active .nv-slash-icon {
-  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  border-color: var(--foreground);
 }
 
 .nv-slash-text {
@@ -9619,23 +9612,24 @@ body {
   color: var(--muted);
 }
 .nv-conn-live {
-  color: color-mix(in srgb, var(--accent) 75%, var(--foreground));
-  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  color: var(--live);
+  border-color: color-mix(in srgb, var(--live) 35%, var(--border));
+  background: color-mix(in srgb, var(--live-soft) 70%, var(--panel));
 }
 .nv-conn-sync {
-  color: color-mix(in srgb, #f0d060 80%, var(--foreground));
-  border-color: color-mix(in srgb, #f0d060 30%, var(--border));
+  color: color-mix(in srgb, #9a6b12 85%, var(--foreground));
+  border-color: color-mix(in srgb, #c4922a 35%, var(--border));
 }
 .nv-conn-offline {
-  color: #f0a0a0;
-  border-color: color-mix(in srgb, #f0a0a0 35%, var(--border));
+  color: #9b3a3a;
+  border-color: color-mix(in srgb, #9b3a3a 30%, var(--border));
 }
 .nv-conn-dot {
   width: 0.4rem;
   height: 0.4rem;
   border-radius: 999px;
-  background: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 16%, transparent);
 }
 .nv-conn-spin {
   animation: nv-spin 0.9s linear infinite;
@@ -9668,26 +9662,26 @@ body {
   background: var(--muted);
 }
 .nv-conn-rail-live {
-  color: color-mix(in srgb, var(--accent) 78%, var(--foreground));
+  color: var(--live);
 }
 .nv-conn-rail-live .nv-conn-rail-dot {
-  background: var(--accent);
+  background: var(--live);
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent),
-    0 0 10px color-mix(in srgb, var(--accent) 35%, transparent);
+    0 0 0 3px color-mix(in srgb, var(--live) 18%, transparent),
+    0 0 10px color-mix(in srgb, var(--live) 28%, transparent);
   animation: nv-conn-pulse 2.4s ease-in-out infinite;
 }
 .nv-conn-rail-sync {
-  color: color-mix(in srgb, #f0d060 85%, var(--foreground));
+  color: color-mix(in srgb, #9a6b12 85%, var(--foreground));
 }
 .nv-conn-rail-sync .nv-conn-rail-dot {
-  background: #f0d060;
+  background: #c4922a;
 }
 .nv-conn-rail-offline {
-  color: #f0a0a0;
+  color: #9b3a3a;
 }
 .nv-conn-rail-offline .nv-conn-rail-dot {
-  background: #f0a0a0;
+  background: #9b3a3a;
 }
 .nv-conn-rail-label {
   overflow: hidden;
@@ -9698,13 +9692,13 @@ body {
   0%,
   100% {
     box-shadow:
-      0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent),
-      0 0 8px color-mix(in srgb, var(--accent) 28%, transparent);
+      0 0 0 3px color-mix(in srgb, var(--live) 14%, transparent),
+      0 0 8px color-mix(in srgb, var(--live) 22%, transparent);
   }
   50% {
     box-shadow:
-      0 0 0 5px color-mix(in srgb, var(--accent) 8%, transparent),
-      0 0 14px color-mix(in srgb, var(--accent) 40%, transparent);
+      0 0 0 5px color-mix(in srgb, var(--live) 8%, transparent),
+      0 0 14px color-mix(in srgb, var(--live) 30%, transparent);
   }
 }
 .sidebar-conn {
