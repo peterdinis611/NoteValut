@@ -18,7 +18,9 @@ export default defineSchema({
     kind: v.optional(v.union(v.literal("page"), v.literal("folder"))),
     color: v.optional(v.string()),
     description: v.optional(v.string()),
-    viewMode: v.optional(v.union(v.literal("grid"), v.literal("list"), v.literal("table"))),
+    viewMode: v.optional(
+      v.union(v.literal("grid"), v.literal("list"), v.literal("table"), v.literal("gallery")),
+    ),
     sortMode: v.optional(v.union(v.literal("updated"), v.literal("name"), v.literal("kind"))),
     defaultTemplateId: v.optional(v.string()),
     isLocked: v.optional(v.boolean()),
@@ -150,4 +152,57 @@ export default defineSchema({
     windowStart: v.number(),
     count: v.number(),
   }).index("by_key", ["key"]),
+
+  /** Notion-style public published pages (SEO + custom slug). */
+  publications: defineTable({
+    ownerId: v.string(),
+    noteId: v.id("notes"),
+    slug: v.string(),
+    title: v.string(),
+    description: v.string(),
+    ogImage: v.optional(v.string()),
+    published: v.boolean(),
+    publishedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_owner", ["ownerId"])
+    .index("by_note", ["noteId"]),
+
+  /** Synced / transcluded block content shared across pages. */
+  syncedBlocks: defineTable({
+    ownerId: v.string(),
+    key: v.string(),
+    text: v.string(),
+    label: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_owner_key", ["ownerId", "key"])
+    .index("by_owner", ["ownerId"]),
+
+  /** Page comments with optional @mentions. */
+  comments: defineTable({
+    ownerId: v.string(),
+    noteId: v.id("notes"),
+    authorId: v.string(),
+    authorName: v.string(),
+    body: v.string(),
+    mentionIds: v.optional(v.array(v.string())),
+    blockId: v.optional(v.string()),
+    resolved: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_note", ["noteId", "createdAt"])
+    .index("by_owner", ["ownerId"]),
+
+  /** Writing streak / focus stats (per owner). */
+  vaultStats: defineTable({
+    ownerId: v.string(),
+    currentStreak: v.number(),
+    longestStreak: v.number(),
+    lastActiveDay: v.optional(v.string()),
+    totalFocusMinutes: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index("by_owner", ["ownerId"]),
 });

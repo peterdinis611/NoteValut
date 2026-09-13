@@ -101,15 +101,23 @@ export function NotesHeroArt() {
 
 export function NotesSack() {
   return (
-    <svg className="nv-land-sack nv-art-bob" viewBox="0 0 128 108" fill="none" aria-hidden>
-      <rect x="22" y="48" width="78" height="46" rx="6" fill="#e8d7b8" stroke={ink} strokeWidth="3" />
-      <rect x="28" y="34" width="78" height="46" rx="6" fill={paper} stroke={ink} strokeWidth="3" />
-      <rect x="34" y="20" width="78" height="48" rx="6" fill="#fff" stroke={ink} strokeWidth="3" />
-      <path d="M48 38h50M48 50h40" stroke="#cbbca3" strokeWidth="2" strokeLinecap="round" />
-      <text x="73" y="72" textAnchor="middle" fill={ink} fontSize="12" fontFamily="ui-serif, Georgia, serif">
+    <svg className="nv-land-sack nv-art-bob" viewBox="0 0 128 126" fill="none" aria-hidden>
+      <rect x="22" y="42" width="78" height="46" rx="6" fill="#e8d7b8" stroke={ink} strokeWidth="3" />
+      <rect x="28" y="28" width="78" height="46" rx="6" fill={paper} stroke={ink} strokeWidth="3" />
+      <rect x="34" y="14" width="78" height="48" rx="6" fill="#fff" stroke={ink} strokeWidth="3" />
+      <path d="M48 32h50M48 44h40" stroke="#cbbca3" strokeWidth="2" strokeLinecap="round" />
+      <circle className="nv-art-plus" cx="104" cy="22" r="10" fill={brew} stroke={ink} strokeWidth="2.4" />
+      <text
+        x="64"
+        y="112"
+        textAnchor="middle"
+        fill={ink}
+        fontSize="13"
+        fontFamily="var(--font-land-display), Georgia, serif"
+        letterSpacing="0.04em"
+      >
         notes
       </text>
-      <circle className="nv-art-plus" cx="104" cy="28" r="10" fill={brew} stroke={ink} strokeWidth="2.4" />
     </svg>
   );
 }

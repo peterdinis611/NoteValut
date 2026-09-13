@@ -163,7 +163,7 @@ export const FileBlock = Extension({
       id: "file",
       type: "file",
       label: "Office file",
-      description: "Word, Excel, or PowerPoint attachment",
+      description: "Word, Excel, or PowerPoint with in-note preview",
       icon: "📎",
       keywords: [
         "file",
@@ -179,6 +179,7 @@ export const FileBlock = Extension({
         "ppt",
         "attachment",
         "document",
+        "preview",
       ],
       group: "Media",
     },

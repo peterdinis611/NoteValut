@@ -37,6 +37,7 @@ export const POPULAR_LANGUAGE_IDS = new Set<string>(["auto", ...PRIORITY]);
 /** Compact popular set shown as chips in the language picker. */
 export const POPULAR_PICKER_IDS = [
   "auto",
+  "mermaid",
   "typescript",
   "javascript",
   "python",
@@ -57,6 +58,7 @@ export type LanguageOption = {
 
 export const CODE_LANGUAGES: LanguageOption[] = [
   { id: "auto", label: "Auto detect" },
+  { id: "mermaid", label: "Mermaid" },
   ...PRIORITY.filter((id) => id === "plaintext" || hljs.getLanguage(id)).map((id) => ({
     id,
     label: languageLabel(id),
@@ -83,6 +85,7 @@ function languageLabel(id: string) {
     dockerfile: "Dockerfile",
     markdown: "Markdown",
     graphql: "GraphQL",
+    mermaid: "Mermaid",
   };
   return map[id] ?? id.charAt(0).toUpperCase() + id.slice(1);
 }
@@ -90,6 +93,9 @@ function languageLabel(id: string) {
 export function highlightCode(code: string, language?: string): { html: string; language: string } {
   const source = code || " ";
   try {
+    if (language === "mermaid") {
+      return { html: escapeHtml(source), language: "mermaid" };
+    }
     if (!language || language === "auto") {
       const result = hljs.highlightAuto(source);
       return { html: result.value, language: result.language ?? "plaintext" };

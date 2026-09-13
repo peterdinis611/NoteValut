@@ -16,6 +16,7 @@ import type * as lib_googleFonts from "../lib/googleFonts.js";
 import type * as lib_rateLimit from "../lib/rateLimit.js";
 import type * as lib_searchText from "../lib/searchText.js";
 import type * as notes from "../notes.js";
+import type * as publications from "../publications.js";
 import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
 import type * as reminders from "../reminders.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   "lib/rateLimit": typeof lib_rateLimit;
   "lib/searchText": typeof lib_searchText;
   notes: typeof notes;
+  publications: typeof publications;
   push: typeof push;
   pushActions: typeof pushActions;
   reminders: typeof reminders;

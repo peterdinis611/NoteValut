@@ -359,6 +359,30 @@ export const Code = Extension({
       keywords: ["code", "pre", "highlight", "syntax"],
       group: "Basic",
     },
+    {
+      id: "mermaid",
+      type: "code",
+      label: "Mermaid",
+      description: "Flowchart, sequence, class & more",
+      icon: "◇",
+      keywords: [
+        "mermaid",
+        "diagram",
+        "flowchart",
+        "sequence",
+        "graph",
+        "uml",
+        "chart",
+      ],
+      group: "Media",
+      language: "mermaid",
+      seedText: `flowchart TD
+  A[Start] --> B{Decision}
+  B -->|Yes| C[Do the thing]
+  B -->|No| D[Keep writing]
+  C --> E[Done]
+  D --> E`,
+    },
   ],
   placeholder: () => "Code",
   render: (props) => <CodeBlockView {...props} />,

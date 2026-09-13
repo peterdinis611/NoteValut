@@ -175,6 +175,8 @@
 .nv-land-sack {
   width: 7.2rem;
   height: auto;
+  display: block;
+  margin: 0 auto 0.15rem;
   pointer-events: none;
   overflow: visible;
 }
@@ -414,6 +416,10 @@
 
   .nv-land-col-left .nv-land-stat,
   .nv-land-col-right .nv-land-blurb {
+    margin-inline: 0;
+  }
+
+  .nv-land-col-left .nv-land-sack {
     margin-inline: 0;
   }
 

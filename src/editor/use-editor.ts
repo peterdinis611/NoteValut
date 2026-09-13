@@ -240,13 +240,14 @@ export function useEditor(options: EditorOptions) {
               : {
                   ...b,
                   type: command.type,
-                  text: saved?.body ?? "",
+                  text: saved?.body ?? command.seedText ?? "",
                   checked:
                     command.type === "todo" ? false : command.type === "toggle" ? true : undefined,
                   calloutVariant:
                     command.type === "callout" ? (command.calloutVariant ?? "info") : undefined,
                   pageId: command.type === "pagelink" ? pages[0]?._id : undefined,
-                  language: command.type === "code" ? "auto" : undefined,
+                  language:
+                    command.type === "code" ? (command.language ?? "auto") : undefined,
                   url: undefined,
                   label:
                     command.type === "custom"

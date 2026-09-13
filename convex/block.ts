@@ -28,6 +28,8 @@ export const blockValidator = v.object({
     v.literal("pdf"),
     v.literal("file"),
     v.literal("canvas"),
+    v.literal("math"),
+    v.literal("synced"),
   ),
   text: v.string(),
   checked: v.optional(v.boolean()),
@@ -53,4 +55,8 @@ export const blockValidator = v.object({
   columnIndex: v.optional(v.number()),
   /** Total columns in the layout group (on each column block) */
   columnCount: v.optional(v.number()),
+  /** Synced block source id (shared across pages) */
+  syncedId: v.optional(v.string()),
+  /** Mentioned user id for comments / @mentions */
+  mentionUserId: v.optional(v.string()),
 });

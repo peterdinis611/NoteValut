@@ -1,8 +1,11 @@
 "use client";
 
 import {
+  ChevronDown,
+  ChevronUp,
   Download,
   ExternalLink,
+  Eye,
   FileSpreadsheet,
   FileText,
   Presentation,
@@ -11,8 +14,15 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { MediaUploadButton } from "@/components/media-upload-button";
 import { useToast } from "@/components/toast";
-import { OFFICE_ACCEPT, fileExtension, officeKindLabel } from "@/hooks/use-vault-upload";
+import {
+  OFFICE_ACCEPT,
+  fileExtension,
+  isOfficeFile,
+  officeKindLabel,
+  useVaultUpload,
+} from "@/hooks/use-vault-upload";
 import type { BlockRenderProps } from "../types";
+import { OfficePreview } from "./office-preview";
 
 function FileKindIcon({ name }: { name: string }) {
   const ext = fileExtension(name);
@@ -25,16 +35,26 @@ function FileKindIcon({ name }: { name: string }) {
   return <FileText className="size-5" />;
 }
 
+function canPreview(name: string) {
+  const ext = fileExtension(name);
+  return ["doc", "docx", "xls", "xlsx", "ppt", "pptx"].includes(ext);
+}
+
 export function FileBlockView(props: BlockRenderProps) {
   const toast = useToast();
+  const { uploadFile } = useVaultUpload();
   const rootRef = useRef<HTMLDivElement>(null);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(props.block.text);
+  const [previewOpen, setPreviewOpen] = useState(true);
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
   const url = props.block.url?.trim() ?? "";
   const name = props.block.text.trim() || "Untitled file";
   const kind = officeKindLabel(name);
+  const previewable = Boolean(url && canPreview(name));
 
   useEffect(() => {
     setNameDraft(props.block.text);
@@ -50,28 +70,80 @@ export function FileBlockView(props: BlockRenderProps) {
     setEditingName(false);
   }
 
+  async function attachFile(file: File) {
+    if (!isOfficeFile(file)) {
+      toast.error("Use Word, Excel, or PowerPoint files");
+      return;
+    }
+    setUploading(true);
+    try {
+      const uploaded = await uploadFile(file);
+      props.commands.updateBlock(props.block.id, {
+        url: uploaded.url,
+        text: file.name,
+      });
+      setPreviewOpen(true);
+      toast.success(`Attached ${file.name}`);
+    } catch {
+      toast.error(`Couldn’t upload ${file.name}`);
+    } finally {
+      setUploading(false);
+    }
+  }
+
   if (!url) {
     return (
-      <div className="nv-file nv-file-empty-wrap" onFocus={props.onFocus}>
+      <div
+        className={`nv-file nv-file-empty-wrap ${dragging ? "nv-file-dropping" : ""}`}
+        onFocus={props.onFocus}
+        onDragEnter={(e) => {
+          if (props.readOnly) return;
+          if ([...e.dataTransfer.types].includes("Files")) {
+            e.preventDefault();
+            setDragging(true);
+          }
+        }}
+        onDragOver={(e) => {
+          if (props.readOnly) return;
+          if ([...e.dataTransfer.types].includes("Files")) {
+            e.preventDefault();
+            setDragging(true);
+          }
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          if (props.readOnly) return;
+          const file = e.dataTransfer.files?.[0];
+          if (!file) return;
+          e.preventDefault();
+          e.stopPropagation();
+          setDragging(false);
+          void attachFile(file);
+        }}
+      >
         <div className="nv-file-empty">
           <span className="nv-file-empty-icon">
             <FileText className="size-5" />
           </span>
           <div className="nv-file-empty-copy">
-            <p className="nv-file-empty-title">Attach an Office file</p>
+            <p className="nv-file-empty-title">
+              {uploading ? "Uploading…" : "Attach Word, Excel, or PowerPoint"}
+            </p>
             <p className="nv-file-empty-hint">
-              Word, Excel, or PowerPoint (.doc/.docx, .xls/.xlsx, .ppt/.pptx)
+              Drop a file here, or upload .doc/.docx, .xls/.xlsx, .ppt/.pptx
             </p>
           </div>
           {!props.readOnly && (
             <MediaUploadButton
               accept={OFFICE_ACCEPT}
-              label="Upload"
+              label={uploading ? "Uploading…" : "Upload"}
+              disabled={uploading}
               onUploaded={(uploadedUrl, file) => {
                 props.commands.updateBlock(props.block.id, {
                   url: uploadedUrl,
                   text: file.name,
                 });
+                setPreviewOpen(true);
                 toast.success(`Attached ${file.name}`);
               }}
               onError={(msg) => toast.error(msg)}
@@ -120,9 +192,21 @@ export function FileBlockView(props: BlockRenderProps) {
               {name}
             </button>
           )}
-          <span className="nv-file-kind">{kind}</span>
+          <span className="nv-file-kind">{kind} document</span>
         </div>
         <div className="nv-file-actions">
+          {previewable && (
+            <button
+              type="button"
+              className={`nv-file-action ${previewOpen ? "nv-file-action-on" : ""}`}
+              title={previewOpen ? "Hide preview" : "Show preview"}
+              onClick={() => setPreviewOpen((v) => !v)}
+            >
+              <Eye className="size-3.5" />
+              {previewOpen ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+              Preview
+            </button>
+          )}
           <a
             className="nv-file-action"
             href={url}
@@ -154,6 +238,7 @@ export function FileBlockView(props: BlockRenderProps) {
                     url: uploadedUrl,
                     text: file.name,
                   });
+                  setPreviewOpen(true);
                   toast.success(`Replaced with ${file.name}`);
                 }}
                 onError={(msg) => toast.error(msg)}
@@ -175,6 +260,7 @@ export function FileBlockView(props: BlockRenderProps) {
           )}
         </div>
       </div>
+      {previewable && previewOpen && <OfficePreview url={url} name={name} />}
     </div>
   );
 }

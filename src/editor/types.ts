@@ -15,6 +15,10 @@ export type SlashCommandDef = {
   keywords: string[];
   calloutVariant?: CalloutVariant;
   group?: string;
+  /** Initial language for code blocks (e.g. mermaid) */
+  language?: string;
+  /** Seed body text when inserting from slash */
+  seedText?: string;
 };
 
 export type EditorCommands = {
