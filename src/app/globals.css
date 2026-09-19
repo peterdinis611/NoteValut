@@ -183,8 +183,10 @@ body {
   position: relative;
   display: flex;
   min-width: 0;
+  min-height: 0;
   flex: 1;
   flex-direction: column;
+  overflow: hidden;
   background:
     radial-gradient(ellipse 80% 50% at 20% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%),
     radial-gradient(ellipse 60% 40% at 100% 0%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 50%),
@@ -197,6 +199,7 @@ body {
   min-width: 0;
   flex: 1;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .sidebar-reopen-btn {
@@ -6458,12 +6461,15 @@ body {
 .settings-page {
   max-width: 52rem;
   margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
+  padding: 2rem 1.5rem 5rem;
   width: 100%;
   flex: 1;
   min-height: 0;
+  height: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .settings-header {

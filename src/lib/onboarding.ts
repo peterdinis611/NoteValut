@@ -78,7 +78,7 @@ const STEPS: DriveStep[] = [
     element: "[data-tour='settings']",
     popover: {
       title: "Make it yours",
-      description: "Themes, export, push reminders, and this tour again — whenever you want them.",
+      description: "Themes, export, fonts, and this tour again — whenever you want them.",
       side: "top",
       align: "start",
     },

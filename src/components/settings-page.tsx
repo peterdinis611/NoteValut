@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Bell,
   Compass,
   Database,
   Eye,
@@ -42,7 +41,6 @@ import { applyThemePack, downloadThemePack, parseThemePack } from "@/lib/theme-p
 import { CssVarsEditor } from "./css-vars-editor";
 import { TemplatePreviewDialog, type PreviewableTemplate } from "./template-preview-dialog";
 import { TemplateEditorDialog } from "./template-editor-dialog";
-import { PushNotificationSettings } from "./push-notification-settings";
 import { GoogleFontsPicker } from "./google-fonts-picker";
 import { useToast } from "./toast";
 
@@ -654,14 +652,13 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
 
       <section className="settings-section">
         <div className="settings-section-head">
-          <Bell className="size-4 text-accent" />
+          <FileText className="size-4 text-accent" />
           <div>
-            <h2>Notifications</h2>
-            <p>Web Push for calendar reminders when the app is closed</p>
+            <h2>Daily notes</h2>
+            <p>Auto-create today’s note when you open the vault</p>
           </div>
         </div>
-        <PushNotificationSettings ownerId={ownerId} />
-        <label className="share-switch" style={{ marginTop: "0.85rem" }}>
+        <label className="share-switch">
           <span className="share-switch-copy">
             <span className="share-switch-label">Auto-create today’s daily note</span>
             <span className="share-switch-hint">
