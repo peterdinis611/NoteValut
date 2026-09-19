@@ -39,6 +39,7 @@ import { useAnimeEnter } from "@/lib/anime-ui";
 import { listDefaultTemplates } from "@/lib/templates";
 import { parseVaultBackupFile } from "@/lib/vault-backup";
 import { applyThemePack, downloadThemePack, parseThemePack } from "@/lib/theme-pack";
+import { CssVarsEditor } from "./css-vars-editor";
 import { TemplatePreviewDialog, type PreviewableTemplate } from "./template-preview-dialog";
 import { TemplateEditorDialog } from "./template-editor-dialog";
 import { PushNotificationSettings } from "./push-notification-settings";
@@ -280,7 +281,7 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
           <Palette className="size-4 text-accent" />
           <div>
             <h2>Appearance</h2>
-            <p>Pick a preset or upload your own CSS theme</p>
+            <p>Presets, CSS variables, or a full custom stylesheet</p>
           </div>
         </div>
 
@@ -330,6 +331,15 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
             </span>
           </button>
         </div>
+
+        <CssVarsEditor
+          cssDraft={cssDraft}
+          themeId={settings.themeId}
+          onChangeCss={(next) => {
+            setCssDraft(next);
+            setCustomThemeCss(next, settings.customCssName ?? "tokens.css");
+          }}
+        />
 
         <div
           className={`settings-css-drop ${dragging ? "settings-css-drop-active" : ""}`}
@@ -390,8 +400,13 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
             rows={10}
           />
           <p className="settings-hint">
-            Override CSS variables like <code>--accent</code>, <code>--background</code>,{" "}
-            <code>--sidebar</code>, <code>--panel</code>, <code>--muted</code>.
+            Override any Folio token:{" "}
+            <code>--background</code>, <code>--foreground</code>, <code>--sidebar</code>,{" "}
+            <code>--panel</code>, <code>--topbar</code>, <code>--muted</code>, <code>--border</code>,{" "}
+            <code>--hover</code>, <code>--hover-strong</code>, <code>--grid-line</code>,{" "}
+            <code>--accent</code>, <code>--accent-bright</code>, <code>--accent-soft</code>,{" "}
+            <code>--accent-ink</code>, <code>--lilac</code>, <code>--live</code>,{" "}
+            <code>--live-soft</code>. Use the pickers above or paste full CSS here.
           </p>
           <div className="settings-css-toolbar" style={{ marginTop: "0.35rem" }}>
             <button

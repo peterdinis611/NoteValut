@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "highlight.js/styles/atom-one-light.css";
 
 /* NoteVault theme — Folio (paper, ink, brew) */
 :root {
@@ -11479,4 +11478,124 @@ body {
 .nv-code-pre .th-heading { color: #7c2d12; font-weight: 700; }
 .nv-code-pre .th-inserted { color: #166534; background: color-mix(in srgb, #166534 12%, transparent); }
 .nv-code-pre .th-deleted { color: #b91c1c; background: color-mix(in srgb, #b91c1c 10%, transparent); }
+
+
+.settings-css-vars {
+  margin: 1rem 0 1.15rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+}
+
+.settings-css-vars-intro {
+  margin-bottom: 0.75rem;
+}
+
+.settings-css-vars-group + .settings-css-vars-group {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border);
+}
+
+.settings-css-vars-group-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.settings-css-vars-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.settings-css-var-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 0.55rem 0.75rem;
+  align-items: center;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.4rem;
+}
+
+.settings-css-var-row.is-dirty {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.settings-css-var-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.settings-css-var-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.settings-css-var-key {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.settings-css-var-hint {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.settings-css-var-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.settings-css-var-swatch {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.settings-css-var-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  background: var(--panel);
+  color: var(--foreground);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+}
+
+.settings-css-var-reset {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.2rem 0.3rem;
+}
+
+@media (max-width: 720px) {
+  .settings-css-var-row {
+    grid-template-columns: 1fr;
+  }
+}
 
