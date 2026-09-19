@@ -5,6 +5,7 @@ import {
   AlignLeft,
   AlignRight,
   Captions,
+  Crop,
   Download,
   Expand,
   ImageIcon,
@@ -18,6 +19,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { ImageCropDialog } from "@/components/image-crop-dialog";
 import { ImageViewer } from "@/components/image-viewer";
 import { MediaUploadButton } from "@/components/media-upload-button";
 import { useToast } from "@/components/toast";
@@ -41,6 +43,7 @@ export function ImageBlockView(props: BlockRenderProps) {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const captionRef = useRef<HTMLInputElement>(null);
@@ -294,6 +297,9 @@ export function ImageBlockView(props: BlockRenderProps) {
               <Tool label="Full screen" onClick={() => setViewerOpen(true)}>
                 <Expand className="size-3.5" />
               </Tool>
+              <Tool label="Crop" onClick={() => setCropOpen(true)}>
+                <Crop className="size-3.5" />
+              </Tool>
               <Tool label="Download" onClick={() => void downloadImage()}>
                 <Download className="size-3.5" />
               </Tool>
@@ -482,6 +488,23 @@ export function ImageBlockView(props: BlockRenderProps) {
         open={viewerOpen}
         onClose={() => setViewerOpen(false)}
         images={[{ src: url, alt }]}
+      />
+      <ImageCropDialog
+        open={cropOpen}
+        imageSrc={url}
+        onClose={() => setCropOpen(false)}
+        onCropped={async (blob) => {
+          try {
+            const file = new File([blob], "cropped.jpg", { type: "image/jpeg" });
+            const uploaded = await uploadFile(file);
+            props.commands.updateBlock(props.block.id, { url: uploaded.url });
+            setBroken(false);
+            toast.success("Image cropped");
+          } catch {
+            toast.error("Couldn’t save crop");
+            throw new Error("crop failed");
+          }
+        }}
       />
     </div>
   );

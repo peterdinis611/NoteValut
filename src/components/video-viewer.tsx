@@ -5,14 +5,11 @@ import {
   ExternalLink,
   Film,
   Minimize2,
-  Pause,
-  Play,
-  Volume2,
-  VolumeX,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import ReactPlayer from "react-player";
 import { AnimePresence } from "@/lib/anime-ui";
 import { resolveVideoSource, type VideoSource } from "@/lib/video";
 
@@ -54,6 +51,13 @@ export function VideoViewer({
   }
 
   const aspect = source.aspect ?? "landscape";
+  // Prefer react-player for YouTube/Vimeo/Wistia/file; keep iframe for niche embeds.
+  const usePlayer =
+    source.provider === "youtube" ||
+    source.provider === "vimeo" ||
+    source.provider === "wistia" ||
+    source.provider === "file" ||
+    Boolean(source.fileUrl);
 
   return (
     <div
@@ -66,7 +70,16 @@ export function VideoViewer({
         onToggleFullscreen={onToggleFullscreen}
       />
       <div className="nv-video-stage">
-        {source.embedUrl ? (
+        {usePlayer ? (
+          <ReactPlayer
+            src={source.fileUrl || source.src}
+            controls
+            width="100%"
+            height="100%"
+            className="nv-video-react-player"
+            style={{ position: "absolute", inset: 0 }}
+          />
+        ) : source.embedUrl ? (
           <iframe
             key={source.embedUrl}
             src={source.embedUrl}
@@ -75,9 +88,12 @@ export function VideoViewer({
             allowFullScreen
             className="nv-video-embed"
           />
-        ) : source.fileUrl ? (
-          <NativeVideoPlayer src={source.fileUrl} title={title || source.label} />
-        ) : null}
+        ) : (
+          <div className="nv-video-status nv-video-status-error">
+            <Film className="size-5" />
+            <p>Can’t play this URL</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -124,94 +140,6 @@ function VideoChrome({
         )}
       </div>
     </header>
-  );
-}
-
-function NativeVideoPlayer({ src, title }: { src: string; title: string }) {
-  const ref = useRef<HTMLVideoElement>(null);
-  const [playing, setPlaying] = useState(false);
-  const [muted, setMuted] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-
-  function togglePlay() {
-    const el = ref.current;
-    if (!el) return;
-    if (el.paused) {
-      void el.play();
-      setPlaying(true);
-    } else {
-      el.pause();
-      setPlaying(false);
-    }
-  }
-
-  return (
-    <div className="nv-video-native">
-      <video
-        ref={ref}
-        src={src}
-        title={title}
-        className="nv-video-file"
-        playsInline
-        onClick={togglePlay}
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onTimeUpdate={() => {
-          const el = ref.current;
-          if (!el || !el.duration) return;
-          setProgress(el.currentTime / el.duration);
-        }}
-        onLoadedMetadata={() => setDuration(ref.current?.duration ?? 0)}
-      />
-      {!playing && (
-        <button type="button" className="nv-video-play-fab" aria-label="Play" onClick={togglePlay}>
-          <Play className="size-7 fill-current" />
-        </button>
-      )}
-      <div className="nv-video-controls" onMouseDown={(e) => e.preventDefault()}>
-        <button
-          type="button"
-          className="nv-video-tool"
-          aria-label={playing ? "Pause" : "Play"}
-          onClick={togglePlay}
-        >
-          {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
-        </button>
-        <input
-          type="range"
-          className="nv-video-seek"
-          min={0}
-          max={1}
-          step={0.001}
-          value={progress}
-          aria-label="Seek"
-          onChange={(e) => {
-            const el = ref.current;
-            if (!el || !el.duration) return;
-            const next = Number(e.target.value);
-            el.currentTime = next * el.duration;
-            setProgress(next);
-          }}
-        />
-        <span className="nv-video-time">
-          {formatTime(progress * duration)} / {formatTime(duration)}
-        </span>
-        <button
-          type="button"
-          className="nv-video-tool"
-          aria-label={muted ? "Unmute" : "Mute"}
-          onClick={() => {
-            const el = ref.current;
-            if (!el) return;
-            el.muted = !el.muted;
-            setMuted(el.muted);
-          }}
-        >
-          {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -277,9 +205,3 @@ export function VideoViewerOverlay({
   );
 }
 
-function formatTime(seconds: number) {
-  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
