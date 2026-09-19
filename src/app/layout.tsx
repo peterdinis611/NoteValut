@@ -5,6 +5,7 @@ import { ConvexClientProvider } from "@/components/providers";
 import { PwaRegister } from "@/components/pwa-register";
 import { ThemeBoot } from "@/components/theme-boot";
 import { clerkAppearance } from "@/lib/clerk-appearance";
+import { absoluteUrl, getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 import "./folio-pages.css";
 
@@ -41,10 +42,21 @@ const landScript = Fraunces({
   display: "swap",
 });
 
+const siteUrl = getSiteUrl();
+
 export const metadata: Metadata = {
-  title: "NoteVault — Notes powered by Convex",
-  description: "Your personal knowledge vault — collections, entries, and real-time sync",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "NoteVault — Notes powered by Convex",
+    template: "%s — NoteVault",
+  },
+  description:
+    "Your personal knowledge vault — collections, entries, publishable pages, and real-time sync.",
   applicationName: "NoteVault",
+  authors: [{ name: "NoteVault" }],
+  creator: "NoteVault",
+  publisher: "NoteVault",
+  keywords: ["notes", "knowledge base", "wiki", "Convex", "NoteVault", "publish"],
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -54,6 +66,37 @@ export const metadata: Metadata = {
   icons: {
     icon: [{ url: "/icons/icon-192.svg", type: "image/svg+xml" }],
     apple: [{ url: "/icons/icon-192.svg" }],
+  },
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "NoteVault",
+    locale: "en_US",
+    url: siteUrl,
+    title: "NoteVault — Notes powered by Convex",
+    description:
+      "Your personal knowledge vault — collections, entries, publishable pages, and real-time sync.",
+    images: [
+      {
+        url: absoluteUrl("/icons/icon-512.svg"),
+        width: 512,
+        height: 512,
+        alt: "NoteVault",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "NoteVault — Notes powered by Convex",
+    description:
+      "Your personal knowledge vault — collections, entries, publishable pages, and real-time sync.",
+    images: [absoluteUrl("/icons/icon-512.svg")],
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
