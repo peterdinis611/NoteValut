@@ -219,7 +219,7 @@ export const WebLink = Extension({
           <div className="nv-weblink-fields">
             <input
               className="nv-weblink-input"
-              placeholder="https://github.com/… · notion.so · linear.app"
+              placeholder="https://figma.com · x.com · gist.github.com · notion.so…"
               value={url}
               onChange={(e) => props.commands.updateBlock(props.block.id, { url: e.target.value })}
               onFocus={props.onFocus}
@@ -238,9 +238,28 @@ export const WebLink = Extension({
             />
           </div>
         )}
-        {url && embed ? (
+        {url && embed?.iframeSrc ? (
+          <div className="nv-weblink-embed">
+            <div className="nv-weblink-embed-bar">
+              <span className="nv-weblink-badge">{embed.label}</span>
+              <span className="nv-weblink-title">{props.block.label || embed.title || title}</span>
+              <a href={url} target="_blank" rel="noopener noreferrer" className="nv-weblink-open">
+                Open <ExternalLink className="size-3" />
+              </a>
+            </div>
+            <iframe
+              className="nv-weblink-iframe"
+              src={embed.iframeSrc}
+              title={embed.title}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
+              style={{ height: embed.iframeHeight ?? 360 }}
+            />
+          </div>
+        ) : url && embed ? (
           <a
-            className="nv-weblink-card"
+            className={`nv-weblink-card ${embed.provider === "notion" ? "nv-weblink-bookmark" : ""}`}
             href={url}
             target="_blank"
             rel="noopener noreferrer"
@@ -267,7 +286,9 @@ export const WebLink = Extension({
             <ExternalLink className="size-3.5 text-muted" />
           </a>
         ) : (
-          <div className="nv-weblink-empty">Paste a GitHub, Notion, Linear, or any URL</div>
+          <div className="nv-weblink-empty">
+            Paste Figma, Tweet, Gist, Notion, GitHub, or any URL
+          </div>
         )}
       </div>
     );

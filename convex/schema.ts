@@ -19,7 +19,13 @@ export default defineSchema({
     color: v.optional(v.string()),
     description: v.optional(v.string()),
     viewMode: v.optional(
-      v.union(v.literal("grid"), v.literal("list"), v.literal("table"), v.literal("gallery")),
+      v.union(
+        v.literal("grid"),
+        v.literal("list"),
+        v.literal("table"),
+        v.literal("gallery"),
+        v.literal("kanban"),
+      ),
     ),
     sortMode: v.optional(v.union(v.literal("updated"), v.literal("name"), v.literal("kind"))),
     defaultTemplateId: v.optional(v.string()),
@@ -35,6 +41,8 @@ export default defineSchema({
     dailyKey: v.optional(v.string()),
     /** Denormalized full-text field for Convex searchIndex */
     searchText: v.optional(v.string()),
+    /** Fixed-dim embedding for vector semantic search */
+    embedding: v.optional(v.array(v.float64())),
     /** Optional page-scoped Google Font / CSS font */
     fontFamily: v.optional(v.string()),
     fontUrl: v.optional(v.string()),
@@ -47,6 +55,11 @@ export default defineSchema({
     .searchIndex("search_body", {
       searchField: "searchText",
       filterFields: ["ownerId"],
+    })
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 384,
+      filterFields: ["ownerId"],
     }),
 
   noteVersions: defineTable({
@@ -57,6 +70,8 @@ export default defineSchema({
     blocks: v.optional(v.array(blockValidator)),
     tags: v.array(v.string()),
     createdAt: v.number(),
+    /** Optional named snapshot label */
+    label: v.optional(v.string()),
   })
     .index("by_note", ["noteId", "createdAt"])
     .index("by_owner", ["ownerId"]),
@@ -71,6 +86,8 @@ export default defineSchema({
     autoDailyNote: v.optional(v.boolean()),
     /** Default daily reminder time "HH:mm" local — used with recurrence */
     dailyReminderTime: v.optional(v.string()),
+    /** Auto-purge trash after N days (0 = never) */
+    trashRetentionDays: v.optional(v.number()),
     updatedAt: v.number(),
   }).index("by_owner", ["ownerId"]),
 
@@ -205,4 +222,19 @@ export default defineSchema({
     totalFocusMinutes: v.optional(v.number()),
     updatedAt: v.number(),
   }).index("by_owner", ["ownerId"]),
+
+  /** Ephemeral presence for shared write sessions (cursors / who is here). */
+  presence: defineTable({
+    shareToken: v.string(),
+    sessionId: v.string(),
+    displayName: v.string(),
+    color: v.string(),
+    noteId: v.optional(v.string()),
+    cursorBlockId: v.optional(v.string()),
+    cursorX: v.optional(v.number()),
+    cursorY: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index("by_token", ["shareToken"])
+    .index("by_token_session", ["shareToken", "sessionId"]),
 });

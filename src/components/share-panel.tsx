@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { roleDescription } from "@/lib/ability";
+import { ROLE_PERMISSION_MATRIX, roleDescription } from "@/lib/ability";
 import { AnimePresence } from "@/lib/anime-ui";
 import { permissionLabel, shareUrl, type ShareScope } from "@/lib/share";
 import { useToast } from "./toast";
@@ -260,6 +260,29 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                     <small>{roleDescription("editor")}</small>
                   </span>
                 </button>
+              </div>
+              <div className="share-roles-matrix" aria-label="Role permissions">
+                <p className="share-section-label">What each role can do</p>
+                <table className="share-roles-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Capability</th>
+                      <th scope="col">Owner</th>
+                      <th scope="col">Editor</th>
+                      <th scope="col">Viewer</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ROLE_PERMISSION_MATRIX.map((row) => (
+                      <tr key={row.action}>
+                        <th scope="row">{row.label}</th>
+                        <td>{row.owner ? "✓" : "—"}</td>
+                        <td>{row.editor ? "✓" : "—"}</td>
+                        <td>{row.viewer ? "✓" : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
               <div className="share-extra-fields">
                 <label className="share-field">

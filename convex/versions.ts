@@ -2,10 +2,16 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
+import { buildNoteSearchText } from "./lib/searchText";
+import { embedText } from "./lib/embed";
 
 export const MAX_VERSIONS = 20;
 
-export async function snapshotNote(ctx: MutationCtx, noteId: Id<"notes">) {
+export async function snapshotNote(
+  ctx: MutationCtx,
+  noteId: Id<"notes">,
+  label?: string,
+) {
   const note = await ctx.db.get(noteId);
   if (!note || note.kind === "folder") return;
 
@@ -17,6 +23,7 @@ export async function snapshotNote(ctx: MutationCtx, noteId: Id<"notes">) {
     blocks: note.blocks,
     tags: note.tags,
     createdAt: Date.now(),
+    label: label?.trim() || undefined,
   });
 
   await pruneVersions(ctx, noteId);
@@ -49,6 +56,7 @@ export const listForNote = query({
       createdAt: ver.createdAt,
       preview: ver.content.slice(0, 120),
       blockCount: ver.blocks?.length ?? 0,
+      label: ver.label,
     }));
   },
 });
@@ -57,6 +65,29 @@ export const get = query({
   args: { id: v.id("noteVersions") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
+  },
+});
+
+export const nameSnapshot = mutation({
+  args: {
+    versionId: v.id("noteVersions"),
+    label: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const ver = await ctx.db.get(args.versionId);
+    if (!ver) throw new Error("Not found");
+    await ctx.db.patch(args.versionId, { label: args.label.trim().slice(0, 80) || undefined });
+  },
+});
+
+export const createNamed = mutation({
+  args: {
+    noteId: v.id("notes"),
+    label: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await snapshotNote(ctx, args.noteId, args.label);
+    return args.noteId;
   },
 });
 
@@ -72,13 +103,22 @@ export const restore = mutation({
     if (version.noteId !== args.noteId) throw new Error("Version mismatch");
     if (note.kind === "folder") throw new Error("Cannot restore folder history");
 
-    await snapshotNote(ctx, args.noteId);
+    await snapshotNote(ctx, args.noteId, "Before restore");
+
+    const searchText = buildNoteSearchText({
+      title: version.title,
+      content: version.content,
+      tags: version.tags,
+      blocks: version.blocks,
+    });
 
     await ctx.db.patch(args.noteId, {
       title: version.title,
       content: version.content,
       blocks: version.blocks,
       tags: version.tags,
+      searchText,
+      embedding: embedText(searchText),
       updatedAt: Date.now(),
     });
 

@@ -39,6 +39,27 @@ export function roleDescription(role: VaultRole) {
   return "Can view shared pages — cannot edit";
 }
 
+/** Matrix for sharing UI — what each role can do. */
+export const ROLE_PERMISSION_MATRIX: Array<{
+  action: AppAction | "comment";
+  label: string;
+  owner: boolean;
+  editor: boolean;
+  viewer: boolean;
+}> = [
+  { action: "read", label: "View pages", owner: true, editor: true, viewer: true },
+  { action: "update", label: "Edit content", owner: true, editor: true, viewer: false },
+  { action: "create", label: "Create pages", owner: true, editor: true, viewer: false },
+  { action: "delete", label: "Delete / trash", owner: true, editor: false, viewer: false },
+  { action: "share", label: "Manage share links", owner: true, editor: false, viewer: false },
+  { action: "comment", label: "Comment & @mention", owner: true, editor: true, viewer: true },
+  { action: "manage", label: "Vault settings", owner: true, editor: false, viewer: false },
+];
+
+export function roleCan(role: VaultRole, action: AppAction): boolean {
+  return defineAbilityFor(role).can(action, "Note") || defineAbilityFor(role).can(action, "all");
+}
+
 /** Build a CASL ability for a vault role. */
 export function defineAbilityFor(role: VaultRole): AppAbility {
   const { can, cannot, build } = new AbilityBuilder<AppAbility>(createMongoAbility);

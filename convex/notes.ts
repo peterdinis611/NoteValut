@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { blockValidator } from "./block";
 import { buildNoteSearchText } from "./lib/searchText";
+import { embedText } from "./lib/embed";
 import { snapshotNote } from "./versions";
 import {
   assertTags,
@@ -87,7 +88,7 @@ export const search = query({
   },
 });
 
-/** Backfill searchText for existing notes (run once after deploy). */
+/** Backfill searchText + embeddings for existing notes. */
 export const reindexSearch = mutation({
   args: { ownerId: v.string() },
   handler: async (ctx, args) => {
@@ -99,8 +100,15 @@ export const reindexSearch = mutation({
     let updated = 0;
     for (const note of notes) {
       const searchText = buildNoteSearchText(note);
+      const patch: { searchText?: string; embedding?: number[] } = {};
       if (note.searchText !== searchText) {
-        await ctx.db.patch(note._id, { searchText });
+        patch.searchText = searchText;
+      }
+      if (note.kind !== "folder" && !note.trashed) {
+        patch.embedding = embedText(searchText);
+      }
+      if (Object.keys(patch).length > 0) {
+        await ctx.db.patch(note._id, patch);
         updated += 1;
       }
     }
@@ -355,6 +363,7 @@ export const create = mutation({
       tags,
       sortOrder: now,
       searchText,
+      embedding: isFolder ? undefined : embedText(searchText),
       updatedAt: now,
     });
   },
@@ -373,7 +382,13 @@ export const update = mutation({
     color: v.optional(v.union(v.string(), v.null())),
     description: v.optional(v.union(v.string(), v.null())),
     viewMode: v.optional(
-      v.union(v.literal("grid"), v.literal("list"), v.literal("table"), v.literal("gallery")),
+      v.union(
+        v.literal("grid"),
+        v.literal("list"),
+        v.literal("table"),
+        v.literal("gallery"),
+        v.literal("kanban"),
+      ),
     ),
     sortMode: v.optional(v.union(v.literal("updated"), v.literal("name"), v.literal("kind"))),
     defaultTemplateId: v.optional(v.union(v.string(), v.null())),
@@ -453,6 +468,9 @@ export const update = mutation({
       blocks: nextBlocks,
       folderBlocks: nextFolderBlocks,
     });
+    if (existing.kind !== "folder") {
+      updates.embedding = embedText(updates.searchText as string);
+    }
 
     const contentChanging =
       patch.title !== undefined ||
@@ -652,6 +670,51 @@ export const listUnlinkedMentions = query({
     }
 
     return hits.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 40);
+  },
+});
+
+/** Bulk-link unlinked mentions: append pagelink from each source → target. */
+export const bulkAppendPagelinks = mutation({
+  args: {
+    ownerId: v.string(),
+    toNoteId: v.id("notes"),
+    fromNoteIds: v.array(v.id("notes")),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const to = await ctx.db.get(args.toNoteId);
+    if (!to || to.ownerId !== args.ownerId) throw new Error("Not found");
+
+    let linked = 0;
+    for (const fromNoteId of args.fromNoteIds) {
+      const from = await ctx.db.get(fromNoteId);
+      if (!from || from.ownerId !== args.ownerId || from.trashed) continue;
+      if (from.blocks?.some((b) => b.type === "pagelink" && b.pageId === (args.toNoteId as string))) {
+        continue;
+      }
+      const link = {
+        id: crypto.randomUUID(),
+        type: "pagelink" as const,
+        text: to.title || "Untitled",
+        pageId: args.toNoteId as string,
+      };
+      const blocks = [...(from.blocks ?? []), link];
+      await ctx.db.patch(fromNoteId, {
+        blocks,
+        updatedAt: Date.now(),
+        searchText: buildNoteSearchText({
+          title: from.title,
+          content: from.content,
+          description: from.description,
+          status: from.status,
+          tags: from.tags,
+          blocks,
+          folderBlocks: from.folderBlocks,
+        }),
+      });
+      linked += 1;
+    }
+    return { linked };
   },
 });
 
@@ -928,7 +991,13 @@ const importNoteValidator = v.object({
   color: v.optional(v.string()),
   description: v.optional(v.string()),
   viewMode: v.optional(
-    v.union(v.literal("grid"), v.literal("list"), v.literal("table"), v.literal("gallery")),
+    v.union(
+      v.literal("grid"),
+      v.literal("list"),
+      v.literal("table"),
+      v.literal("gallery"),
+      v.literal("kanban"),
+    ),
   ),
   sortMode: v.optional(v.union(v.literal("updated"), v.literal("name"), v.literal("kind"))),
   defaultTemplateId: v.optional(v.string()),
@@ -960,6 +1029,15 @@ export const importVault = mutation({
     const ordered = [...folders, ...pages];
 
     for (const note of ordered) {
+      const searchText = buildNoteSearchText({
+        title: note.title || "Untitled",
+        content: note.content || "",
+        description: note.description,
+        status: note.status,
+        tags: assertTags(note.tags ?? []),
+        blocks: note.blocks,
+        folderBlocks: note.folderBlocks,
+      });
       const newId = await ctx.db.insert("notes", {
         ownerId: args.ownerId,
         title: note.title || "Untitled",
@@ -982,6 +1060,8 @@ export const importVault = mutation({
         archived: !!note.archived,
         trashed: false,
         tags: assertTags(note.tags ?? []),
+        searchText,
+        embedding: note.kind === "folder" ? undefined : embedText(searchText),
         updatedAt: note.updatedAt || now,
       });
       idMap.set(note.id, newId);
@@ -993,6 +1073,35 @@ export const importVault = mutation({
       const newParent = idMap.get(note.parentId);
       if (!newId || !newParent) continue;
       await ctx.db.patch(newId, { parentId: newParent });
+    }
+
+    // Remap pagelink pageIds from import draft ids → real Convex ids
+    for (const note of ordered) {
+      const newId = idMap.get(note.id);
+      if (!newId || !note.blocks?.length) continue;
+      let changed = false;
+      const blocks = note.blocks.map((b) => {
+        if (b.type !== "pagelink" || !b.pageId) return b;
+        const mapped = idMap.get(b.pageId);
+        if (!mapped || mapped === b.pageId) return b;
+        changed = true;
+        return { ...b, pageId: mapped as string };
+      });
+      if (!changed) continue;
+      const searchText = buildNoteSearchText({
+        title: note.title || "Untitled",
+        content: note.content || "",
+        description: note.description,
+        status: note.status,
+        tags: assertTags(note.tags ?? []),
+        blocks,
+        folderBlocks: note.folderBlocks,
+      });
+      await ctx.db.patch(newId, {
+        blocks,
+        searchText,
+        embedding: note.kind === "folder" ? undefined : embedText(searchText),
+      });
     }
 
     return { imported: ordered.length };
@@ -1036,6 +1145,34 @@ export const emptyTrash = mutation({
       await permanentlyDelete(ctx, item._id);
     }
     return { deleted: toDelete.length };
+  },
+});
+
+/** Permanently delete trash items older than retention days (0 = skip). */
+export const purgeExpiredTrash = mutation({
+  args: { ownerId: v.string() },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const settings = await ctx.db
+      .query("vaultSettings")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .first();
+    const days = settings?.trashRetentionDays ?? 30;
+    if (days <= 0) return { deleted: 0, retentionDays: days };
+
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const trashed = await ctx.db
+      .query("notes")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+
+    const expired = trashed.filter(
+      (n) => n.trashed && (n.trashedAt ?? 0) > 0 && (n.trashedAt ?? 0) < cutoff,
+    );
+    for (const item of expired) {
+      await permanentlyDelete(ctx, item._id);
+    }
+    return { deleted: expired.length, retentionDays: days };
   },
 });
 
@@ -1371,6 +1508,7 @@ async function createDailyNote(
     tags: ["daily"],
     dailyKey,
     searchText,
+    embedding: embedText(searchText),
     updatedAt: now,
   });
 }

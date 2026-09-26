@@ -71,3 +71,49 @@ export const remove = mutation({
     await ctx.db.delete(args.commentId);
   },
 });
+
+/** People you can @mention — share labels + prior comment authors. */
+export const listPeople = query({
+  args: { ownerId: v.string() },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const people = new Map<string, { id: string; name: string; source: string }>();
+
+    const shares = await ctx.db
+      .query("shares")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+    for (const s of shares) {
+      if (!s.enabled) continue;
+      const name = (s.label || "Guest").replace(/^Share:\s*/i, "").trim() || "Guest";
+      const id = name.replace(/\s+/g, "-").toLowerCase().slice(0, 40);
+      if (!people.has(id)) {
+        people.set(id, {
+          id,
+          name,
+          source: s.permission === "write" ? "Editor link" : "Viewer link",
+        });
+      }
+    }
+
+    const comments = await ctx.db
+      .query("comments")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .take(200);
+    for (const c of comments) {
+      const name = c.authorName.trim();
+      if (!name) continue;
+      const id = name.replace(/\s+/g, "-").toLowerCase().slice(0, 40);
+      if (!people.has(id)) {
+        people.set(id, { id, name, source: "Commenter" });
+      }
+      for (const mid of c.mentionIds ?? []) {
+        if (!people.has(mid)) {
+          people.set(mid, { id: mid, name: mid, source: "Mentioned" });
+        }
+      }
+    }
+
+    return [...people.values()].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 40);
+  },
+});

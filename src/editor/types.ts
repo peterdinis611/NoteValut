@@ -19,6 +19,8 @@ export type SlashCommandDef = {
   language?: string;
   /** Seed body text when inserting from slash */
   seedText?: string;
+  /** When set, replace the slash block with these blocks (fresh ids) */
+  insertBlocks?: Block[];
 };
 
 export type EditorCommands = {

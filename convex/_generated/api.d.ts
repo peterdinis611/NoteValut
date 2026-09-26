@@ -9,14 +9,18 @@
  */
 
 import type * as block from "../block.js";
+import type * as blog from "../blog.js";
 import type * as comments from "../comments.js";
+import type * as embeddings from "../embeddings.js";
 import type * as files from "../files.js";
 import type * as googleFonts from "../googleFonts.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_embed from "../lib/embed.js";
 import type * as lib_googleFonts from "../lib/googleFonts.js";
 import type * as lib_rateLimit from "../lib/rateLimit.js";
 import type * as lib_searchText from "../lib/searchText.js";
 import type * as notes from "../notes.js";
+import type * as presence from "../presence.js";
 import type * as publications from "../publications.js";
 import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
@@ -36,14 +40,18 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   block: typeof block;
+  blog: typeof blog;
   comments: typeof comments;
+  embeddings: typeof embeddings;
   files: typeof files;
   googleFonts: typeof googleFonts;
   "lib/auth": typeof lib_auth;
+  "lib/embed": typeof lib_embed;
   "lib/googleFonts": typeof lib_googleFonts;
   "lib/rateLimit": typeof lib_rateLimit;
   "lib/searchText": typeof lib_searchText;
   notes: typeof notes;
+  presence: typeof presence;
   publications: typeof publications;
   push: typeof push;
   pushActions: typeof pushActions;

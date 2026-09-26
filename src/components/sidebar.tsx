@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { type Ref, useEffect, useMemo, useState } from "react";
 import { toDailyKey } from "@/lib/daily";
+import { formatRelativeTime } from "@/lib/format";
 import { isFolder } from "@/lib/item-kinds";
 import { SIDEBAR_WIDTH } from "@/lib/motion";
 import { searchNotes } from "@/lib/search";
@@ -146,6 +147,8 @@ export function Sidebar({
   const notes = useQuery(api.notes.list, ownerId ? { ownerId } : "skip");
   const trashed = useQuery(api.notes.listTrashed, ownerId ? { ownerId } : "skip");
   const archived = useQuery(api.notes.listArchived, ownerId ? { ownerId } : "skip");
+  const vaultSettings = useQuery(api.vaultSettings.get, ownerId ? { ownerId } : "skip");
+  const trashRetentionDays = vaultSettings?.trashRetentionDays ?? 30;
 
   const updateNote = useMutation(api.notes.update);
   const moveNote = useMutation(api.notes.move);
@@ -833,21 +836,41 @@ export function Sidebar({
                 <p className="sidebar-empty">Trash is empty</p>
               ) : (
                 <>
-                  {trashed?.map((item) => (
-                    <div key={item._id} className="sidebar-bin-item">
-                      <span className="sidebar-bin-label">
-                        <span>{item.icon}</span>
-                        <span className="truncate">{item.title || "Untitled"}</span>
-                      </span>
-                      <button
-                        type="button"
-                        className="sidebar-bin-restore"
-                        onClick={() => handleRestore(item._id)}
-                      >
-                        Restore
-                      </button>
-                    </div>
-                  ))}
+                  {trashed?.map((item) => {
+                    const trashedAt = item.trashedAt ?? item.updatedAt;
+                    const daysLeft =
+                      trashRetentionDays > 0
+                        ? Math.max(
+                            0,
+                            Math.ceil(
+                              (trashedAt + trashRetentionDays * 86400000 - Date.now()) / 86400000,
+                            ),
+                          )
+                        : null;
+                    return (
+                      <div key={item._id} className="sidebar-bin-item">
+                        <span className="sidebar-bin-label">
+                          <span>{item.icon}</span>
+                          <span className="sidebar-bin-text">
+                            <span className="truncate">{item.title || "Untitled"}</span>
+                            <span className="sidebar-bin-meta">
+                              Trashed {formatRelativeTime(trashedAt)}
+                              {daysLeft != null
+                                ? ` · ${daysLeft === 0 ? "purges soon" : `${daysLeft}d left`}`
+                                : ""}
+                            </span>
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          className="sidebar-bin-restore"
+                          onClick={() => handleRestore(item._id)}
+                        >
+                          Restore
+                        </button>
+                      </div>
+                    );
+                  })}
                   <button type="button" className="sidebar-empty-bin" onClick={handleEmptyTrash}>
                     Empty trash
                   </button>

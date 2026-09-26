@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { FileText, Link2, Unlink } from "lucide-react";
+import { useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useToast } from "@/components/toast";
@@ -16,7 +17,9 @@ export function BacklinksPanel({ ownerId, noteId, onNavigate }: Props) {
   const links = useQuery(api.notes.listBacklinks, { ownerId, noteId });
   const unlinked = useQuery(api.notes.listUnlinkedMentions, { ownerId, noteId });
   const appendPagelink = useMutation(api.notes.appendPagelink);
+  const bulkAppend = useMutation(api.notes.bulkAppendPagelinks);
   const toast = useToast();
+  const [linkingAll, setLinkingAll] = useState(false);
 
   const hasLinks = links !== undefined && links.length > 0;
   const hasUnlinked = unlinked !== undefined && unlinked.length > 0;
@@ -31,6 +34,27 @@ export function BacklinksPanel({ ownerId, noteId, onNavigate }: Props) {
       toast.success("Linked page");
     } catch {
       toast.error("Couldn’t create link");
+    }
+  };
+
+  const linkAll = async () => {
+    if (!unlinked?.length) return;
+    setLinkingAll(true);
+    try {
+      const res = await bulkAppend({
+        ownerId,
+        toNoteId: noteId,
+        fromNoteIds: unlinked.map((u) => u._id),
+      });
+      toast.success(
+        res.linked === 0
+          ? "Already linked"
+          : `Linked ${res.linked} page${res.linked === 1 ? "" : "s"}`,
+      );
+    } catch {
+      toast.error("Couldn’t link all");
+    } finally {
+      setLinkingAll(false);
     }
   };
 
@@ -73,6 +97,16 @@ export function BacklinksPanel({ ownerId, noteId, onNavigate }: Props) {
             <span>
               {unlinked.length} unlinked {unlinked.length === 1 ? "mention" : "mentions"}
             </span>
+            {unlinked.length > 1 && (
+              <button
+                type="button"
+                className="page-unlinked-link-all"
+                disabled={linkingAll}
+                onClick={() => void linkAll()}
+              >
+                {linkingAll ? "Linking…" : "Link all"}
+              </button>
+            )}
           </div>
           <ul className="page-backlinks-list">
             {unlinked.map((hit) => (

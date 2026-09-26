@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import {
+  Columns3,
   FileText,
   FolderOpen,
   Grid3X3,
@@ -22,10 +23,12 @@ import { type Block, blocksToPlainText, defaultBlocks, migrateContentToBlocks } 
 import { getLabelColor, LABEL_COLORS } from "@/lib/colors";
 import { formatRelativeTime } from "@/lib/format";
 import { isFolder } from "@/lib/item-kinds";
+import { STATUS_OPTIONS } from "@/lib/status";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { PAGE_TEMPLATES } from "@/lib/templates";
 import { useVaultAccess } from "@/context/vault-access";
 import { VaultEditor } from "@/editor";
+import { CollectionKanban } from "./collection-kanban";
 import { IconPicker } from "./icon-picker";
 import { CoverBanner } from "./cover-banner";
 import { SharePanel } from "./share-panel";
@@ -285,6 +288,16 @@ export function CollectionDetail({
                   >
                     <LayoutGrid className="size-4" />
                   </button>
+                  <button
+                    type="button"
+                    className={viewMode === "kanban" ? "view-toggle-active" : ""}
+                    onClick={() =>
+                      !readOnly && updateNote({ id: folder._id, viewMode: "kanban" })
+                    }
+                    title="Kanban"
+                  >
+                    <Columns3 className="size-4" />
+                  </button>
                 </div>
               </div>
             )}
@@ -320,6 +333,13 @@ export function CollectionDetail({
                   />
                 ))}
               </div>
+            ) : viewMode === "kanban" ? (
+              <CollectionKanban
+                items={children}
+                readOnly={readOnly}
+                onNavigate={onNavigate}
+                onUpdateStatus={(id, status) => void updateNote({ id, status })}
+              />
             ) : viewMode === "table" ? (
               <CollectionTable
                 items={children}
@@ -582,8 +602,6 @@ function GalleryCard({
     </div>
   );
 }
-
-const STATUS_OPTIONS = ["", "Todo", "Doing", "Done", "Blocked"] as const;
 
 function CollectionTable({
   items,

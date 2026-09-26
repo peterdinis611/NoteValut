@@ -20,6 +20,7 @@ export const get = query({
       backgroundImage: undefined as string | undefined,
       autoDailyNote: false as boolean | undefined,
       dailyReminderTime: undefined as string | undefined,
+      trashRetentionDays: 30 as number | undefined,
       updatedAt: Date.now(),
     };
   },
@@ -33,6 +34,7 @@ export const update = mutation({
     backgroundImage: v.optional(v.union(v.string(), v.null())),
     autoDailyNote: v.optional(v.boolean()),
     dailyReminderTime: v.optional(v.union(v.string(), v.null())),
+    trashRetentionDays: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     await requireOwner(ctx, args.ownerId);
@@ -54,6 +56,9 @@ export const update = mutation({
       if (args.dailyReminderTime !== undefined) {
         updates.dailyReminderTime = args.dailyReminderTime ?? undefined;
       }
+      if (args.trashRetentionDays !== undefined) {
+        updates.trashRetentionDays = Math.max(0, Math.min(365, Math.floor(args.trashRetentionDays)));
+      }
       await ctx.db.patch(existing._id, updates);
       return existing._id;
     }
@@ -65,6 +70,10 @@ export const update = mutation({
       backgroundImage: args.backgroundImage ?? undefined,
       autoDailyNote: args.autoDailyNote ?? false,
       dailyReminderTime: args.dailyReminderTime ?? undefined,
+      trashRetentionDays:
+        args.trashRetentionDays !== undefined
+          ? Math.max(0, Math.min(365, Math.floor(args.trashRetentionDays)))
+          : 30,
       updatedAt: now,
     });
   },

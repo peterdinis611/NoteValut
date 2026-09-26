@@ -32,7 +32,8 @@ import {
 import { removeCustomTemplate } from "@/db/templates-collection";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { useVaultSettings } from "@/hooks/use-vault-settings";
-import { importMarkdownFiles, importZipVault } from "@/lib/import-notes";
+import { useVaultUpload } from "@/hooks/use-vault-upload";
+import { importMarkdownFiles, importZipVault, remapImportLinks } from "@/lib/import-notes";
 import { startVaultTour } from "@/lib/onboarding";
 import { useAnimeEnter } from "@/lib/anime-ui";
 import { listDefaultTemplates } from "@/lib/templates";
@@ -61,8 +62,10 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
   const templates = useCustomTemplates();
   const importVault = useMutation(api.notes.importVault);
   const reindexSearch = useMutation(api.notes.reindexSearch);
+  const purgeExpiredTrash = useMutation(api.notes.purgeExpiredTrash);
   const vaultRemote = useQuery(api.vaultSettings.get, ownerId ? { ownerId } : "skip");
   const updateVaultRemote = useMutation(api.vaultSettings.update);
+  const { uploadFile } = useVaultUpload();
   const fileRef = useRef<HTMLInputElement>(null);
   const fontFileRef = useRef<HTMLInputElement>(null);
   const themePackRef = useRef<HTMLInputElement>(null);
@@ -191,12 +194,29 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
       const list = [...files];
       const zips = list.filter((f) => /\.zip$/i.test(f.name) || f.type === "application/zip");
       const mds = list.filter((f) => !zips.includes(f));
-      const drafts = [
-        ...(mds.length ? await importMarkdownFiles(mds, importSource) : []),
-        ...(
-          await Promise.all(zips.map((z) => importZipVault(z)))
-        ).flat(),
-      ];
+      let drafts = mds.length ? await importMarkdownFiles(mds, importSource) : [];
+      const assetUrlByPath = new Map<string, string>();
+
+      for (const zip of zips) {
+        const { drafts: zipDrafts, assets } = await importZipVault(zip);
+        for (const [path, blob] of assets) {
+          const name = path.split("/").pop() || "asset";
+          const file = new File([blob], name, { type: blob.type || "application/octet-stream" });
+          try {
+            const uploaded = await uploadFile(file);
+            assetUrlByPath.set(path, uploaded.url);
+            assetUrlByPath.set(name, uploaded.url);
+          } catch {
+            // skip failed asset
+          }
+        }
+        drafts = [...drafts, ...zipDrafts];
+      }
+
+      if (assetUrlByPath.size) {
+        drafts = remapImportLinks(drafts, assetUrlByPath);
+      }
+
       if (!drafts.length) throw new Error("No Markdown files found");
       const result = await importVault({
         ownerId,
@@ -215,7 +235,7 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
         })),
       });
       toast.success(
-        `Imported ${result.imported} pages${zips.length ? " (incl. ZIP)" : ` (${importSource})`}`,
+        `Imported ${result.imported} pages${zips.length ? " (ZIP + attachments)" : ` (${importSource})`}`,
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn’t import Markdown");
@@ -638,14 +658,14 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
               void (async () => {
                 try {
                   const res = await reindexSearch({ ownerId });
-                  toast.success(`Search index updated (${res.updated}/${res.total} notes)`);
+                  toast.success(`Search + semantic index updated (${res.updated}/${res.total} notes)`);
                 } catch {
                   toast.error("Couldn’t rebuild search index");
                 }
               })();
             }}
           >
-            Rebuild search index
+            Rebuild search + semantic index
           </button>
         </div>
       </section>
@@ -691,10 +711,63 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
 
       <section className="settings-section">
         <div className="settings-section-head">
+          <Trash2 className="size-4 text-accent" />
+          <div>
+            <h2>Trash hygiene</h2>
+            <p>Auto-purge and restore timeline for deleted pages</p>
+          </div>
+        </div>
+        <label className="settings-field">
+          <span className="settings-field-label">Auto-purge after (days)</span>
+          <select
+            className="settings-select"
+            value={String(vaultRemote?.trashRetentionDays ?? 30)}
+            disabled={vaultRemote === undefined}
+            onChange={(e) => {
+              const days = Number(e.target.value);
+              void updateVaultRemote({ ownerId, trashRetentionDays: days }).then(
+                () =>
+                  toast.success(
+                    days === 0 ? "Auto-purge off" : `Trash purges after ${days} days`,
+                  ),
+                () => toast.error("Couldn’t update retention"),
+              );
+            }}
+          >
+            <option value="0">Never</option>
+            <option value="7">7 days</option>
+            <option value="14">14 days</option>
+            <option value="30">30 days</option>
+            <option value="90">90 days</option>
+          </select>
+        </label>
+        <div className="settings-css-toolbar" style={{ marginTop: "0.75rem" }}>
+          <button
+            type="button"
+            className="settings-btn settings-btn-ghost"
+            onClick={() => {
+              void purgeExpiredTrash({ ownerId }).then(
+                (res) =>
+                  toast.success(
+                    res.deleted === 0
+                      ? "Nothing to purge"
+                      : `Purged ${res.deleted} expired item${res.deleted === 1 ? "" : "s"}`,
+                  ),
+                () => toast.error("Couldn’t purge trash"),
+              );
+            }}
+          >
+            Purge expired now
+          </button>
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-section-head">
           <FileText className="size-4 text-accent" />
           <div>
             <h2>Import notes</h2>
-            <p>Markdown from Obsidian, Notion export, or plain .md files</p>
+            <p>Markdown from Obsidian, Notion export, or plain .md files · ZIP remaps attachments &amp; wikilinks</p>
           </div>
         </div>
         <div className="settings-import-source">

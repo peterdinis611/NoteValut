@@ -12,6 +12,7 @@ import { ConnectionStatus } from "./connection-status";
 import { LottieStatus } from "./lottie-status";
 import { NoteEditor } from "./note-editor";
 import { ScrollToTop } from "./scroll-to-top";
+import { SharePresenceBar } from "./share-presence";
 
 type Props = {
   token: string;
@@ -181,6 +182,11 @@ export function SharedVaultApp({ token }: Props) {
           </div>
         </aside>
         <main className="app-main">
+          <SharePresenceBar
+            shareToken={token}
+            noteId={activeId}
+            displayName={role === "editor" ? "Editor" : "Viewer"}
+          />
           {activeId ? (
             <NoteEditor
               noteId={activeId}

@@ -17,6 +17,7 @@ import { CustomBlock } from "./custom";
 import { TableBlock, VideoBlock, WebLink, PdfBlock, FileBlock } from "./rich";
 import { CanvasBlock } from "./canvas";
 import { MathBlock, SyncedBlock } from "./math-synced";
+import { TemplateInsert } from "./template-insert";
 import type { Extension } from "../types";
 
 /** Default NoteVault starter kit — TipTap-style bundle of block extensions. */
@@ -47,6 +48,7 @@ export const StarterKit: Extension[] = [
   Toggle,
   CustomBlock,
   Divider,
+  TemplateInsert,
 ];
 
 export {

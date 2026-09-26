@@ -208,6 +208,38 @@ export function useEditor(options: EditorOptions) {
       applySlashCommand: (blockId, command) => {
         if (readOnly) return;
 
+        if (command.insertBlocks?.length) {
+          const index = blocksRef.current.findIndex((b) => b.id === blockId);
+          if (index < 0) return;
+          const fresh = command.insertBlocks.map((b) =>
+            createBlock(b.type, b.text, {
+              checked: b.checked,
+              calloutVariant: b.calloutVariant,
+              pageId: b.pageId,
+              language: b.language,
+              url: b.url,
+              label: b.label,
+              rows: b.rows?.map((row) => [...row]),
+              color: b.color,
+              bgColor: b.bgColor,
+              width: b.width,
+              align: b.align,
+              indent: b.indent,
+              dueAt: b.dueAt,
+              pinned: b.pinned,
+              syncedId: b.type === "synced" ? crypto.randomUUID() : b.syncedId,
+              mentionUserId: b.mentionUserId,
+            }),
+          );
+          const next = [...blocksRef.current];
+          next.splice(index, 1, ...fresh);
+          focusTarget.current = { id: fresh[0]!.id, caret: "start" };
+          commit(next);
+          setSlashBlockId(null);
+          setMentionBlockId(null);
+          return;
+        }
+
         if (command.id === "columns-2" || command.id === "columns-3") {
           const count = command.id === "columns-2" ? 2 : 3;
           const index = blocksRef.current.findIndex((b) => b.id === blockId);

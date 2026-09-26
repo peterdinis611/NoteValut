@@ -1,7 +1,7 @@
 "use client";
 
 import { useDebouncedValue } from "@tanstack/react-pacer";
-import { useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import {
   Archive,
   CalendarClock,
@@ -32,7 +32,6 @@ import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { isFolder } from "@/lib/item-kinds";
 import { searchNotes, type NoteSearchHit } from "@/lib/search";
-import { semanticSearch } from "@/lib/semantic-search";
 import {
   highlightMatches,
   noteMatchesFilters,
@@ -116,6 +115,46 @@ export function CommandPalette({
       : "skip",
   );
   const tagRows = useQuery(api.notes.listTags, open && ownerId ? { ownerId } : "skip");
+  const vectorSearch = useAction(api.embeddings.search);
+  const [vectorHits, setVectorHits] = useState<
+    Array<{
+      _id: Id<"notes">;
+      title: string;
+      icon: string;
+      tags: string[];
+      updatedAt: number;
+      status?: string;
+      preview: string;
+      score: number;
+    }>
+  >([]);
+  const [vectorPending, setVectorPending] = useState(false);
+
+  useEffect(() => {
+    if (!open || !ownerId || searchBare.length < 3 || q.startsWith("#")) {
+      setVectorHits([]);
+      setVectorPending(false);
+      return;
+    }
+    let cancelled = false;
+    setVectorPending(true);
+    const t = window.setTimeout(() => {
+      void vectorSearch({ ownerId, query: searchBare, limit: 8 })
+        .then((hits) => {
+          if (!cancelled) setVectorHits(hits);
+        })
+        .catch(() => {
+          if (!cancelled) setVectorHits([]);
+        })
+        .finally(() => {
+          if (!cancelled) setVectorPending(false);
+        });
+    }, 120);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [open, ownerId, searchBare, q, vectorSearch]);
 
   useEffect(() => {
     if (!open) {
@@ -178,27 +217,27 @@ export function CommandPalette({
     | { kind: "semantic"; note: NoteSearchHit; score: number };
 
   const semanticHits = useMemo(() => {
-    if (!notes || searchBare.length < 3 || q.startsWith("#")) return [];
-    const pool = notes.filter((n) => !isFolder(n) && noteMatchesFilters(n, filters));
+    if (searchBare.length < 3 || q.startsWith("#") || vectorHits.length === 0 || !notes) {
+      return [];
+    }
     const ftsIds = new Set(noteHits.map((n) => n._id));
-    return semanticSearch(pool, searchBare, 8)
-      .filter((h) => !ftsIds.has(h.note._id))
+    const byId = new Map(notes.map((n) => [n._id, n]));
+    return vectorHits
+      .filter((h) => !ftsIds.has(h._id))
       .map((h) => {
-        const body = [h.note.content, blocksToSearchText(h.note.blocks)]
-          .filter(Boolean)
-          .join("\n");
+        const full = byId.get(h._id);
+        if (!full || isFolder(full) || !noteMatchesFilters(full, filters)) return null;
         return {
           note: {
-            ...h.note,
-            snippet:
-              snippetAround(body, searchBare) ||
-              snippetAround(h.note.title || "", searchBare) ||
-              null,
+            ...full,
+            snippet: h.preview || null,
           } as NoteSearchHit,
           score: h.score,
         };
-      });
-  }, [notes, searchBare, q, filters, noteHits]);
+      })
+      .filter((x): x is { note: NoteSearchHit; score: number } => x != null)
+      .slice(0, 8);
+  }, [vectorHits, noteHits, notes, searchBare, q, filters]);
 
   const showRecent = open && !q && recent.length > 0;
 
@@ -289,7 +328,7 @@ export function CommandPalette({
             </div>
             <p className="cmd-hint">
               Filters: <span>tag:</span> <span>after:</span> <span>before:</span> · ↑↓ enter · ⌘K
-              {ftsPending ? " · searching…" : ""}
+              {ftsPending || vectorPending ? " · searching…" : ""}
             </p>
 
             {(filters.tags.length > 0 || filters.after || filters.before) && (

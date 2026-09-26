@@ -1,6 +1,13 @@
-/** Detect known product URLs for richer embed cards. */
+/** Detect known product URLs for richer embed cards + iframes. */
 
-export type EmbedProvider = "github" | "notion" | "linear" | "figma" | "generic";
+export type EmbedProvider =
+  | "github"
+  | "gist"
+  | "notion"
+  | "linear"
+  | "figma"
+  | "tweet"
+  | "generic";
 
 export type EmbedMeta = {
   provider: EmbedProvider;
@@ -8,15 +15,20 @@ export type EmbedMeta = {
   accent: string;
   title: string;
   subtitle: string;
+  /** When set, render an interactive iframe instead of a static card */
+  iframeSrc?: string;
+  iframeHeight?: number;
 };
 
 export function detectEmbed(url: string): EmbedMeta {
   let host = "";
   let path = "";
+  let search = "";
   try {
     const u = new URL(url);
     host = u.hostname.replace(/^www\./, "");
     path = u.pathname.replace(/\/$/, "");
+    search = u.search;
   } catch {
     return {
       provider: "generic",
@@ -27,7 +39,41 @@ export function detectEmbed(url: string): EmbedMeta {
     };
   }
 
-  if (host === "github.com" || host === "gist.github.com") {
+  // X / Twitter
+  if (host === "twitter.com" || host === "x.com" || host === "mobile.twitter.com") {
+    const parts = path.split("/").filter(Boolean);
+    const statusIdx = parts.indexOf("status");
+    const tweetId = statusIdx >= 0 ? parts[statusIdx + 1] : undefined;
+    if (tweetId && /^\d+$/.test(tweetId)) {
+      return {
+        provider: "tweet",
+        label: "Post",
+        accent: "#1d9bf0",
+        title: `@${parts[0] ?? "post"}`,
+        subtitle: `Status ${tweetId}`,
+        iframeSrc: `https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&theme=dark`,
+        iframeHeight: 420,
+      };
+    }
+  }
+
+  // GitHub Gist
+  if (host === "gist.github.com") {
+    const parts = path.split("/").filter(Boolean);
+    const user = parts[0] ?? "";
+    const gistId = parts[1] ?? "";
+    return {
+      provider: "gist",
+      label: "Gist",
+      accent: "#8b949e",
+      title: gistId ? `${user}/${gistId.slice(0, 8)}` : user || "Gist",
+      subtitle: host,
+      iframeSrc: gistId ? `https://gist.github.com/${user}/${gistId}.pibb` : undefined,
+      iframeHeight: 360,
+    };
+  }
+
+  if (host === "github.com") {
     const parts = path.split("/").filter(Boolean);
     const title = parts.length >= 2 ? `${parts[0]}/${parts[1]}` : parts[0] || "GitHub";
     const kind =
@@ -72,12 +118,18 @@ export function detectEmbed(url: string): EmbedMeta {
   }
 
   if (host === "figma.com") {
+    const embedUrl = new URL("https://www.figma.com/embed");
+    embedUrl.searchParams.set("embed_host", "notevault");
+    embedUrl.searchParams.set("url", url.split("?")[0] + search);
+    const name = decodeURIComponent(path.split("/").pop() || "Figma file");
     return {
       provider: "figma",
       label: "Figma",
       accent: "#a259ff",
-      title: decodeURIComponent(path.split("/").pop() || "Figma file"),
+      title: name,
       subtitle: host,
+      iframeSrc: embedUrl.toString(),
+      iframeHeight: 480,
     };
   }
 
