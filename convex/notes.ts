@@ -6,6 +6,8 @@ import type { MutationCtx } from "./_generated/server";
 import { blockValidator } from "./block";
 import { buildNoteSearchText } from "./lib/searchText";
 import { embedText } from "./lib/embed";
+import { propertyDefValidator, viewConfigValidator } from "./lib/properties";
+import { logActivity } from "./activity";
 import { snapshotNote } from "./versions";
 import {
   assertTags,
@@ -395,6 +397,9 @@ export const update = mutation({
     isLocked: v.optional(v.boolean()),
     status: v.optional(v.union(v.string(), v.null())),
     tags: v.optional(v.array(v.string())),
+    properties: v.optional(v.any()),
+    propertyDefs: v.optional(v.array(propertyDefValidator)),
+    viewConfig: v.optional(viewConfigValidator),
     pinned: v.optional(v.boolean()),
     archived: v.optional(v.boolean()),
     parentId: v.optional(v.union(v.id("notes"), v.null())),
@@ -440,6 +445,9 @@ export const update = mutation({
     if (patch.isLocked !== undefined) updates.isLocked = patch.isLocked;
     if (patch.status !== undefined) updates.status = patch.status ?? undefined;
     if (patch.tags !== undefined) updates.tags = assertTags(patch.tags);
+    if (patch.properties !== undefined) updates.properties = patch.properties;
+    if (patch.propertyDefs !== undefined) updates.propertyDefs = patch.propertyDefs;
+    if (patch.viewConfig !== undefined) updates.viewConfig = patch.viewConfig;
     if (patch.pinned !== undefined) updates.pinned = patch.pinned;
     if (patch.archived !== undefined) updates.archived = patch.archived;
     if (patch.parentId !== undefined) updates.parentId = patch.parentId ?? undefined;
@@ -493,6 +501,26 @@ export const update = mutation({
     }
 
     await ctx.db.patch(id, updates);
+
+    const activityBits: string[] = [];
+    if (patch.title !== undefined && patch.title !== existing.title) activityBits.push("renamed");
+    if (patch.status !== undefined && (patch.status ?? undefined) !== existing.status) {
+      activityBits.push("status");
+    }
+    if (patch.tags !== undefined) activityBits.push("tags");
+    if (patch.properties !== undefined) activityBits.push("properties");
+    if (patch.parentId !== undefined) activityBits.push("moved");
+    if (patch.propertyDefs !== undefined) activityBits.push("schema");
+    if (contentChanging && existing.kind !== "folder") activityBits.push("edited");
+    if (activityBits.length) {
+      await logActivity(ctx, {
+        ownerId: existing.ownerId,
+        noteId: id,
+        action: activityBits[0] === "edited" ? "edit" : activityBits[0]!,
+        summary: `${activityBits.join(", ")} · ${nextTitle || "Untitled"}`,
+      });
+    }
+
     return id;
   },
 });

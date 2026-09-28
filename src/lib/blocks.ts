@@ -24,7 +24,8 @@ export type BlockType =
   | "file"
   | "canvas"
   | "math"
-  | "synced";
+  | "synced"
+  | "query";
 
 export type CalloutVariant = "info" | "tip" | "warning";
 

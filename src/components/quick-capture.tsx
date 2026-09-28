@@ -17,10 +17,20 @@ type Props = {
   onCreated: (id: Id<"notes">) => void;
 };
 
+function localDailyKey(ms: number) {
+  const d = new Date(ms);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export function QuickCapture({ ownerId, open, onClose, onCreated }: Props) {
   const toast = useToast();
   const notes = useQuery(api.notes.list, { ownerId });
   const createNote = useMutation(api.notes.create);
+  const applyRules = useMutation(api.inboxRules.applyToNote);
+  const scheduleReminder = useMutation(api.reminders.schedule);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
@@ -46,9 +56,29 @@ export function QuickCapture({ ownerId, open, onClose, onCreated }: Props) {
         blocks,
       });
 
+      try {
+        const result = await applyRules({ ownerId, noteId: id });
+        if (result.remindInHours && result.remindInHours > 0) {
+          const remindAt = Date.now() + result.remindInHours * 3_600_000;
+          await scheduleReminder({
+            ownerId,
+            dailyKey: localDailyKey(remindAt),
+            remindAt,
+            noteId: id,
+            title: title.trim() || "Quick capture",
+          });
+        }
+        if (result.applied > 0) {
+          toast.success(`Captured · ${result.applied} rule${result.applied === 1 ? "" : "s"} applied`);
+        } else {
+          toast.success("Captured");
+        }
+      } catch {
+        toast.success("Captured");
+      }
+
       setTitle("");
       setBody("");
-      toast.success("Captured");
       onCreated(id);
       onClose();
     } catch {
@@ -90,7 +120,7 @@ export function QuickCapture({ ownerId, open, onClose, onCreated }: Props) {
 
             <div className="quick-capture-footer">
               <span className="text-xs text-muted">
-                Saves to {inbox ? "Inbox collection" : "vault root"}
+                Saves to {inbox ? "Inbox collection" : "vault root"} · inbox rules apply
               </span>
               <button
                 type="button"

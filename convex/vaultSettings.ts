@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireOwner } from "./lib/auth";
 
+const DEFAULT_HOME_WIDGETS = ["streak", "due", "pinned", "graph", "focus"];
+
 export const get = query({
   args: { ownerId: v.string() },
   handler: async (ctx, args) => {
@@ -21,6 +23,8 @@ export const get = query({
       autoDailyNote: false as boolean | undefined,
       dailyReminderTime: undefined as string | undefined,
       trashRetentionDays: 30 as number | undefined,
+      homeWidgets: DEFAULT_HOME_WIDGETS as string[] | undefined,
+      activeWorkspaceId: undefined as string | undefined,
       updatedAt: Date.now(),
     };
   },
@@ -35,6 +39,8 @@ export const update = mutation({
     autoDailyNote: v.optional(v.boolean()),
     dailyReminderTime: v.optional(v.union(v.string(), v.null())),
     trashRetentionDays: v.optional(v.number()),
+    homeWidgets: v.optional(v.array(v.string())),
+    activeWorkspaceId: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     await requireOwner(ctx, args.ownerId);
@@ -44,6 +50,7 @@ export const update = mutation({
       .first();
 
     const now = Date.now();
+    const allowed = new Set(DEFAULT_HOME_WIDGETS);
 
     if (existing) {
       const updates: Record<string, unknown> = { updatedAt: now };
@@ -59,9 +66,21 @@ export const update = mutation({
       if (args.trashRetentionDays !== undefined) {
         updates.trashRetentionDays = Math.max(0, Math.min(365, Math.floor(args.trashRetentionDays)));
       }
+      if (args.homeWidgets !== undefined) {
+        const cleaned = args.homeWidgets.filter((id) => allowed.has(id));
+        updates.homeWidgets = cleaned.length ? cleaned : DEFAULT_HOME_WIDGETS;
+      }
+      if (args.activeWorkspaceId !== undefined) {
+        updates.activeWorkspaceId = args.activeWorkspaceId ?? undefined;
+      }
       await ctx.db.patch(existing._id, updates);
       return existing._id;
     }
+
+    const homeWidgets =
+      args.homeWidgets !== undefined
+        ? args.homeWidgets.filter((id) => allowed.has(id))
+        : DEFAULT_HOME_WIDGETS;
 
     return await ctx.db.insert("vaultSettings", {
       ownerId: args.ownerId,
@@ -74,6 +93,8 @@ export const update = mutation({
         args.trashRetentionDays !== undefined
           ? Math.max(0, Math.min(365, Math.floor(args.trashRetentionDays)))
           : 30,
+      homeWidgets: homeWidgets.length ? homeWidgets : DEFAULT_HOME_WIDGETS,
+      activeWorkspaceId: args.activeWorkspaceId ?? undefined,
       updatedAt: now,
     });
   },

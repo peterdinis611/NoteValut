@@ -4,33 +4,61 @@ import { useMemo, useState } from "react";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { formatRelativeTime } from "@/lib/format";
 import { isFolder } from "@/lib/item-kinds";
+import { groupByProperty } from "@/lib/properties";
 import { KANBAN_COLUMNS } from "@/lib/status";
 
 type Props = {
   items: Doc<"notes">[];
   readOnly?: boolean;
+  groupBy?: string;
   onNavigate: (id: Id<"notes">) => void;
   onUpdateStatus: (id: Id<"notes">, status: string | null) => void;
+  onUpdateProperty?: (id: Id<"notes">, propertyId: string, value: string | null) => void;
 };
 
-export function CollectionKanban({ items, readOnly, onNavigate, onUpdateStatus }: Props) {
+export function CollectionKanban({
+  items,
+  readOnly,
+  groupBy = "status",
+  onNavigate,
+  onUpdateStatus,
+  onUpdateProperty,
+}: Props) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
-  const byStatus = useMemo(() => {
-    const map = new Map<string, Doc<"notes">[]>();
-    for (const col of KANBAN_COLUMNS) map.set(col.id, []);
-    for (const item of items) {
-      if (isFolder(item)) continue;
-      const key = item.status && KANBAN_COLUMNS.some((c) => c.id === item.status) ? item.status : "";
-      map.get(key)!.push(item);
+  const columns = useMemo(() => {
+    if (groupBy === "status") return KANBAN_COLUMNS.map((c) => ({ id: c.id, label: c.label }));
+    const grouped = groupByProperty(
+      items.filter((i) => !isFolder(i)),
+      groupBy,
+    );
+    const keys = [...grouped.keys()].sort((a, b) => a.localeCompare(b));
+    if (!keys.includes("")) keys.unshift("");
+    return keys.map((k) => ({ id: k, label: k || "Empty" }));
+  }, [items, groupBy]);
+
+  const byCol = useMemo(() => {
+    if (groupBy === "status") {
+      const map = new Map<string, Doc<"notes">[]>();
+      for (const col of KANBAN_COLUMNS) map.set(col.id, []);
+      for (const item of items) {
+        if (isFolder(item)) continue;
+        const key =
+          item.status && KANBAN_COLUMNS.some((c) => c.id === item.status) ? item.status : "";
+        map.get(key)!.push(item);
+      }
+      return map;
     }
-    return map;
-  }, [items]);
+    return groupByProperty(
+      items.filter((i) => !isFolder(i)),
+      groupBy,
+    );
+  }, [items, groupBy]);
 
   return (
     <div className="kanban-board">
-      {KANBAN_COLUMNS.map((col) => {
-        const cards = byStatus.get(col.id) ?? [];
+      {columns.map((col) => {
+        const cards = byCol.get(col.id) ?? [];
         return (
           <section
             key={col.id || "none"}
@@ -44,7 +72,8 @@ export function CollectionKanban({ items, readOnly, onNavigate, onUpdateStatus }
               e.preventDefault();
               const id = e.dataTransfer.getData("text/note-id") as Id<"notes">;
               if (!id) return;
-              onUpdateStatus(id, col.id || null);
+              if (groupBy === "status") onUpdateStatus(id, col.id || null);
+              else onUpdateProperty?.(id, groupBy, col.id || null);
               setDraggingId(null);
             }}
           >

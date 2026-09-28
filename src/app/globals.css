@@ -12089,3 +12089,332 @@ body {
   color: var(--foreground);
   font-size: 0.85rem;
 }
+
+/* Home widget config */
+.vault-widget-config {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
+}
+.vault-widget-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  color: var(--muted);
+  cursor: pointer;
+  text-align: left;
+  min-width: 7.5rem;
+}
+.vault-widget-chip span {
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--foreground);
+}
+.vault-widget-chip small {
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+.vault-widget-chip.is-on {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+}
+.vault-widget-pinned,
+.vault-widget-graph {
+  flex: 1 1 12rem;
+  min-width: 11rem;
+}
+.vault-widget-pinned-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+.vault-widget-pins {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.vault-widget-pins button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.25rem 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: left;
+}
+.vault-widget-pins button:hover { color: var(--accent); }
+
+.home-graph-snippet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.home-graph-svg {
+  width: 100%;
+  height: auto;
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--sidebar) 80%, transparent);
+}
+.home-graph-edge {
+  stroke: color-mix(in srgb, var(--accent) 35%, var(--border));
+  stroke-width: 1;
+}
+.home-graph-node circle {
+  fill: color-mix(in srgb, var(--panel) 90%, var(--accent));
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.home-graph-node text {
+  font-size: 8px;
+  fill: var(--foreground);
+  pointer-events: none;
+}
+.home-graph-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.home-graph-legend button {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0.15rem 0;
+  text-align: left;
+  min-width: 0;
+}
+.home-graph-open,
+.home-graph-empty .vault-section-link {
+  align-self: flex-start;
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+}
+.home-graph-empty {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* Database 2.0 — query block, AI, activity, view config */
+.nv-query-block {
+  margin: 0.5rem 0;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  overflow: hidden;
+}
+.nv-query-input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  padding: 0.55rem 0.75rem;
+  outline: none;
+}
+.nv-query-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.nv-query-count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.nv-query-empty {
+  margin: 0;
+  padding: 0.5rem 0.75rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.nv-query-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.4rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.nv-query-list button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 0.4rem 0.4rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.nv-query-list button:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.nv-query-list em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.ai-vault-panel,
+.activity-feed-panel {
+  max-width: 28rem;
+  width: min(28rem, 94vw);
+  max-height: min(80vh, 40rem);
+  display: flex;
+  flex-direction: column;
+}
+.ai-vault-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0 1.1rem 0.6rem;
+}
+.ai-vault-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 1.1rem 0.75rem;
+}
+.ai-vault-form textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 4.5rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--border);
+  background: var(--sidebar);
+  color: inherit;
+  font: inherit;
+  padding: 0.65rem 0.75rem;
+}
+.ai-vault-answer {
+  flex: 1;
+  min-height: 0;
+  margin: 0 1.1rem 1.1rem;
+  padding: 0.75rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--sidebar) 70%, transparent);
+  overflow: auto;
+}
+.ai-vault-answer pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font: inherit;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.ai-vault-cites {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.ai-vault-cites button {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.2rem 0;
+}
+.activity-feed-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 1.1rem 1.1rem;
+}
+.activity-feed-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.activity-feed-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.7rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--sidebar) 65%, transparent);
+}
+.activity-feed-summary {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+.activity-feed-meta {
+  margin: 0.25rem 0 0;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.activity-feed-action {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 650;
+}
+
+.db-view-config {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.db-view-config label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  min-width: 9rem;
+}
+
+.settings-inbox-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.settings-inbox-form .settings-input,
+.settings-inbox-form .settings-select {
+  flex: 1 1 10rem;
+  min-width: 8rem;
+}

@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { buildNoteSearchText } from "./lib/searchText";
 import { embedText } from "./lib/embed";
+import { logActivity } from "./activity";
 
 export const MAX_VERSIONS = 20;
 
@@ -120,6 +121,13 @@ export const restore = mutation({
       searchText,
       embedding: embedText(searchText),
       updatedAt: Date.now(),
+    });
+
+    await logActivity(ctx, {
+      ownerId: note.ownerId,
+      noteId: args.noteId,
+      action: "restore",
+      summary: `Restored “${version.title || "Untitled"}” from history`,
     });
 
     return args.noteId;

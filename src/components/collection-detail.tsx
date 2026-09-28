@@ -24,6 +24,13 @@ import { getLabelColor, LABEL_COLORS } from "@/lib/colors";
 import { formatRelativeTime } from "@/lib/format";
 import { isFolder } from "@/lib/item-kinds";
 import { STATUS_OPTIONS } from "@/lib/status";
+import {
+  applyViewConfig,
+  defaultPropertyDefs,
+  type PropertyDef,
+  type PropertyMap,
+  type ViewConfig,
+} from "@/lib/properties";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { PAGE_TEMPLATES } from "@/lib/templates";
 import { useVaultAccess } from "@/context/vault-access";
@@ -31,6 +38,7 @@ import { VaultEditor } from "@/editor";
 import { CollectionKanban } from "./collection-kanban";
 import { IconPicker } from "./icon-picker";
 import { CoverBanner } from "./cover-banner";
+import { CollectionPropertySchema } from "./page-properties";
 import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
 
@@ -71,6 +79,13 @@ export function CollectionDetail({
   const readOnly = globalReadOnly || !canUpdate || !!folder.isLocked;
   const label = getLabelColor(folder.color);
   const viewMode = folder.viewMode ?? "grid";
+  const propertyDefs = (folder.propertyDefs as PropertyDef[] | undefined) ?? defaultPropertyDefs();
+  const viewConfig = folder.viewConfig as ViewConfig | undefined;
+
+  const viewItems = useMemo(() => {
+    if (!children) return undefined;
+    return applyViewConfig(children, viewConfig);
+  }, [children, viewConfig]);
 
   useEffect(() => {
     setFolderBlocks(
@@ -302,16 +317,16 @@ export function CollectionDetail({
               </div>
             )}
 
-            {children === undefined ? (
+            {viewItems === undefined ? (
               <p className="text-muted">Loading…</p>
-            ) : children.length === 0 ? (
+            ) : viewItems.length === 0 ? (
               <div className="folder-empty">
                 <FolderOpen className="size-10 text-muted" />
                 <p>Empty collection</p>
               </div>
             ) : viewMode === "grid" ? (
               <div className="folder-grid">
-                {children.map((child) => (
+                {viewItems.map((child) => (
                   <ChildCard
                     key={child._id}
                     child={child}
@@ -323,7 +338,7 @@ export function CollectionDetail({
               </div>
             ) : viewMode === "gallery" ? (
               <div className="collection-gallery">
-                {children.map((child) => (
+                {viewItems.map((child) => (
                   <GalleryCard
                     key={child._id}
                     child={child}
@@ -335,21 +350,32 @@ export function CollectionDetail({
               </div>
             ) : viewMode === "kanban" ? (
               <CollectionKanban
-                items={children}
+                items={viewItems}
                 readOnly={readOnly}
+                groupBy={viewConfig?.groupBy ?? "status"}
                 onNavigate={onNavigate}
                 onUpdateStatus={(id, status) => void updateNote({ id, status })}
+                onUpdateProperty={(id, propertyId, value) =>
+                  void updateNote({
+                    id,
+                    properties: {
+                      ...((viewItems.find((c) => c._id === id)?.properties as PropertyMap) ?? {}),
+                      [propertyId]: value,
+                    },
+                  })
+                }
               />
             ) : viewMode === "table" ? (
               <CollectionTable
-                items={children}
+                items={viewItems}
+                propertyDefs={propertyDefs}
                 readOnly={readOnly}
                 onNavigate={onNavigate}
                 onUpdate={(id, patch) => void updateNote({ id, ...patch })}
               />
             ) : (
               <div className="collection-list">
-                {children.map((child) => (
+                {viewItems.map((child) => (
                   <div key={child._id} className="collection-list-row-wrap">
                     <button
                       type="button"
@@ -388,6 +414,70 @@ export function CollectionDetail({
 
         {tab === "settings" && (
           <div className="collection-panel">
+            <CollectionPropertySchema
+              folderId={folder._id}
+              defs={folder.propertyDefs as PropertyDef[] | undefined}
+              readOnly={readOnly}
+            />
+
+            <SettingRow label="Group / sort (views)">
+              <div className="db-view-config">
+                <label>
+                  Group by
+                  <select
+                    className="share-select"
+                    value={viewConfig?.groupBy ?? "status"}
+                    disabled={readOnly}
+                    onChange={(e) =>
+                      void updateNote({
+                        id: folder._id,
+                        viewConfig: {
+                          ...(viewConfig ?? {}),
+                          groupBy: e.target.value,
+                        },
+                      })
+                    }
+                  >
+                    <option value="status">Status</option>
+                    {propertyDefs
+                      .filter((d) => d.id !== "status")
+                      .map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label>
+                  Sort
+                  <select
+                    className="share-select"
+                    value={viewConfig?.sorts?.[0]?.builtin ?? "updated"}
+                    disabled={readOnly}
+                    onChange={(e) =>
+                      void updateNote({
+                        id: folder._id,
+                        viewConfig: {
+                          ...(viewConfig ?? {}),
+                          sorts: [
+                            {
+                              builtin: e.target.value as "updated" | "title" | "status" | "pinned",
+                              dir: "desc",
+                            },
+                          ],
+                        },
+                      })
+                    }
+                  >
+                    <option value="updated">Last edited</option>
+                    <option value="title">Name</option>
+                    <option value="status">Status</option>
+                    <option value="pinned">Pinned</option>
+                  </select>
+                </label>
+              </div>
+            </SettingRow>
+
             <SettingRow label="Sort contents by">
               <select
                 className="share-select"
@@ -605,20 +695,28 @@ function GalleryCard({
 
 function CollectionTable({
   items,
+  propertyDefs,
   readOnly,
   onNavigate,
   onUpdate,
 }: {
   items: Doc<"notes">[];
+  propertyDefs: PropertyDef[];
   readOnly?: boolean;
   onNavigate: (id: Id<"notes">) => void;
   onUpdate: (
     id: Id<"notes">,
-    patch: { status?: string | null; tags?: string[]; pinned?: boolean },
+    patch: {
+      status?: string | null;
+      tags?: string[];
+      pinned?: boolean;
+      properties?: PropertyMap;
+    },
   ) => void;
 }) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [tagFilter, setTagFilter] = useState("");
+  const extraDefs = propertyDefs.filter((d) => d.id !== "status" && d.id !== "tags");
 
   const tags = useMemo(() => {
     const set = new Set<string>();
@@ -677,65 +775,98 @@ function CollectionTable({
             <tr>
               <th>Name</th>
               <th>Status</th>
+              {extraDefs.map((d) => (
+                <th key={d.id}>{d.name}</th>
+              ))}
               <th>Tags</th>
               <th>Updated</th>
               <th>Star</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((item) => (
-              <tr key={item._id}>
-                <td>
-                  <button
-                    type="button"
-                    className="db-table-name"
-                    onClick={() => onNavigate(item._id)}
-                  >
-                    <span>{isFolder(item) ? "🗂️" : item.icon}</span>
-                    <span>{item.title || "Untitled"}</span>
-                  </button>
-                </td>
-                <td>
-                  <select
-                    className="db-table-select"
-                    value={item.status ?? ""}
-                    disabled={readOnly || isFolder(item)}
-                    onChange={(e) => onUpdate(item._id, { status: e.target.value || null })}
-                  >
-                    {STATUS_OPTIONS.map((s) => (
-                      <option key={s || "none"} value={s}>
-                        {s || "—"}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td className="db-table-tags">
-                  {(item.tags ?? []).slice(0, 3).map((t) => (
+            {filtered.map((item) => {
+              const props = (item.properties ?? {}) as PropertyMap;
+              return (
+                <tr key={item._id}>
+                  <td>
                     <button
-                      key={t}
                       type="button"
-                      className="db-tag"
-                      title={`Filter by #${t}`}
-                      onClick={() => setTagFilter(t)}
+                      className="db-table-name"
+                      onClick={() => onNavigate(item._id)}
                     >
-                      {t}
+                      <span>{isFolder(item) ? "🗂️" : item.icon}</span>
+                      <span>{item.title || "Untitled"}</span>
                     </button>
+                  </td>
+                  <td>
+                    <select
+                      className="db-table-select"
+                      value={item.status ?? ""}
+                      disabled={readOnly || isFolder(item)}
+                      onChange={(e) => onUpdate(item._id, { status: e.target.value || null })}
+                    >
+                      {STATUS_OPTIONS.map((s) => (
+                        <option key={s || "none"} value={s}>
+                          {s || "—"}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  {extraDefs.map((d) => (
+                    <td key={d.id}>
+                      {d.type === "select" ? (
+                        <select
+                          className="db-table-select"
+                          value={String(props[d.id] ?? "")}
+                          disabled={readOnly || isFolder(item)}
+                          onChange={(e) =>
+                            onUpdate(item._id, {
+                              properties: { ...props, [d.id]: e.target.value || null },
+                            })
+                          }
+                        >
+                          <option value="">—</option>
+                          {(d.options ?? []).map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="db-table-muted">
+                          {props[d.id] == null ? "—" : String(props[d.id])}
+                        </span>
+                      )}
+                    </td>
                   ))}
-                </td>
-                <td className="db-table-muted">{formatRelativeTime(item.updatedAt)}</td>
-                <td>
-                  <button
-                    type="button"
-                    className={`db-star ${item.pinned ? "is-on" : ""}`}
-                    disabled={readOnly}
-                    aria-label="Toggle star"
-                    onClick={() => onUpdate(item._id, { pinned: !item.pinned })}
-                  >
-                    {item.pinned ? "★" : "☆"}
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  <td className="db-table-tags">
+                    {(item.tags ?? []).slice(0, 3).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        className="db-tag"
+                        title={`Filter by #${t}`}
+                        onClick={() => setTagFilter(t)}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </td>
+                  <td className="db-table-muted">{formatRelativeTime(item.updatedAt)}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className={`db-star ${item.pinned ? "is-on" : ""}`}
+                      disabled={readOnly}
+                      aria-label="Toggle star"
+                      onClick={() => onUpdate(item._id, { pinned: !item.pinned })}
+                    >
+                      {item.pinned ? "★" : "☆"}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

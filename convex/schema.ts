@@ -1,10 +1,12 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { blockValidator } from "./block";
+import { propertyDefValidator, viewConfigValidator } from "./lib/properties";
 
 export default defineSchema({
   notes: defineTable({
     ownerId: v.string(),
+    workspaceId: v.optional(v.string()),
     title: v.string(),
     content: v.string(),
     blocks: v.optional(v.array(blockValidator)),
@@ -13,7 +15,6 @@ export default defineSchema({
     coverColor: v.optional(v.string()),
     coverImage: v.optional(v.string()),
     parentId: v.optional(v.id("notes")),
-    /** Manual sidebar order among siblings (lower = higher in list) */
     sortOrder: v.optional(v.number()),
     kind: v.optional(v.union(v.literal("page"), v.literal("folder"))),
     color: v.optional(v.string()),
@@ -30,20 +31,18 @@ export default defineSchema({
     sortMode: v.optional(v.union(v.literal("updated"), v.literal("name"), v.literal("kind"))),
     defaultTemplateId: v.optional(v.string()),
     isLocked: v.optional(v.boolean()),
-    /** Optional status for database-style views */
     status: v.optional(v.string()),
+    propertyDefs: v.optional(v.array(propertyDefValidator)),
+    properties: v.optional(v.any()),
+    viewConfig: v.optional(viewConfigValidator),
     pinned: v.boolean(),
     archived: v.boolean(),
     trashed: v.optional(v.boolean()),
     trashedAt: v.optional(v.number()),
     tags: v.array(v.string()),
-    /** YYYY-MM-DD when this note is a daily note */
     dailyKey: v.optional(v.string()),
-    /** Denormalized full-text field for Convex searchIndex */
     searchText: v.optional(v.string()),
-    /** Fixed-dim embedding for vector semantic search */
     embedding: v.optional(v.array(v.float64())),
-    /** Optional page-scoped Google Font / CSS font */
     fontFamily: v.optional(v.string()),
     fontUrl: v.optional(v.string()),
     updatedAt: v.number(),
@@ -52,6 +51,7 @@ export default defineSchema({
     .index("by_owner_updated", ["ownerId", "updatedAt"])
     .index("by_parent", ["parentId"])
     .index("by_owner_daily", ["ownerId", "dailyKey"])
+    .index("by_workspace", ["workspaceId"])
     .searchIndex("search_body", {
       searchField: "searchText",
       filterFields: ["ownerId"],
@@ -70,7 +70,6 @@ export default defineSchema({
     blocks: v.optional(v.array(blockValidator)),
     tags: v.array(v.string()),
     createdAt: v.number(),
-    /** Optional named snapshot label */
     label: v.optional(v.string()),
   })
     .index("by_note", ["noteId", "createdAt"])
@@ -80,16 +79,27 @@ export default defineSchema({
     ownerId: v.string(),
     sharingEnabled: v.boolean(),
     publicReadonly: v.boolean(),
-    /** Optional full-bleed background on vault home */
     backgroundImage: v.optional(v.string()),
-    /** Auto-open/create today’s daily note on vault load */
     autoDailyNote: v.optional(v.boolean()),
-    /** Default daily reminder time "HH:mm" local — used with recurrence */
     dailyReminderTime: v.optional(v.string()),
-    /** Auto-purge trash after N days (0 = never) */
     trashRetentionDays: v.optional(v.number()),
+    homeWidgets: v.optional(v.array(v.string())),
+    activeWorkspaceId: v.optional(v.string()),
     updatedAt: v.number(),
   }).index("by_owner", ["ownerId"]),
+
+  workspaces: defineTable({
+    ownerId: v.string(),
+    workspaceId: v.string(),
+    name: v.string(),
+    kind: v.union(v.literal("personal"), v.literal("team")),
+    orgId: v.optional(v.string()),
+    role: v.optional(v.union(v.literal("owner"), v.literal("admin"), v.literal("member"))),
+    updatedAt: v.number(),
+  })
+    .index("by_owner", ["ownerId"])
+    .index("by_workspace", ["workspaceId"])
+    .index("by_org", ["orgId"]),
 
   shares: defineTable({
     ownerId: v.string(),
@@ -100,9 +110,7 @@ export default defineSchema({
     label: v.string(),
     enabled: v.boolean(),
     createdAt: v.number(),
-    /** Optional expiry (ms epoch). */
     expiresAt: v.optional(v.number()),
-    /** SHA-256 hex of `token:password` when password-protected. */
     passwordHash: v.optional(v.string()),
     viewCount: v.optional(v.number()),
     lastViewedAt: v.optional(v.number()),
@@ -110,7 +118,6 @@ export default defineSchema({
     .index("by_token", ["token"])
     .index("by_owner", ["ownerId"]),
 
-  /** Calendar / daily reminders — fired while the app is open via client listener. */
   reminders: defineTable({
     ownerId: v.string(),
     dailyKey: v.string(),
@@ -126,7 +133,6 @@ export default defineSchema({
     jobId: v.optional(v.id("_scheduled_functions")),
     createdAt: v.number(),
     firedAt: v.optional(v.number()),
-    /** Recurrence: none | daily | weekly */
     recurrence: v.optional(
       v.union(v.literal("none"), v.literal("daily"), v.literal("weekly")),
     ),
@@ -135,7 +141,6 @@ export default defineSchema({
     .index("by_owner_daily", ["ownerId", "dailyKey"])
     .index("by_owner_remindAt", ["ownerId", "remindAt"]),
 
-  /** Web Push subscriptions for calendar reminders when the app is closed. */
   pushSubscriptions: defineTable({
     ownerId: v.string(),
     endpoint: v.string(),
@@ -148,7 +153,6 @@ export default defineSchema({
     .index("by_owner", ["ownerId"])
     .index("by_endpoint", ["endpoint"]),
 
-  /** Cached Google Fonts catalog (public metadata, refreshed daily). */
   googleFontsCache: defineTable({
     key: v.string(),
     fetchedAt: v.number(),
@@ -163,14 +167,12 @@ export default defineSchema({
     ),
   }).index("by_key", ["key"]),
 
-  /** Fixed-window rate limits (e.g. googleFonts.ensure). */
   rateLimits: defineTable({
     key: v.string(),
     windowStart: v.number(),
     count: v.number(),
   }).index("by_key", ["key"]),
 
-  /** Notion-style public published pages (SEO + custom slug). */
   publications: defineTable({
     ownerId: v.string(),
     noteId: v.id("notes"),
@@ -186,7 +188,6 @@ export default defineSchema({
     .index("by_owner", ["ownerId"])
     .index("by_note", ["noteId"]),
 
-  /** Synced / transcluded block content shared across pages. */
   syncedBlocks: defineTable({
     ownerId: v.string(),
     key: v.string(),
@@ -197,7 +198,6 @@ export default defineSchema({
     .index("by_owner_key", ["ownerId", "key"])
     .index("by_owner", ["ownerId"]),
 
-  /** Page comments with optional @mentions. */
   comments: defineTable({
     ownerId: v.string(),
     noteId: v.id("notes"),
@@ -213,7 +213,6 @@ export default defineSchema({
     .index("by_note", ["noteId", "createdAt"])
     .index("by_owner", ["ownerId"]),
 
-  /** Writing streak / focus stats (per owner). */
   vaultStats: defineTable({
     ownerId: v.string(),
     currentStreak: v.number(),
@@ -223,7 +222,6 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_owner", ["ownerId"]),
 
-  /** Ephemeral presence for shared write sessions (cursors / who is here). */
   presence: defineTable({
     shareToken: v.string(),
     sessionId: v.string(),
@@ -237,4 +235,46 @@ export default defineSchema({
   })
     .index("by_token", ["shareToken"])
     .index("by_token_session", ["shareToken", "sessionId"]),
+
+  savedQueries: defineTable({
+    ownerId: v.string(),
+    folderId: v.optional(v.id("notes")),
+    name: v.string(),
+    query: v.string(),
+    viewMode: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_owner", ["ownerId"])
+    .index("by_folder", ["folderId"]),
+
+  activityLog: defineTable({
+    ownerId: v.string(),
+    actorId: v.string(),
+    actorName: v.optional(v.string()),
+    noteId: v.optional(v.id("notes")),
+    action: v.string(),
+    summary: v.string(),
+    meta: v.optional(v.any()),
+    createdAt: v.number(),
+  })
+    .index("by_owner_time", ["ownerId", "createdAt"])
+    .index("by_note", ["noteId", "createdAt"]),
+
+  inboxRules: defineTable({
+    ownerId: v.string(),
+    enabled: v.boolean(),
+    name: v.string(),
+    matchType: v.union(
+      v.literal("always"),
+      v.literal("titleContains"),
+      v.literal("hasTag"),
+    ),
+    matchValue: v.optional(v.string()),
+    addTags: v.optional(v.array(v.string())),
+    setStatus: v.optional(v.string()),
+    moveToFolderId: v.optional(v.id("notes")),
+    remindInHours: v.optional(v.number()),
+    sortOrder: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index("by_owner", ["ownerId"]),
 });

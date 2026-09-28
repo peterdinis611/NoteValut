@@ -28,6 +28,8 @@ import { KeyboardCheatSheet } from "./keyboard-cheat-sheet";
 import { LottieStatus } from "./lottie-status";
 import { MobileBottomNav } from "./mobile-bottom-nav";
 import { NoteEditor } from "./note-editor";
+import { ActivityFeed } from "./activity-feed";
+import { AiVaultPanel } from "./ai-vault-panel";
 import { QuickCapture, QuickCaptureFab } from "./quick-capture";
 import { ReminderListener } from "./reminder-listener";
 import { ScrollToTop } from "./scroll-to-top";
@@ -83,9 +85,17 @@ export function NoteVaultApp() {
   const [noteShareSignal, setNoteShareSignal] = useState(0);
   const [noteMoveSignal, setNoteMoveSignal] = useState(0);
   const [notePublishSignal, setNotePublishSignal] = useState(0);
+  const [noteDuplicateSignal, setNoteDuplicateSignal] = useState(0);
+  const [notePinSignal, setNotePinSignal] = useState(0);
+  const [notePinBlockSignal, setNotePinBlockSignal] = useState(0);
+  const [noteRemindSignal, setNoteRemindSignal] = useState(0);
+  const [noteArchiveSignal, setNoteArchiveSignal] = useState(0);
+  const [noteTrashSignal, setNoteTrashSignal] = useState(0);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [inboxTriageOpen, setInboxTriageOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
   const tourBooted = useRef(false);
 
   useEffect(() => {
@@ -329,6 +339,22 @@ export function NoteVaultApp() {
         run: () => setQuickCaptureOpen(true),
       },
       {
+        id: "vault-ai",
+        label: "Vault AI",
+        hint: "Chat, summarize, suggest links",
+        icon: CommandIcons.ai,
+        keywords: ["ai", "chat", "summary", "semantic", "rag", "links"],
+        run: () => setAiOpen(true),
+      },
+      {
+        id: "activity-feed",
+        label: "Activity feed",
+        hint: "Recent edits and restores",
+        icon: CommandIcons.activity,
+        keywords: ["history", "log", "audit", "changes"],
+        run: () => setActivityOpen(true),
+      },
+      {
         id: "tags",
         label: "Browse tags",
         icon: CommandIcons.tags,
@@ -465,6 +491,54 @@ export function NoteVaultApp() {
               keywords: ["share", "invite", "link"],
               run: () => setNoteShareSignal((n) => n + 1),
             } satisfies CommandAction,
+            {
+              id: "duplicate",
+              label: "Duplicate page",
+              hint: "Create a copy",
+              icon: CommandIcons.duplicate,
+              keywords: ["copy", "clone", "duplicate"],
+              run: () => setNoteDuplicateSignal((n) => n + 1),
+            } satisfies CommandAction,
+            {
+              id: "pin-note",
+              label: "Pin / unpin page",
+              hint: "Favorites",
+              icon: CommandIcons.pin,
+              keywords: ["favorite", "star", "pin"],
+              run: () => setNotePinSignal((n) => n + 1),
+            } satisfies CommandAction,
+            {
+              id: "pin-block",
+              label: "Pin focused block",
+              hint: "Bookmark on this page",
+              icon: CommandIcons.bookmark,
+              keywords: ["bookmark", "pin", "block"],
+              run: () => setNotePinBlockSignal((n) => n + 1),
+            } satisfies CommandAction,
+            {
+              id: "remind",
+              label: "Remind in 1 hour",
+              hint: "Schedule a reminder",
+              icon: CommandIcons.remind,
+              keywords: ["reminder", "notify", "alarm", "later"],
+              run: () => setNoteRemindSignal((n) => n + 1),
+            } satisfies CommandAction,
+            {
+              id: "archive-note",
+              label: "Archive / unarchive",
+              hint: "File this page away",
+              icon: CommandIcons.archive,
+              keywords: ["archive", "file"],
+              run: () => setNoteArchiveSignal((n) => n + 1),
+            } satisfies CommandAction,
+            {
+              id: "trash-note",
+              label: "Move to trash",
+              hint: "Delete page",
+              icon: CommandIcons.trash,
+              keywords: ["delete", "trash", "bin", "remove"],
+              run: () => setNoteTrashSignal((n) => n + 1),
+            } satisfies CommandAction,
           ]
         : []),
     ],
@@ -479,6 +553,7 @@ export function NoteVaultApp() {
       openCalendar,
       openDueInbox,
       activeId,
+      toggleFocusMode,
     ],
   );
 
@@ -658,6 +733,12 @@ export function NoteVaultApp() {
                 openShareSignal={noteShareSignal}
                 openMoveSignal={noteMoveSignal}
                 openPublishSignal={notePublishSignal}
+                openDuplicateSignal={noteDuplicateSignal}
+                openPinNoteSignal={notePinSignal}
+                openPinBlockSignal={notePinBlockSignal}
+                openRemindSignal={noteRemindSignal}
+                openArchiveSignal={noteArchiveSignal}
+                openTrashSignal={noteTrashSignal}
               />
             ) : (
               <VaultHome
@@ -740,6 +821,19 @@ export function NoteVaultApp() {
             onClose={() => setInboxTriageOpen(false)}
             onNavigate={selectNote}
             onOpenToday={() => void openToday()}
+          />
+          <AiVaultPanel
+            ownerId={ownerId}
+            open={aiOpen}
+            onClose={() => setAiOpen(false)}
+            noteId={activeId}
+            onNavigate={selectNote}
+          />
+          <ActivityFeed
+            ownerId={ownerId}
+            open={activityOpen}
+            onClose={() => setActivityOpen(false)}
+            onNavigate={selectNote}
           />
         </main>
       </div>

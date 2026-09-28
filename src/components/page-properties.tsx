@@ -1,29 +1,63 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Tag, X } from "lucide-react";
 import { KeyboardEvent, useMemo, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
+import {
+  defaultPropertyDefs,
+  formatPropValue,
+  type PropertyDef,
+  type PropertyMap,
+  type PropertyValue,
+} from "@/lib/properties";
 import { addTagToList, normalizeTag, removeTagFromList, tagKey } from "@/lib/tags";
+import { STATUS_OPTIONS } from "@/lib/status";
 import { useToast } from "./toast";
 
 type Props = {
+  note: Doc<"notes">;
   tags: string[];
   updatedAt: number;
   ownerId?: string;
   readOnly?: boolean;
-  onChange: (tags: string[]) => void;
+  onChangeTags: (tags: string[]) => void;
+  onChangeStatus?: (status: string | null) => void;
+  onChangeProperties?: (properties: PropertyMap) => void;
   onOpenTag?: (tag: string) => void;
 };
 
-export function PageProperties({ tags, updatedAt, ownerId, readOnly, onChange, onOpenTag }: Props) {
+export function PageProperties({
+  note,
+  tags,
+  updatedAt,
+  ownerId,
+  readOnly,
+  onChangeTags,
+  onChangeStatus,
+  onChangeProperties,
+  onOpenTag,
+}: Props) {
   const toast = useToast();
   const [draft, setDraft] = useState("");
   const [editingTags, setEditingTags] = useState(false);
   const [suggestIndex, setSuggestIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const parent = useQuery(
+    api.notes.get,
+    note.parentId ? { id: note.parentId } : "skip",
+  );
   const vaultTags = useQuery(api.notes.listTags, ownerId && editingTags ? { ownerId } : "skip");
+
+  const defs: PropertyDef[] = useMemo(() => {
+    const fromFolder = (parent?.propertyDefs as PropertyDef[] | undefined) ?? [];
+    if (fromFolder.length) return fromFolder;
+    return defaultPropertyDefs();
+  }, [parent?.propertyDefs]);
+
+  const properties = (note.properties ?? {}) as PropertyMap;
 
   const suggestions = useMemo(() => {
     const q = tagKey(normalizeTag(draft));
@@ -42,7 +76,7 @@ export function PageProperties({ tags, updatedAt, ownerId, readOnly, onChange, o
       setDraft("");
       return;
     }
-    onChange(result.tags);
+    onChangeTags(result.tags);
     setDraft("");
     setSuggestIndex(0);
   }
@@ -65,12 +99,21 @@ export function PageProperties({ tags, updatedAt, ownerId, readOnly, onChange, o
       }
     }
     if (e.key === "Backspace" && !draft && tags.length) {
-      onChange(tags.slice(0, -1));
+      onChangeTags(tags.slice(0, -1));
     }
     if (e.key === "Escape") {
       if (suggestions.length) setDraft("");
       else setEditingTags(false);
     }
+  }
+
+  function setProp(def: PropertyDef, value: PropertyValue) {
+    if (def.id === "status") {
+      onChangeStatus?.(value ? String(value) : null);
+      return;
+    }
+    const next = { ...properties, [def.id]: value };
+    onChangeProperties?.(next);
   }
 
   return (
@@ -85,6 +128,80 @@ export function PageProperties({ tags, updatedAt, ownerId, readOnly, onChange, o
           })}
         </span>
       </div>
+
+      {defs.map((def) => {
+        if (def.id === "tags") return null;
+        const raw =
+          def.id === "status" ? note.status || "" : properties[def.id];
+
+        return (
+          <div key={def.id} className="page-property-row">
+            <span className="page-property-label">{def.name}</span>
+            <div className="page-property-value">
+              {readOnly ? (
+                <span className="text-sm">{formatPropValue(def, raw)}</span>
+              ) : def.type === "select" || def.id === "status" ? (
+                <select
+                  className="page-prop-input"
+                  value={String(raw ?? "")}
+                  onChange={(e) => setProp(def, e.target.value || null)}
+                >
+                  <option value="">—</option>
+                  {(def.options ?? (def.id === "status" ? [...STATUS_OPTIONS].filter(Boolean) : [])).map(
+                    (opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ),
+                  )}
+                </select>
+              ) : def.type === "checkbox" ? (
+                <input
+                  type="checkbox"
+                  checked={Boolean(raw)}
+                  onChange={(e) => setProp(def, e.target.checked)}
+                />
+              ) : def.type === "number" ? (
+                <input
+                  type="number"
+                  className="page-prop-input"
+                  value={raw == null ? "" : String(raw)}
+                  onChange={(e) =>
+                    setProp(def, e.target.value === "" ? null : Number(e.target.value))
+                  }
+                />
+              ) : def.type === "date" ? (
+                <input
+                  type="date"
+                  className="page-prop-input"
+                  value={
+                    typeof raw === "number"
+                      ? new Date(raw).toISOString().slice(0, 10)
+                      : typeof raw === "string"
+                        ? raw.slice(0, 10)
+                        : ""
+                  }
+                  onChange={(e) =>
+                    setProp(
+                      def,
+                      e.target.value ? new Date(e.target.value).getTime() : null,
+                    )
+                  }
+                />
+              ) : def.type === "formula" ? (
+                <span className="text-sm text-muted">{formatPropValue(def, raw)}</span>
+              ) : (
+                <input
+                  className="page-prop-input"
+                  value={raw == null ? "" : String(raw)}
+                  placeholder={def.type}
+                  onChange={(e) => setProp(def, e.target.value || null)}
+                />
+              )}
+            </div>
+          </div>
+        );
+      })}
 
       <div className="page-property-row">
         <span className="page-property-label">
@@ -111,7 +228,7 @@ export function PageProperties({ tags, updatedAt, ownerId, readOnly, onChange, o
                 aria-label={`Remove ${tag}`}
                 className="page-tag-remove"
                 disabled={readOnly}
-                onClick={() => onChange(removeTagFromList(tags, tag))}
+                onClick={() => onChangeTags(removeTagFromList(tags, tag))}
               >
                 <X className="size-2.5" />
               </button>
@@ -131,7 +248,6 @@ export function PageProperties({ tags, updatedAt, ownerId, readOnly, onChange, o
                 }}
                 onKeyDown={onKeyDown}
                 onBlur={() => {
-                  // Delay so suggestion click can fire
                   window.setTimeout(() => {
                     addTag(draft);
                     setEditingTags(false);
@@ -168,6 +284,67 @@ export function PageProperties({ tags, updatedAt, ownerId, readOnly, onChange, o
           ) : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Schema editor for collection property defs */
+export function CollectionPropertySchema({
+  folderId,
+  defs,
+  readOnly,
+}: {
+  folderId: Id<"notes">;
+  defs: PropertyDef[] | undefined;
+  readOnly?: boolean;
+}) {
+  const updateNote = useMutation(api.notes.update);
+  const toast = useToast();
+  const list = defs?.length ? defs : defaultPropertyDefs();
+
+  if (readOnly) return null;
+
+  return (
+    <div className="db-schema">
+      <p className="db-schema-label">Properties</p>
+      <ul className="db-schema-list">
+        {list.map((d) => (
+          <li key={d.id}>
+            <strong>{d.name}</strong>
+            <span>{d.type}</span>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        className="settings-btn settings-btn-ghost"
+        onClick={() => {
+          const name = window.prompt("Property name");
+          if (!name?.trim()) return;
+          const type = window.prompt(
+            "Type: text | number | select | date | checkbox | url",
+            "select",
+          );
+          const next = [
+            ...list,
+            {
+              id: crypto.randomUUID().slice(0, 8),
+              name: name.trim(),
+              type: (type?.trim() || "text") as PropertyDef["type"],
+              options:
+                type === "select" || !type
+                  ? ["Option A", "Option B"]
+                  : undefined,
+            },
+          ];
+          void updateNote({ id: folderId, propertyDefs: next }).then(
+            () => toast.success("Property added"),
+            () => toast.error("Couldn’t add property"),
+          );
+        }}
+      >
+        Add property
+      </button>
     </div>
   );
 }

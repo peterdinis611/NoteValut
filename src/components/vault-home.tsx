@@ -7,9 +7,11 @@ import {
   Flame,
   FolderOpen,
   ImageIcon,
+  LayoutGrid,
   LayoutTemplate,
   Loader2,
   Network,
+  Pin,
   Plus,
   Share2,
   Upload,
@@ -24,11 +26,19 @@ import { collectDueTasks } from "@/lib/due-tasks";
 import { useCustomTemplates } from "@/hooks/use-custom-templates";
 import { useVaultUpload } from "@/hooks/use-vault-upload";
 import { formatRelativeTime } from "@/lib/format";
+import {
+  HOME_WIDGET_IDS,
+  HOME_WIDGET_META,
+  normalizeHomeWidgets,
+  toggleHomeWidget,
+  type HomeWidgetId,
+} from "@/lib/home-widgets";
 import { isFolder } from "@/lib/item-kinds";
 import { playFolioPageMotion } from "@/lib/folio-page-motion";
 import { PAGE_TEMPLATES } from "@/lib/templates";
 import { DailyCalendar } from "./daily-calendar";
 import { FocusModeToggle } from "./focus-mode-toggle";
+import { HomeGraphSnippet } from "./home-graph-snippet";
 import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
 
@@ -61,6 +71,7 @@ export function VaultHome({
 }: Props) {
   const toast = useToast();
   const [shareOpen, setShareOpen] = useState(false);
+  const [widgetsOpen, setWidgetsOpen] = useState(false);
   const [bgUploading, setBgUploading] = useState(false);
   const bgFileRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -139,6 +150,29 @@ export function VaultHome({
     () => notes?.reduce((sum, n) => sum + (isFolder(n) ? 0 : countOverdueTasks(n.blocks)), 0) ?? 0,
     [notes],
   );
+  const pinned = useMemo(
+    () =>
+      notes
+        ?.filter((n) => !isFolder(n) && n.pinned && !n.trashed && !n.archived)
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .slice(0, 8) ?? [],
+    [notes],
+  );
+  const enabledWidgets = useMemo(
+    () => normalizeHomeWidgets(vaultSettings?.homeWidgets),
+    [vaultSettings?.homeWidgets],
+  );
+
+  async function setWidgetEnabled(id: HomeWidgetId) {
+    const next = toggleHomeWidget(enabledWidgets, id);
+    try {
+      await updateSettings({ ownerId, homeWidgets: next });
+    } catch {
+      toast.error("Couldn’t update widgets");
+    }
+  }
+
+  const showWidget = (id: HomeWidgetId) => enabledWidgets.includes(id);
 
   return (
     <div
@@ -268,68 +302,102 @@ export function VaultHome({
 
       <div className="vault-home-body">
         <section className="vault-section vault-widgets nv-folio-await">
-          <div className="vault-widget-row">
-            <div className="vault-widget vault-widget-streak">
-              <Flame className="size-4 text-accent" />
-              <div>
-                <p className="vault-widget-label">Writing streak</p>
-                <p className="vault-widget-value">
-                  {streak?.currentStreak ?? 0}
-                  <span className="vault-widget-unit">
-                    {(streak?.currentStreak ?? 0) === 1 ? " day" : " days"}
-                  </span>
-                </p>
-                {(streak?.longestStreak ?? 0) > 0 && (
-                  <p className="vault-widget-hint">
-                    Best {streak!.longestStreak} · keep showing up
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="vault-widget vault-widget-focus">
-              <FocusModeToggle className="vault-focus-cta" label="Focus mode" />
-              <p className="vault-widget-hint">Hide chrome — write only</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="vault-section nv-folio-await">
           <div className="vault-section-head">
-            <h2 className="vault-section-title">Continue</h2>
+            <h2 className="vault-section-title">Widgets</h2>
+            <button
+              type="button"
+              className="vault-section-link"
+              onClick={() => setWidgetsOpen((v) => !v)}
+              aria-expanded={widgetsOpen}
+            >
+              <LayoutGrid className="size-3.5" />
+              Configure
+            </button>
           </div>
-          {recent.length === 0 ? (
-            <p className="vault-empty">No entries yet — start with a blank page or a template.</p>
-          ) : (
-            <ul className="vault-row-list">
-              {recent.map((entry) => {
-                const tasks = countOpenTasks(entry.blocks);
+          {widgetsOpen && (
+            <div className="vault-widget-config" role="group" aria-label="Home widgets">
+              {HOME_WIDGET_IDS.map((id) => {
+                const on = enabledWidgets.includes(id);
                 return (
-                  <li key={entry._id}>
-                    <button
-                      type="button"
-                      className="vault-row"
-                      onClick={() => onNavigate(entry._id)}
-                    >
-                      <span className="vault-row-icon">{entry.icon}</span>
-                      <span className="vault-row-main">
-                        <span className="vault-row-title">{entry.title || "Untitled"}</span>
-                        {tasks > 0 && (
-                          <span className="vault-row-hint">
-                            {plural(tasks, "open task", "open tasks")}
-                          </span>
-                        )}
-                      </span>
-                      <span className="vault-row-meta">{formatRelativeTime(entry.updatedAt)}</span>
-                      <ArrowRight className="vault-row-arrow size-3.5" />
-                    </button>
-                  </li>
+                  <button
+                    key={id}
+                    type="button"
+                    className={`vault-widget-chip ${on ? "is-on" : ""}`}
+                    aria-pressed={on}
+                    onClick={() => void setWidgetEnabled(id)}
+                  >
+                    <span>{HOME_WIDGET_META[id].label}</span>
+                    <small>{HOME_WIDGET_META[id].description}</small>
+                  </button>
                 );
               })}
-            </ul>
+            </div>
           )}
+          <div className="vault-widget-row">
+            {showWidget("streak") && (
+              <div className="vault-widget vault-widget-streak">
+                <Flame className="size-4 text-accent" />
+                <div>
+                  <p className="vault-widget-label">Writing streak</p>
+                  <p className="vault-widget-value">
+                    {streak?.currentStreak ?? 0}
+                    <span className="vault-widget-unit">
+                      {(streak?.currentStreak ?? 0) === 1 ? " day" : " days"}
+                    </span>
+                  </p>
+                  {(streak?.longestStreak ?? 0) > 0 && (
+                    <p className="vault-widget-hint">
+                      Best {streak!.longestStreak} · keep showing up
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+            {showWidget("focus") && (
+              <div className="vault-widget vault-widget-focus">
+                <FocusModeToggle className="vault-focus-cta" label="Focus mode" />
+                <p className="vault-widget-hint">Hide chrome — write only</p>
+              </div>
+            )}
+            {showWidget("pinned") && (
+              <div className="vault-widget vault-widget-pinned">
+                <div className="vault-widget-pinned-head">
+                  <Pin className="size-3.5 text-accent" />
+                  <p className="vault-widget-label">Pinned</p>
+                </div>
+                {pinned.length === 0 ? (
+                  <p className="vault-widget-hint">Star pages to pin them here</p>
+                ) : (
+                  <ul className="vault-widget-pins">
+                    {pinned.map((p) => (
+                      <li key={p._id}>
+                        <button type="button" onClick={() => onNavigate(p._id)}>
+                          <span>{p.icon}</span>
+                          <span className="truncate">{p.title || "Untitled"}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            {showWidget("graph") && (
+              <div className="vault-widget vault-widget-graph">
+                <div className="vault-widget-pinned-head">
+                  <Network className="size-3.5 text-accent" />
+                  <p className="vault-widget-label">Graph</p>
+                </div>
+                <HomeGraphSnippet
+                  notes={notes}
+                  onNavigate={onNavigate}
+                  onOpenFull={onOpenGraph}
+                />
+              </div>
+            )}
+          </div>
         </section>
 
-        {dueTasks.length > 0 && (
+        {showWidget("due") && dueTasks.length > 0 && (
           <section className="vault-section nv-folio-await">
             <div className="vault-section-head">
               <h2 className="vault-section-title">
@@ -372,6 +440,42 @@ export function VaultHome({
             </ul>
           </section>
         )}
+
+        <section className="vault-section nv-folio-await">
+          <div className="vault-section-head">
+            <h2 className="vault-section-title">Continue</h2>
+          </div>
+          {recent.length === 0 ? (
+            <p className="vault-empty">No entries yet — start with a blank page or a template.</p>
+          ) : (
+            <ul className="vault-row-list">
+              {recent.map((entry) => {
+                const tasks = countOpenTasks(entry.blocks);
+                return (
+                  <li key={entry._id}>
+                    <button
+                      type="button"
+                      className="vault-row"
+                      onClick={() => onNavigate(entry._id)}
+                    >
+                      <span className="vault-row-icon">{entry.icon}</span>
+                      <span className="vault-row-main">
+                        <span className="vault-row-title">{entry.title || "Untitled"}</span>
+                        {tasks > 0 && (
+                          <span className="vault-row-hint">
+                            {plural(tasks, "open task", "open tasks")}
+                          </span>
+                        )}
+                      </span>
+                      <span className="vault-row-meta">{formatRelativeTime(entry.updatedAt)}</span>
+                      <ArrowRight className="vault-row-arrow size-3.5" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
 
         {openTaskEntries.length > 0 && (
           <section className="vault-section nv-folio-await">

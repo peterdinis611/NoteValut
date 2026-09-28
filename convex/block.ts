@@ -30,6 +30,7 @@ export const blockValidator = v.object({
     v.literal("canvas"),
     v.literal("math"),
     v.literal("synced"),
+    v.literal("query"),
   ),
   text: v.string(),
   checked: v.optional(v.boolean()),

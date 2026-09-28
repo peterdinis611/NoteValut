@@ -3,10 +3,13 @@
 import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useAction, useQuery } from "convex/react";
 import {
+  Activity,
   Archive,
+  Bookmark,
   CalendarClock,
   CalendarDays,
   Clock,
+  Copy,
   Download,
   Focus,
   FolderOpen,
@@ -17,13 +20,16 @@ import {
   LayoutTemplate,
   Network,
   Paperclip,
+  Pin,
   Plus,
   Search,
   Settings2,
   Share2,
+  Sparkles,
   StickyNote,
   Sun,
   Tag,
+  Trash2,
   Upload,
   Zap,
 } from "lucide-react";
@@ -532,4 +538,11 @@ export const CommandIcons = {
   templates: <LayoutTemplate className="size-3.5" />,
   inbox: <Inbox className="size-3.5" />,
   focus: <Focus className="size-3.5" />,
+  pin: <Pin className="size-3.5" />,
+  bookmark: <Bookmark className="size-3.5" />,
+  duplicate: <Copy className="size-3.5" />,
+  remind: <Clock className="size-3.5" />,
+  trash: <Trash2 className="size-3.5" />,
+  ai: <Sparkles className="size-3.5" />,
+  activity: <Activity className="size-3.5" />,
 };

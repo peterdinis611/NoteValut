@@ -40,6 +40,11 @@ import { listDefaultTemplates } from "@/lib/templates";
 import { parseVaultBackupFile } from "@/lib/vault-backup";
 import { applyThemePack, downloadThemePack, parseThemePack } from "@/lib/theme-pack";
 import { CssVarsEditor } from "./css-vars-editor";
+import {
+  SettingsInboxRules,
+  SettingsSavedQueries,
+  SettingsWorkspaces,
+} from "./settings-db20";
 import { TemplatePreviewDialog, type PreviewableTemplate } from "./template-preview-dialog";
 import { TemplateEditorDialog } from "./template-editor-dialog";
 import { GoogleFontsPicker } from "./google-fonts-picker";
@@ -669,6 +674,10 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
           </button>
         </div>
       </section>
+
+      <SettingsWorkspaces ownerId={ownerId} />
+      <SettingsInboxRules ownerId={ownerId} />
+      <SettingsSavedQueries ownerId={ownerId} />
 
       <section className="settings-section">
         <div className="settings-section-head">

@@ -52,6 +52,12 @@ type Props = {
   openShareSignal?: number;
   openMoveSignal?: number;
   openPublishSignal?: number;
+  openDuplicateSignal?: number;
+  openPinNoteSignal?: number;
+  openPinBlockSignal?: number;
+  openRemindSignal?: number;
+  openArchiveSignal?: number;
+  openTrashSignal?: number;
 };
 
 export function NoteEditor({
@@ -66,6 +72,12 @@ export function NoteEditor({
   openShareSignal = 0,
   openMoveSignal = 0,
   openPublishSignal = 0,
+  openDuplicateSignal = 0,
+  openPinNoteSignal = 0,
+  openPinBlockSignal = 0,
+  openRemindSignal = 0,
+  openArchiveSignal = 0,
+  openTrashSignal = 0,
 }: Props) {
   const toast = useToast();
   const { readOnly: globalReadOnly, role, ability } = useVaultAccess();
@@ -77,6 +89,7 @@ export function NoteEditor({
   const updateNote = useMutation(api.notes.update);
   const trashNote = useMutation(api.notes.trash);
   const duplicateNote = useMutation(api.notes.duplicate);
+  const scheduleReminder = useMutation(api.reminders.schedule);
   const recordActivity = useMutation(api.vaultStats.recordActivity);
 
   const [title, setTitle] = useState("");
@@ -105,6 +118,75 @@ export function NoteEditor({
   useEffect(() => {
     if (openPublishSignal > 0) setPublishOpen(true);
   }, [openPublishSignal]);
+
+  useEffect(() => {
+    if (openDuplicateSignal > 0) void handleDuplicate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- signal-driven
+  }, [openDuplicateSignal]);
+
+  useEffect(() => {
+    if (openPinNoteSignal > 0 && note && !isFolder(note)) void handleTogglePin();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openPinNoteSignal]);
+
+  useEffect(() => {
+    if (openPinBlockSignal <= 0 || readOnly) return;
+    const active = document.activeElement;
+    const el =
+      (active instanceof Element ? active.closest("[data-block-id]") : null) ??
+      document.querySelector(".nv-row-focused [data-block-id]");
+    const blockId = el?.getAttribute("data-block-id");
+    if (!blockId) {
+      toast.error("Focus a block first");
+      return;
+    }
+    const nextBlocks = blocks.map((b) =>
+      b.id === blockId ? { ...b, pinned: !b.pinned } : b,
+    );
+    setBlocks(nextBlocks);
+    scheduleSave({ blocks: nextBlocks });
+    toast.success(nextBlocks.find((b) => b.id === blockId)?.pinned ? "Block pinned" : "Block unpinned");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openPinBlockSignal]);
+
+  useEffect(() => {
+    if (openRemindSignal <= 0 || !note) return;
+    const remindAt = Date.now() + 60 * 60 * 1000;
+    const dailyKey = new Date(remindAt).toISOString().slice(0, 10);
+    void scheduleReminder({
+      ownerId,
+      dailyKey,
+      remindAt,
+      noteId,
+      title: note.title || "Untitled",
+      recurrence: "none",
+    }).then(
+      () => toast.success("Reminder in 1 hour"),
+      () => toast.error("Couldn’t schedule reminder"),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openRemindSignal]);
+
+  useEffect(() => {
+    if (openArchiveSignal <= 0 || !note || isFolder(note)) return;
+    void updateNote({ id: note._id, archived: !note.archived }).then(
+      () => toast.success(note.archived ? "Unarchived" : "Archived"),
+      () => toast.error("Couldn’t update archive"),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openArchiveSignal]);
+
+  useEffect(() => {
+    if (openTrashSignal <= 0) return;
+    void trashNote({ id: noteId }).then(
+      () => {
+        toast.success("Moved to trash");
+        onNavigate(null);
+      },
+      () => toast.error("Couldn’t trash page"),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openTrashSignal]);
 
   useEffect(() => {
     if (!note || isFolder(note)) {
@@ -606,14 +688,21 @@ export function NoteEditor({
             />
 
             <PageProperties
+              note={note}
               tags={tags}
               updatedAt={note.updatedAt}
               ownerId={ownerId}
               readOnly={readOnly}
               onOpenTag={onOpenTag}
-              onChange={(next) => {
+              onChangeTags={(next) => {
                 setTags(next);
                 scheduleSave({ tags: next });
+              }}
+              onChangeStatus={(status) => {
+                void updateNote({ id: noteId, status });
+              }}
+              onChangeProperties={(properties) => {
+                void updateNote({ id: noteId, properties });
               }}
             />
 

@@ -68,7 +68,17 @@ export const reindexOwner = mutation({
 
 export const getNotesByIds = internalQuery({
   args: { ids: v.array(v.id("notes")) },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<
+    Array<{
+      _id: Id<"notes">;
+      title: string;
+      icon: string;
+      tags: string[];
+      updatedAt: number;
+      status?: string;
+      preview: string;
+    }>
+  > => {
     const out: Array<{
       _id: Id<"notes">;
       title: string;
@@ -121,9 +131,9 @@ export const search = action({
 
     const ids = hits.map((h) => h._id);
     const notes = await ctx.runQuery(internal.embeddings.getNotesByIds, { ids });
-    const scoreById = new Map(hits.map((h) => [h._id, h._score]));
+    const scoreById = new Map(hits.map((h) => [h._id, h._score] as const));
     return notes
-      .map((n) => ({ ...n, score: scoreById.get(n._id) ?? 0 }))
+      .map((n): SearchHit => ({ ...n, score: scoreById.get(n._id) ?? 0 }))
       .sort((a, b) => b.score - a.score);
   },
 });

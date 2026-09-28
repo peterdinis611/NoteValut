@@ -18,9 +18,31 @@ const GROUPS: Group[] = [
     ],
   },
   {
+    title: "Navigation",
+    items: [
+      { keys: "⌘ K → Home", action: "Vault overview" },
+      { keys: "⌘ K → Today", action: "Open daily note" },
+      { keys: "⌘ K → Calendar", action: "Month calendar" },
+      { keys: "⌘ K → Due", action: "Due inbox" },
+      { keys: "⌘ K → Graph", action: "Page graph" },
+      { keys: "⌘ K → Focus", action: "Toggle focus mode" },
+    ],
+  },
+  {
+    title: "Page actions (⌘K)",
+    items: [
+      { keys: "Duplicate", action: "Copy current page" },
+      { keys: "Pin page", action: "Add to favorites" },
+      { keys: "Pin block", action: "Bookmark focused block" },
+      { keys: "Remind…", action: "Schedule a reminder" },
+      { keys: "Archive / Trash", action: "File or delete page" },
+      { keys: "Publish / Share", action: "Public page or link" },
+    ],
+  },
+  {
     title: "Editor",
     items: [
-      { keys: "/", action: "Slash commands" },
+      { keys: "/", action: "Slash commands (+ templates)" },
       { keys: "[[", action: "Mention / link page" },
       { keys: "⌘ B / I / E", action: "Bold / italic / code" },
       { keys: "⌘ ⇧ H", action: "Highlight" },
@@ -83,37 +105,37 @@ export function KeyboardCheatSheet({ open, onClose }: Props) {
           aria-modal="true"
           aria-label="Keyboard shortcuts"
         >
-            <header className="shortcuts-head">
-              <div className="shortcuts-title-row">
-                <Keyboard className="size-4 text-accent" />
-                <h2 className="shortcuts-title">
-                  Keyboard <em>shortcuts</em>
-                </h2>
-              </div>
-              <button
-                type="button"
-                className="shortcuts-close"
-                aria-label="Close"
-                onClick={onClose}
-              >
-                <X className="size-4" />
-              </button>
-            </header>
-            <div className="shortcuts-body note-scroll">
-              {GROUPS.map((group) => (
-                <section key={group.title} className="shortcuts-group">
-                  <h3 className="shortcuts-group-title">{group.title}</h3>
-                  <ul className="shortcuts-list">
-                    {group.items.map((item) => (
-                      <li key={item.keys} className="shortcuts-row">
-                        <span className="shortcuts-action">{item.action}</span>
-                        <kbd className="shortcuts-keys">{item.keys}</kbd>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))}
+          <header className="shortcuts-head">
+            <div className="shortcuts-title-row">
+              <Keyboard className="size-4 text-accent" />
+              <h2 className="shortcuts-title">
+                Keyboard <em>shortcuts</em>
+              </h2>
             </div>
+            <button
+              type="button"
+              className="shortcuts-close"
+              aria-label="Close"
+              onClick={onClose}
+            >
+              <X className="size-4" />
+            </button>
+          </header>
+          <div className="shortcuts-body note-scroll">
+            {GROUPS.map((group) => (
+              <section key={group.title} className="shortcuts-group">
+                <h3 className="shortcuts-group-title">{group.title}</h3>
+                <ul className="shortcuts-list">
+                  {group.items.map((item) => (
+                    <li key={`${group.title}-${item.keys}-${item.action}`} className="shortcuts-row">
+                      <span className="shortcuts-action">{item.action}</span>
+                      <kbd className="shortcuts-keys">{item.keys}</kbd>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
         </div>
       </div>
     </AnimePresence>,

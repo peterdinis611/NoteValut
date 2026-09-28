@@ -8,15 +8,19 @@
  * @module
  */
 
+import type * as activity from "../activity.js";
+import type * as ai from "../ai.js";
 import type * as block from "../block.js";
 import type * as blog from "../blog.js";
 import type * as comments from "../comments.js";
 import type * as embeddings from "../embeddings.js";
 import type * as files from "../files.js";
 import type * as googleFonts from "../googleFonts.js";
+import type * as inboxRules from "../inboxRules.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_embed from "../lib/embed.js";
 import type * as lib_googleFonts from "../lib/googleFonts.js";
+import type * as lib_properties from "../lib/properties.js";
 import type * as lib_rateLimit from "../lib/rateLimit.js";
 import type * as lib_searchText from "../lib/searchText.js";
 import type * as notes from "../notes.js";
@@ -24,6 +28,7 @@ import type * as presence from "../presence.js";
 import type * as publications from "../publications.js";
 import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
+import type * as queries from "../queries.js";
 import type * as reminders from "../reminders.js";
 import type * as shares from "../shares.js";
 import type * as syncedBlocks from "../syncedBlocks.js";
@@ -31,6 +36,7 @@ import type * as tags from "../tags.js";
 import type * as vaultSettings from "../vaultSettings.js";
 import type * as vaultStats from "../vaultStats.js";
 import type * as versions from "../versions.js";
+import type * as workspaces from "../workspaces.js";
 
 import type {
   ApiFromModules,
@@ -39,15 +45,19 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  activity: typeof activity;
+  ai: typeof ai;
   block: typeof block;
   blog: typeof blog;
   comments: typeof comments;
   embeddings: typeof embeddings;
   files: typeof files;
   googleFonts: typeof googleFonts;
+  inboxRules: typeof inboxRules;
   "lib/auth": typeof lib_auth;
   "lib/embed": typeof lib_embed;
   "lib/googleFonts": typeof lib_googleFonts;
+  "lib/properties": typeof lib_properties;
   "lib/rateLimit": typeof lib_rateLimit;
   "lib/searchText": typeof lib_searchText;
   notes: typeof notes;
@@ -55,6 +65,7 @@ declare const fullApi: ApiFromModules<{
   publications: typeof publications;
   push: typeof push;
   pushActions: typeof pushActions;
+  queries: typeof queries;
   reminders: typeof reminders;
   shares: typeof shares;
   syncedBlocks: typeof syncedBlocks;
@@ -62,6 +73,7 @@ declare const fullApi: ApiFromModules<{
   vaultSettings: typeof vaultSettings;
   vaultStats: typeof vaultStats;
   versions: typeof versions;
+  workspaces: typeof workspaces;
 }>;
 
 /**
