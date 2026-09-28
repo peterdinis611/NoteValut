@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { AnimePresence } from "@/lib/anime-ui";
+import { MarkdownView } from "./markdown-view";
 import { useToast } from "./toast";
 
 type Props = {
@@ -123,7 +124,7 @@ export function AiVaultPanel({ ownerId, open, onClose, noteId, onNavigate }: Pro
 
           {answer && (
             <div className="ai-vault-answer note-scroll">
-              <pre>{answer}</pre>
+              <MarkdownView streaming>{answer}</MarkdownView>
               {cites.length > 0 && (
                 <ul className="ai-vault-cites">
                   {cites.map((c) => (

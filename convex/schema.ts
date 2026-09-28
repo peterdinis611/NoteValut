@@ -26,6 +26,7 @@ export default defineSchema({
         v.literal("table"),
         v.literal("gallery"),
         v.literal("kanban"),
+        v.literal("calendar"),
       ),
     ),
     sortMode: v.optional(v.union(v.literal("updated"), v.literal("name"), v.literal("kind"))),
@@ -206,12 +207,14 @@ export default defineSchema({
     body: v.string(),
     mentionIds: v.optional(v.array(v.string())),
     blockId: v.optional(v.string()),
+    parentId: v.optional(v.id("comments")),
     resolved: v.optional(v.boolean()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_note", ["noteId", "createdAt"])
-    .index("by_owner", ["ownerId"]),
+    .index("by_owner", ["ownerId"])
+    .index("by_parent", ["parentId"]),
 
   vaultStats: defineTable({
     ownerId: v.string(),
@@ -235,6 +238,15 @@ export default defineSchema({
   })
     .index("by_token", ["shareToken"])
     .index("by_token_session", ["shareToken", "sessionId"]),
+
+  /** Per-note ACL override for org workspaces: who may edit this note. */
+  noteAcl: defineTable({
+    noteId: v.id("notes"),
+    workspaceId: v.string(),
+    /** Minimum role required to edit: owner > admin > member */
+    minEditRole: v.union(v.literal("owner"), v.literal("admin"), v.literal("member")),
+    updatedAt: v.number(),
+  }).index("by_note", ["noteId"]),
 
   savedQueries: defineTable({
     ownerId: v.string(),
@@ -275,6 +287,33 @@ export default defineSchema({
     moveToFolderId: v.optional(v.id("notes")),
     remindInHours: v.optional(v.number()),
     sortOrder: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index("by_owner", ["ownerId"]),
+
+  notifications: defineTable({
+    ownerId: v.string(),
+    recipientId: v.string(),
+    kind: v.union(v.literal("mention"), v.literal("comment"), v.literal("system")),
+    noteId: v.optional(v.id("notes")),
+    commentId: v.optional(v.id("comments")),
+    title: v.string(),
+    body: v.optional(v.string()),
+    read: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_recipient", ["recipientId", "createdAt"])
+    .index("by_recipient_unread", ["recipientId", "read"]),
+
+  recurringTemplates: defineTable({
+    ownerId: v.string(),
+    name: v.string(),
+    titleTemplate: v.string(),
+    weekday: v.number(),
+    enabled: v.boolean(),
+    parentId: v.optional(v.id("notes")),
+    blocks: v.optional(v.array(blockValidator)),
+    tags: v.optional(v.array(v.string())),
+    lastFiredKey: v.optional(v.string()),
     updatedAt: v.number(),
   }).index("by_owner", ["ownerId"]),
 });

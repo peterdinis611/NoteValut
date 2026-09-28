@@ -344,8 +344,15 @@ export const create = mutation({
       folderBlocks: folderBlocks ? [...folderBlocks] : undefined,
     });
 
+    const settings = await ctx.db
+      .query("vaultSettings")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .first();
+    const workspaceId = settings?.activeWorkspaceId ?? args.ownerId;
+
     return await ctx.db.insert("notes", {
       ownerId: args.ownerId,
+      workspaceId,
       title,
       content,
       blocks,
@@ -390,6 +397,7 @@ export const update = mutation({
         v.literal("table"),
         v.literal("gallery"),
         v.literal("kanban"),
+        v.literal("calendar"),
       ),
     ),
     sortMode: v.optional(v.union(v.literal("updated"), v.literal("name"), v.literal("kind"))),
@@ -496,7 +504,16 @@ export const update = mutation({
         patch.tags === undefined || JSON.stringify(patch.tags) === JSON.stringify(existing.tags);
 
       if (!(titleSame && contentSame && blocksSame && tagsSame)) {
-        await snapshotNote(ctx, id);
+        const versionId = await snapshotNote(ctx, id);
+        if (versionId) {
+          await logActivity(ctx, {
+            ownerId: existing.ownerId,
+            noteId: id,
+            action: "edit",
+            summary: `edited · ${nextTitle || "Untitled"}`,
+            meta: { versionId },
+          });
+        }
       }
     }
 
@@ -511,14 +528,34 @@ export const update = mutation({
     if (patch.properties !== undefined) activityBits.push("properties");
     if (patch.parentId !== undefined) activityBits.push("moved");
     if (patch.propertyDefs !== undefined) activityBits.push("schema");
-    if (contentChanging && existing.kind !== "folder") activityBits.push("edited");
-    if (activityBits.length) {
+    // content edits already logged with versionId above
+    const contentLogged =
+      contentChanging &&
+      existing.kind !== "folder" &&
+      !(
+        (patch.title === undefined || patch.title === existing.title) &&
+        (patch.content === undefined || patch.content === existing.content) &&
+        (patch.blocks === undefined ||
+          JSON.stringify(patch.blocks) === JSON.stringify(existing.blocks ?? [])) &&
+        (patch.tags === undefined || JSON.stringify(patch.tags) === JSON.stringify(existing.tags))
+      );
+    if (activityBits.length && !contentLogged) {
       await logActivity(ctx, {
         ownerId: existing.ownerId,
         noteId: id,
-        action: activityBits[0] === "edited" ? "edit" : activityBits[0]!,
+        action: activityBits[0]!,
         summary: `${activityBits.join(", ")} · ${nextTitle || "Untitled"}`,
       });
+    } else if (activityBits.length && contentLogged && activityBits.some((b) => b !== "edited")) {
+      const nonEdit = activityBits.filter((b) => b !== "edited");
+      if (nonEdit.length) {
+        await logActivity(ctx, {
+          ownerId: existing.ownerId,
+          noteId: id,
+          action: nonEdit[0]!,
+          summary: `${nonEdit.join(", ")} · ${nextTitle || "Untitled"}`,
+        });
+      }
     }
 
     return id;
@@ -1025,6 +1062,7 @@ const importNoteValidator = v.object({
       v.literal("table"),
       v.literal("gallery"),
       v.literal("kanban"),
+      v.literal("calendar"),
     ),
   ),
   sortMode: v.optional(v.union(v.literal("updated"), v.literal("name"), v.literal("kind"))),

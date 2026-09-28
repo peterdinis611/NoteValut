@@ -134,3 +134,72 @@ export const applyToNote = mutation({
     return { applied, remindInHours, status, tags, parentId };
   },
 });
+
+/** Dry-run: show what would happen to a sample title/tags without mutating. */
+export const preview = query({
+  args: {
+    ownerId: v.string(),
+    title: v.string(),
+    tags: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const rules = (
+      await ctx.db
+        .query("inboxRules")
+        .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+        .collect()
+    )
+      .filter((r) => r.enabled)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+    let tags = [...(args.tags ?? [])];
+    let status: string | undefined;
+    let parentId: Id<"notes"> | undefined;
+    let remindInHours: number | undefined;
+    const matched: Array<{ id: string; name: string; effects: string[] }> = [];
+
+    for (const rule of rules) {
+      let match = false;
+      if (rule.matchType === "always") match = true;
+      else if (rule.matchType === "titleContains" && rule.matchValue) {
+        match = args.title.toLowerCase().includes(rule.matchValue.toLowerCase());
+      } else if (rule.matchType === "hasTag" && rule.matchValue) {
+        match = tags.some((t) => t.toLowerCase() === rule.matchValue!.toLowerCase());
+      }
+      if (!match) continue;
+      const effects: string[] = [];
+      if (rule.addTags?.length) {
+        for (const t of rule.addTags) {
+          if (!tags.some((x) => x.toLowerCase() === t.toLowerCase())) {
+            tags.push(t);
+            effects.push(`+tag ${t}`);
+          }
+        }
+      }
+      if (rule.setStatus !== undefined) {
+        status = rule.setStatus;
+        effects.push(`status → ${rule.setStatus || "(clear)"}`);
+      }
+      if (rule.moveToFolderId) {
+        parentId = rule.moveToFolderId;
+        const folder = await ctx.db.get(rule.moveToFolderId);
+        effects.push(`move → ${folder?.title || "collection"}`);
+      }
+      if (rule.remindInHours && rule.remindInHours > 0) {
+        remindInHours = rule.remindInHours;
+        effects.push(`remind in ${rule.remindInHours}h`);
+      }
+      matched.push({ id: rule._id, name: rule.name, effects });
+    }
+
+    return {
+      matched,
+      resulting: { tags, status, parentId, remindInHours },
+      summary:
+        matched.length === 0
+          ? "No rules would match — capture stays as-is."
+          : `${matched.length} rule${matched.length === 1 ? "" : "s"} would apply.`,
+    };
+  },
+});

@@ -5,14 +5,7 @@ import { CreateMenu, CreateMenuTrigger } from "@/components/create-menu";
 const meta = {
   title: "Components/CreateMenu",
   component: CreateMenu,
-  parameters: { layout: "padded" },
-  decorators: [
-    (Story) => (
-      <div className="relative h-80 w-72">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: { layout: "fullscreen" },
 } satisfies Meta<typeof CreateMenu>;
 
 export default meta;
@@ -24,6 +17,9 @@ export const Open: Story = {
     onClose: fn(),
     onCreateEntry: fn(),
     onCreateCollection: fn(),
+    onBrowseTemplates: fn(),
+    onQuickCapture: fn(),
+    onOpenToday: fn(),
   },
 };
 

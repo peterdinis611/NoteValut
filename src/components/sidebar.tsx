@@ -17,6 +17,7 @@ import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useMutation, useQuery } from "convex/react";
 import {
   Archive,
+  Bookmark,
   CalendarDays,
   ChevronDown,
   ChevronRight,
@@ -47,13 +48,14 @@ import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { AuthControls } from "./auth-controls";
 import { ConnectionStatus } from "./connection-status";
+import { NotificationsBell } from "./notifications-bell";
 import { CreateMenu } from "./create-menu";
 import { MoveDialog } from "./move-dialog";
 import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
 import { VirtualList } from "./virtual-list";
 
-type BrowseMode = "all" | "favorites" | "recent" | "collections" | "archive";
+type BrowseMode = "all" | "favorites" | "recent" | "collections" | "archive" | "queries";
 type DropPosition = "before" | "after" | "inside";
 type DropIntent = { overId: Id<"notes">; position: DropPosition } | null;
 
@@ -97,6 +99,9 @@ type Props = {
   onCreateCollection: (parentId?: Id<"notes">) => void;
   onQuickCapture: () => void;
   onBrowseTemplates?: () => void;
+  onOpenToday?: () => void;
+  onOpenGraph?: () => void;
+  onLinkDocuments?: () => void;
   /** Increment to open the vault share panel (e.g. from ⌘K). */
   openShareSignal?: number;
   slotRef?: Ref<HTMLDivElement>;
@@ -121,6 +126,9 @@ export function Sidebar({
   onCreateCollection,
   onQuickCapture,
   onBrowseTemplates,
+  onOpenToday,
+  onOpenGraph,
+  onLinkDocuments,
   openShareSignal = 0,
   slotRef,
 }: Props) {
@@ -148,6 +156,12 @@ export function Sidebar({
   const trashed = useQuery(api.notes.listTrashed, ownerId ? { ownerId } : "skip");
   const archived = useQuery(api.notes.listArchived, ownerId ? { ownerId } : "skip");
   const vaultSettings = useQuery(api.vaultSettings.get, ownerId ? { ownerId } : "skip");
+  const savedQueries = useQuery(api.queries.list, ownerId ? { ownerId } : "skip");
+  const [activeQuery, setActiveQuery] = useState<string | null>(null);
+  const queryHits = useQuery(
+    api.queries.run,
+    ownerId && activeQuery ? { ownerId, query: activeQuery, limit: 40 } : "skip",
+  );
   const trashRetentionDays = vaultSettings?.trashRetentionDays ?? 30;
 
   const updateNote = useMutation(api.notes.update);
@@ -436,6 +450,7 @@ export function Sidebar({
     { id: "favorites" as const, label: "Favorites", icon: Pin },
     { id: "recent" as const, label: "Recent", icon: Clock3 },
     { id: "collections" as const, label: "Folders", icon: FolderOpen },
+    { id: "queries" as const, label: "Saved", icon: Bookmark },
     { id: "archive" as const, label: "Archive", icon: Archive },
   ];
 
@@ -552,6 +567,10 @@ export function Sidebar({
               onCreateEntry={(templateId) => onCreateEntry(undefined, templateId)}
               onCreateCollection={() => onCreateCollection()}
               onBrowseTemplates={onBrowseTemplates}
+              onQuickCapture={onQuickCapture}
+              onOpenToday={onOpenToday}
+              onOpenGraph={onOpenGraph}
+              onLinkDocuments={onLinkDocuments}
             />
           </div>
 
@@ -706,6 +725,52 @@ export function Sidebar({
                   onTrash={handleTrash}
                 />
               )}
+            </SidebarSection>
+          ) : browse === "queries" ? (
+            <SidebarSection title="Saved searches">
+              {(savedQueries ?? []).length === 0 ? (
+                <EmptyHint text="Save queries in Settings → Saved searches (e.g. status:Todo)." />
+              ) : (
+                <ul className="sidebar-section-items">
+                  {(savedQueries ?? []).map((q) => (
+                    <li key={q._id}>
+                      <button
+                        type="button"
+                        className={`sidebar-link ${activeQuery === q.query ? "sidebar-link-active" : ""}`}
+                        onClick={() => setActiveQuery(q.query)}
+                      >
+                        <Bookmark className="size-3.5 shrink-0" />
+                        <span className="truncate">{q.name}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {activeQuery ? (
+                <div className="sidebar-query-results">
+                  <p className="sidebar-section-title">Results</p>
+                  {queryHits === undefined ? (
+                    <p className="sidebar-empty">Running…</p>
+                  ) : queryHits.length === 0 ? (
+                    <EmptyHint text="No matches." />
+                  ) : (
+                    <ul className="sidebar-section-items">
+                      {queryHits.map((hit) => (
+                        <li key={hit._id}>
+                          <button
+                            type="button"
+                            className={`sidebar-link ${hit._id === activeId ? "sidebar-link-active" : ""}`}
+                            onClick={() => onSelect(hit._id)}
+                          >
+                            <span aria-hidden>{hit.icon || "📝"}</span>
+                            <span className="truncate">{hit.title || "Untitled"}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : null}
             </SidebarSection>
           ) : browse === "archive" ? (
             <SidebarSection title="Archive">
@@ -933,6 +998,7 @@ export function Sidebar({
 
           <div className="sidebar-footer-user">
             <ConnectionStatus variant="rail" />
+            <NotificationsBell ownerId={ownerId} onNavigate={onSelect} />
             <AuthControls />
           </div>
         </div>

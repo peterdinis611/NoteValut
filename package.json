@@ -13,6 +13,8 @@
     "format": "biome format --write .",
     "check": "biome check --write .",
     "test": "playwright test --project=chromium",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
     "test:e2e": "playwright test --project=chromium",
     "test:e2e:all": "playwright test --project=chromium --project=firefox --project=webkit",
     "test:e2e:chromium": "playwright test --project=chromium",
@@ -50,6 +52,7 @@
     "@embedpdf/plugin-zoom": "^2.14.4",
     "@tanstack/db": "^0.6.16",
     "@tanstack/highlight": "^0.1.0",
+    "@tanstack/markdown": "^0.0.15",
     "@tanstack/react-db": "^0.1.94",
     "@tanstack/react-pacer": "^0.22.1",
     "@tanstack/react-virtual": "^3.14.6",
@@ -105,7 +108,9 @@
     "playwright": "^1.55.0",
     "storybook": "^10.5.7",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "^6.4.3",
+    "vitest": "^3.2.4"
   },
   "optionalDependencies": {
     "@tailwindcss/oxide-darwin-arm64": "^4.3.3",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { AtSign, Check, MessageSquare, Trash2 } from "lucide-react";
+import { AtSign, Check, MessageSquare, Reply, Trash2 } from "lucide-react";
 import { useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -13,6 +13,9 @@ type Props = {
   authorId: string;
   authorName: string;
   open?: boolean;
+  /** Focus comment thread on this block when set. */
+  blockId?: string | null;
+  onClearBlock?: () => void;
 };
 
 function parseMentions(body: string): string[] {
@@ -43,6 +46,8 @@ export function CommentsPanel({
   authorId,
   authorName,
   open = true,
+  blockId = null,
+  onClearBlock,
 }: Props) {
   const toast = useToast();
   const comments = useQuery(api.comments.listForNote, open ? { ownerId, noteId } : "skip");
@@ -53,6 +58,7 @@ export function CommentsPanel({
 
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
+  const [replyTo, setReplyTo] = useState<Id<"comments"> | null>(null);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -69,6 +75,18 @@ export function CommentsPanel({
       )
       .slice(0, 8);
   }, [people, mentionQuery]);
+
+  const roots = useMemo(() => (comments ?? []).filter((c) => !c.parentId), [comments]);
+  const repliesByParent = useMemo(() => {
+    const map = new Map<string, typeof roots>();
+    for (const c of comments ?? []) {
+      if (!c.parentId) continue;
+      const list = map.get(c.parentId) ?? [];
+      list.push(c);
+      map.set(c.parentId, list);
+    }
+    return map;
+  }, [comments]);
 
   if (!open) return null;
 
@@ -113,10 +131,14 @@ export function CommentsPanel({
         authorName,
         body: trimmed,
         mentionIds: parseMentions(trimmed),
+        blockId: blockId ?? undefined,
+        parentId: replyTo ?? undefined,
       });
       setBody("");
       setMentionQuery(null);
-      toast.success("Comment added");
+      setReplyTo(null);
+      onClearBlock?.();
+      toast.success(replyTo ? "Reply added" : "Comment added");
     } catch {
       toast.error("Couldn’t add comment");
     } finally {
@@ -159,7 +181,77 @@ export function CommentsPanel({
     }
   }
 
-  const list = comments ?? [];
+  function renderComment(c: (typeof roots)[number], depth = 0) {
+    const replies = repliesByParent.get(c._id) ?? [];
+    return (
+      <li
+        key={c._id}
+        className={`page-comments-item ${c.resolved ? "page-comments-item-resolved" : ""} ${
+          depth ? "page-comments-reply" : ""
+        }`}
+        data-block-thread={c.blockId || undefined}
+      >
+        <div className="page-comments-meta">
+          <strong>{c.authorName}</strong>
+          <time dateTime={new Date(c.createdAt).toISOString()}>
+            {new Date(c.createdAt).toLocaleString(undefined, {
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </time>
+          {c.blockId ? <span className="page-comments-badge">Block</span> : null}
+          {c.resolved && <span className="page-comments-badge">Resolved</span>}
+        </div>
+        <p className="page-comments-body">{highlightMentions(c.body)}</p>
+        {(c.mentionIds?.length ?? 0) > 0 && (
+          <p className="page-comments-tagged">
+            <AtSign className="size-3" />
+            {c.mentionIds!.map((m) => `@${m}`).join(" ")}
+          </p>
+        )}
+        <div className="page-comments-actions">
+          {depth === 0 ? (
+            <button
+              type="button"
+              className="page-comments-action"
+              onClick={() => {
+                setReplyTo(c._id);
+                textareaRef.current?.focus();
+              }}
+            >
+              <Reply className="size-3" />
+              Reply
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="page-comments-action"
+            onClick={() => void handleResolve(c._id, !c.resolved)}
+          >
+            <Check className="size-3" />
+            {c.resolved ? "Reopen" : "Resolve"}
+          </button>
+          <button
+            type="button"
+            className="page-comments-action page-comments-action-danger"
+            onClick={() => void handleRemove(c._id)}
+          >
+            <Trash2 className="size-3" />
+            Delete
+          </button>
+        </div>
+        {replies.length > 0 ? (
+          <ul className="page-comments-thread">{replies.map((r) => renderComment(r, depth + 1))}</ul>
+        ) : null}
+      </li>
+    );
+  }
+
+  const filteredRoots = blockId
+    ? roots.filter((c) => c.blockId === blockId || !c.blockId)
+    : roots;
 
   return (
     <section className="page-comments" aria-label="Comments">
@@ -168,64 +260,37 @@ export function CommentsPanel({
         <span>
           {comments === undefined
             ? "Comments"
-            : `${list.length} comment${list.length === 1 ? "" : "s"}`}
+            : `${(comments ?? []).length} comment${(comments ?? []).length === 1 ? "" : "s"}`}
         </span>
+        {blockId ? (
+          <button type="button" className="page-comments-action" onClick={onClearBlock}>
+            On block · clear
+          </button>
+        ) : null}
       </div>
 
       {comments === undefined ? (
         <p className="page-comments-empty">Loading…</p>
-      ) : list.length === 0 ? (
-        <p className="page-comments-empty">No comments yet — @mention people from share links</p>
+      ) : filteredRoots.length === 0 ? (
+        <p className="page-comments-empty">
+          No comments yet — select a block then comment, or @mention teammates
+        </p>
       ) : (
-        <ul className="page-comments-list">
-          {list.map((c) => (
-            <li
-              key={c._id}
-              className={`page-comments-item ${c.resolved ? "page-comments-item-resolved" : ""}`}
-            >
-              <div className="page-comments-meta">
-                <strong>{c.authorName}</strong>
-                <time dateTime={new Date(c.createdAt).toISOString()}>
-                  {new Date(c.createdAt).toLocaleString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
-                </time>
-                {c.resolved && <span className="page-comments-badge">Resolved</span>}
-              </div>
-              <p className="page-comments-body">{highlightMentions(c.body)}</p>
-              {(c.mentionIds?.length ?? 0) > 0 && (
-                <p className="page-comments-tagged">
-                  <AtSign className="size-3" />
-                  {c.mentionIds!.map((m) => `@${m}`).join(" ")}
-                </p>
-              )}
-              <div className="page-comments-actions">
-                <button
-                  type="button"
-                  className="page-comments-action"
-                  onClick={() => void handleResolve(c._id, !c.resolved)}
-                >
-                  <Check className="size-3" />
-                  {c.resolved ? "Reopen" : "Resolve"}
-                </button>
-                <button
-                  type="button"
-                  className="page-comments-action page-comments-action-danger"
-                  onClick={() => void handleRemove(c._id)}
-                >
-                  <Trash2 className="size-3" />
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <ul className="page-comments-list">{filteredRoots.map((c) => renderComment(c))}</ul>
       )}
 
       <form className="page-comments-composer" onSubmit={(e) => void handleSubmit(e)}>
+        {replyTo ? (
+          <p className="page-comments-replying">
+            Replying in thread{" "}
+            <button type="button" onClick={() => setReplyTo(null)}>
+              Cancel
+            </button>
+          </p>
+        ) : null}
+        {blockId ? (
+          <p className="page-comments-replying">Anchored to selected block</p>
+        ) : null}
         <div className="page-comments-compose-wrap">
           <textarea
             ref={textareaRef}
@@ -257,15 +322,15 @@ export function CommentsPanel({
                   >
                     <AtSign className="size-3" />
                     <span>{p.name}</span>
-                    <span className="page-comments-people-src">{p.source}</span>
+                    <em>{p.source}</em>
                   </button>
                 </li>
               ))}
             </ul>
           )}
         </div>
-        <button type="submit" disabled={busy || !body.trim()} className="page-comments-submit">
-          {busy ? "Posting…" : "Comment"}
+        <button type="submit" className="settings-btn" disabled={busy || !body.trim()}>
+          {busy ? "Posting…" : replyTo ? "Reply" : "Comment"}
         </button>
       </form>
     </section>

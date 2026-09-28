@@ -15,6 +15,12 @@ const STORY_IDS = [
   "app-routes-notfound--default",
   "app-colors--palette",
   "app-marketinglanding--default",
+  "components-createmenu--open",
+  "components-graphview--open",
+  "components-markdownview--default",
+  "components-linkdocumentsdialog--open",
+  "components-quickcapture--open",
+  "components-commandpalette--open",
 ];
 
 test.describe("Storybook smoke", () => {

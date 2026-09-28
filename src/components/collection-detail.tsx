@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import {
   Columns3,
+  CalendarDays,
   FileText,
   FolderOpen,
   Grid3X3,
@@ -27,6 +28,7 @@ import { STATUS_OPTIONS } from "@/lib/status";
 import {
   applyViewConfig,
   defaultPropertyDefs,
+  itemsOnDate,
   type PropertyDef,
   type PropertyMap,
   type ViewConfig,
@@ -313,6 +315,16 @@ export function CollectionDetail({
                   >
                     <Columns3 className="size-4" />
                   </button>
+                  <button
+                    type="button"
+                    className={viewMode === "calendar" ? "view-toggle-active" : ""}
+                    onClick={() =>
+                      !readOnly && updateNote({ id: folder._id, viewMode: "calendar" })
+                    }
+                    title="Calendar (by Due)"
+                  >
+                    <CalendarDays className="size-4" />
+                  </button>
                 </div>
               </div>
             )}
@@ -364,6 +376,14 @@ export function CollectionDetail({
                     },
                   })
                 }
+              />
+            ) : viewMode === "calendar" ? (
+              <CollectionCalendar
+                items={viewItems.filter((c) => !isFolder(c))}
+                datePropId={
+                  propertyDefs.find((d) => d.type === "date")?.id ?? "due"
+                }
+                onNavigate={onNavigate}
               />
             ) : viewMode === "table" ? (
               <CollectionTable
@@ -689,6 +709,100 @@ function GalleryCard({
           <Trash2 className="size-3.5" />
         </button>
       )}
+    </div>
+  );
+}
+
+function CollectionCalendar({
+  items,
+  datePropId,
+  onNavigate,
+}: {
+  items: Doc<"notes">[];
+  datePropId: string;
+  onNavigate: (id: Id<"notes">) => void;
+}) {
+  const [cursor, setCursor] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startWeekday = new Date(year, month, 1).getDay();
+  const monthLabel = cursor.toLocaleString(undefined, { month: "long", year: "numeric" });
+
+  const cells: Array<{ day: number | null; ms: number }> = [];
+  for (let i = 0; i < startWeekday; i++) cells.push({ day: null, ms: 0 });
+  for (let day = 1; day <= daysInMonth; day++) {
+    const ms = new Date(year, month, day).getTime();
+    cells.push({ day, ms });
+  }
+
+  return (
+    <div className="collection-calendar">
+      <div className="collection-calendar-toolbar">
+        <button
+          type="button"
+          className="vault-btn-secondary"
+          onClick={() =>
+            setCursor((d) => {
+              const n = new Date(d);
+              n.setMonth(n.getMonth() - 1);
+              return n;
+            })
+          }
+        >
+          ←
+        </button>
+        <h3 className="collection-calendar-title">{monthLabel}</h3>
+        <button
+          type="button"
+          className="vault-btn-secondary"
+          onClick={() =>
+            setCursor((d) => {
+              const n = new Date(d);
+              n.setMonth(n.getMonth() + 1);
+              return n;
+            })
+          }
+        >
+          →
+        </button>
+      </div>
+      <div className="collection-calendar-weekdays">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+          <span key={d}>{d}</span>
+        ))}
+      </div>
+      <div className="collection-calendar-grid">
+        {cells.map((cell, i) => {
+          if (cell.day == null) {
+            return <div key={`e-${i}`} className="collection-calendar-cell is-empty" />;
+          }
+          const onDay = itemsOnDate(items, datePropId, cell.ms);
+          return (
+            <div key={cell.day} className="collection-calendar-cell">
+              <span className="collection-calendar-day">{cell.day}</span>
+              <ul className="collection-calendar-items">
+                {onDay.slice(0, 4).map((item) => (
+                  <li key={item._id}>
+                    <button type="button" onClick={() => onNavigate(item._id)}>
+                      {item.icon || "📝"} {item.title || "Untitled"}
+                    </button>
+                  </li>
+                ))}
+                {onDay.length > 4 ? (
+                  <li className="collection-calendar-more">+{onDay.length - 4} more</li>
+                ) : null}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -7,6 +7,8 @@ import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import {
   defaultPropertyDefs,
+  evalFormula,
+  evalRollup,
   formatPropValue,
   type PropertyDef,
   type PropertyMap,
@@ -15,6 +17,7 @@ import {
 import { addTagToList, normalizeTag, removeTagFromList, tagKey } from "@/lib/tags";
 import { STATUS_OPTIONS } from "@/lib/status";
 import { useToast } from "./toast";
+import { isFolder } from "@/lib/item-kinds";
 
 type Props = {
   note: Doc<"notes">;
@@ -26,6 +29,7 @@ type Props = {
   onChangeStatus?: (status: string | null) => void;
   onChangeProperties?: (properties: PropertyMap) => void;
   onOpenTag?: (tag: string) => void;
+  onNavigate?: (id: Id<"notes">) => void;
 };
 
 export function PageProperties({
@@ -38,11 +42,13 @@ export function PageProperties({
   onChangeStatus,
   onChangeProperties,
   onOpenTag,
+  onNavigate,
 }: Props) {
   const toast = useToast();
   const [draft, setDraft] = useState("");
   const [editingTags, setEditingTags] = useState(false);
   const [suggestIndex, setSuggestIndex] = useState(0);
+  const [relationOpen, setRelationOpen] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const parent = useQuery(
@@ -50,6 +56,10 @@ export function PageProperties({
     note.parentId ? { id: note.parentId } : "skip",
   );
   const vaultTags = useQuery(api.notes.listTags, ownerId && editingTags ? { ownerId } : "skip");
+  const linkable = useQuery(
+    api.notes.list,
+    ownerId && relationOpen ? { ownerId } : "skip",
+  );
 
   const defs: PropertyDef[] = useMemo(() => {
     const fromFolder = (parent?.propertyDefs as PropertyDef[] | undefined) ?? [];
@@ -58,6 +68,14 @@ export function PageProperties({
   }, [parent?.propertyDefs]);
 
   const properties = (note.properties ?? {}) as PropertyMap;
+
+  const pagesById = useMemo(() => {
+    const map = new Map<string, Doc<"notes">>();
+    for (const n of linkable ?? []) {
+      if (!isFolder(n) && !n.trashed) map.set(n._id, n);
+    }
+    return map;
+  }, [linkable]);
 
   const suggestions = useMemo(() => {
     const q = tagKey(normalizeTag(draft));
@@ -189,7 +207,102 @@ export function PageProperties({
                   }
                 />
               ) : def.type === "formula" ? (
-                <span className="text-sm text-muted">{formatPropValue(def, raw)}</span>
+                <span className="text-sm page-prop-computed" title={def.formula}>
+                  {
+                    evalFormula(def.formula, {
+                      properties,
+                      status: note.status,
+                      defs,
+                    }).display
+                  }
+                </span>
+              ) : def.type === "rollup" ? (
+                <span className="text-sm page-prop-computed">
+                  {(() => {
+                    const relIds = properties[def.rollupRelationId ?? ""] ;
+                    const ids = Array.isArray(relIds) ? relIds : relIds ? [String(relIds)] : [];
+                    const related = ids
+                      .map((id) => pagesById.get(id))
+                      .filter(Boolean)
+                      .map((n) => ({
+                        properties: (n!.properties ?? {}) as PropertyMap,
+                        status: n!.status,
+                      }));
+                    return evalRollup(def, related);
+                  })()}
+                </span>
+              ) : def.type === "relation" ? (
+                <div className="page-prop-relation">
+                  {(Array.isArray(raw) ? raw : raw ? [String(raw)] : []).map((id) => {
+                    const page = pagesById.get(String(id));
+                    return (
+                      <button
+                        key={String(id)}
+                        type="button"
+                        className="page-prop-rel-chip"
+                        onClick={() => onNavigate?.(id as Id<"notes">)}
+                      >
+                        {page ? `${page.icon} ${page.title || "Untitled"}` : String(id).slice(0, 8)}
+                        {!readOnly && (
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            className="page-prop-rel-x"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const cur = Array.isArray(raw) ? [...raw] : [];
+                              setProp(
+                                def,
+                                cur.filter((x) => x !== id),
+                              );
+                            }}
+                          >
+                            ×
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      className="page-tag-add"
+                      onClick={() => setRelationOpen(def.id)}
+                    >
+                      + Link
+                    </button>
+                  )}
+                  {relationOpen === def.id && linkable && (
+                    <div className="page-prop-rel-picker">
+                      {linkable
+                        .filter((n) => !isFolder(n) && !n.trashed && n._id !== note._id)
+                        .filter((n) => {
+                          if (def.relationFolderId && n.parentId !== def.relationFolderId) {
+                            return false;
+                          }
+                          const cur = Array.isArray(raw) ? raw : [];
+                          return !cur.includes(n._id);
+                        })
+                        .slice(0, 12)
+                        .map((n) => (
+                          <button
+                            key={n._id}
+                            type="button"
+                            onClick={() => {
+                              const cur = Array.isArray(raw) ? [...raw] : [];
+                              setProp(def, [...cur, n._id]);
+                              setRelationOpen(null);
+                            }}
+                          >
+                            {n.icon} {n.title || "Untitled"}
+                          </button>
+                        ))}
+                      <button type="button" className="text-muted" onClick={() => setRelationOpen(null)}>
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <input
                   className="page-prop-input"
@@ -322,19 +435,23 @@ export function CollectionPropertySchema({
           const name = window.prompt("Property name");
           if (!name?.trim()) return;
           const type = window.prompt(
-            "Type: text | number | select | date | checkbox | url",
+            "Type: text | number | select | date | checkbox | url | relation | formula | rollup",
             "select",
           );
+          const t = (type?.trim() || "text") as PropertyDef["type"];
+          const formula =
+            t === "formula"
+              ? window.prompt("Formula (use prop('Priority') etc.)", "prop('priority')") ?? undefined
+              : undefined;
           const next = [
             ...list,
             {
               id: crypto.randomUUID().slice(0, 8),
               name: name.trim(),
-              type: (type?.trim() || "text") as PropertyDef["type"],
-              options:
-                type === "select" || !type
-                  ? ["Option A", "Option B"]
-                  : undefined,
+              type: t,
+              options: t === "select" ? ["Option A", "Option B"] : undefined,
+              formula,
+              rollupAgg: t === "rollup" ? ("count" as const) : undefined,
             },
           ];
           void updateNote({ id: folderId, propertyDefs: next }).then(

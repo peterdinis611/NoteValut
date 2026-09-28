@@ -223,6 +223,11 @@ export function highlightCode(code: string, language?: string): { html: string; 
   }
 }
 
+/** Expose the shared TanStack Highlight engine (e.g. Markdown highlighter bridge). */
+export function getVaultHighlighter() {
+  return highlighter;
+}
+
 function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")

@@ -178,8 +178,10 @@ function SyncedBlockView(props: BlockRenderProps) {
     api.syncedBlocks.getByKey,
     ownerId && key ? { ownerId, key } : "skip",
   );
+  const existing = useQuery(api.syncedBlocks.list, ownerId ? { ownerId } : "skip");
   const upsert = useMutation(api.syncedBlocks.upsert);
   const [local, setLocal] = useState(props.block.text);
+  const [picking, setPicking] = useState(false);
 
   useEffect(() => {
     if (remote?.text !== undefined && remote.text !== local) {
@@ -210,12 +212,46 @@ function SyncedBlockView(props: BlockRenderProps) {
     }
   };
 
+  const others = (existing ?? []).filter((s) => s.key !== key);
+
   return (
     <div className="nv-synced">
       <div className="nv-synced-badge">
         <RefreshCw className="size-3" />
-        <span>{props.block.label || "Synced"}</span>
+        <span>{props.block.label || remote?.label || "Synced"}</span>
+        {!props.readOnly && others.length > 0 ? (
+          <button
+            type="button"
+            className="nv-synced-link-btn"
+            onClick={() => setPicking((v) => !v)}
+          >
+            Embed existing…
+          </button>
+        ) : null}
       </div>
+      {picking && !props.readOnly ? (
+        <ul className="nv-synced-picker">
+          {others.map((s) => (
+            <li key={s.key}>
+              <button
+                type="button"
+                onClick={() => {
+                  props.commands.updateBlock(props.block.id, {
+                    syncedId: s.key,
+                    text: s.text,
+                    label: s.label,
+                  });
+                  setLocal(s.text);
+                  setPicking(false);
+                }}
+              >
+                <strong>{s.label || s.key.slice(0, 8)}</strong>
+                <span>{s.text.slice(0, 80) || "(empty)"}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <BlockTextInput
         block={{ ...props.block, text: local }}
         readOnly={props.readOnly}

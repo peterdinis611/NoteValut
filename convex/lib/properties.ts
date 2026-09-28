@@ -10,6 +10,7 @@ export const propertyTypeValidator = v.union(
   v.literal("url"),
   v.literal("relation"),
   v.literal("formula"),
+  v.literal("rollup"),
 );
 
 export const propertyDefValidator = v.object({
@@ -19,6 +20,17 @@ export const propertyDefValidator = v.object({
   options: v.optional(v.array(v.string())),
   formula: v.optional(v.string()),
   relationFolderId: v.optional(v.string()),
+  rollupRelationId: v.optional(v.string()),
+  rollupPropertyId: v.optional(v.string()),
+  rollupAgg: v.optional(
+    v.union(
+      v.literal("count"),
+      v.literal("sum"),
+      v.literal("avg"),
+      v.literal("min"),
+      v.literal("max"),
+    ),
+  ),
 });
 
 export const propertyValueValidator = v.union(

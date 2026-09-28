@@ -99,9 +99,96 @@ export function SettingsWorkspaces({ ownerId }: Props) {
         </button>
       </div>
       <p className="settings-hint">
-        Team notes are partitioned by <code>workspaceId</code>. Full org ACL lands next.
+        Team notes are stamped with <code>workspaceId</code>. Members invited below get real
+        roles (owner / admin / member) checked on note access.
       </p>
+      <WorkspaceInvite ownerId={ownerId} workspaces={workspaces ?? []} />
     </section>
+  );
+}
+
+function WorkspaceInvite({
+  ownerId,
+  workspaces,
+}: {
+  ownerId: string;
+  workspaces: Array<{ workspaceId: string; name: string; kind: string; role: string }>;
+}) {
+  const toast = useToast();
+  const invite = useMutation(api.workspaces.inviteMember);
+  const teams = workspaces.filter((w) => w.kind === "team");
+  const [workspaceId, setWorkspaceId] = useState(teams[0]?.workspaceId ?? "");
+  const [memberUserId, setMemberUserId] = useState("");
+  const [role, setRole] = useState<"admin" | "member">("member");
+  const members = useQuery(
+    api.workspaces.listMembers,
+    workspaceId ? { ownerId, workspaceId } : "skip",
+  );
+
+  if (teams.length === 0) return null;
+
+  return (
+    <div className="settings-inbox-form" style={{ marginTop: "0.75rem" }}>
+      <p className="settings-hint">Invite teammate (Clerk user id) + role</p>
+      <select
+        className="settings-select"
+        value={workspaceId}
+        onChange={(e) => setWorkspaceId(e.target.value)}
+      >
+        {teams.map((t) => (
+          <option key={t.workspaceId} value={t.workspaceId}>
+            {t.name}
+          </option>
+        ))}
+      </select>
+      <input
+        className="settings-input"
+        placeholder="Clerk user id (subject)"
+        value={memberUserId}
+        onChange={(e) => setMemberUserId(e.target.value)}
+      />
+      <select
+        className="settings-select"
+        value={role}
+        onChange={(e) => setRole(e.target.value as "admin" | "member")}
+      >
+        <option value="member">member</option>
+        <option value="admin">admin</option>
+      </select>
+      <button
+        type="button"
+        className="settings-btn"
+        disabled={!memberUserId.trim() || !workspaceId}
+        onClick={() =>
+          void invite({
+            ownerId,
+            workspaceId,
+            memberUserId: memberUserId.trim(),
+            role,
+          }).then(
+            () => {
+              toast.success("Member invited");
+              setMemberUserId("");
+            },
+            () => toast.error("Couldn’t invite"),
+          )
+        }
+      >
+        Invite
+      </button>
+      {members && members.length > 0 ? (
+        <ul className="settings-template-list">
+          {members.map((m) => (
+            <li key={m.userId} className="settings-template-row">
+              <span className="min-w-0 flex-1 truncate text-sm">
+                {m.name} · {m.role}
+              </span>
+              <span className="text-xs text-muted truncate">{m.userId.slice(0, 12)}…</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 
@@ -257,7 +344,64 @@ export function SettingsInboxRules({ ownerId }: Props) {
           Add rule
         </button>
       </div>
+
+      <InboxRulesPreview ownerId={ownerId} />
     </section>
+  );
+}
+
+function InboxRulesPreview({ ownerId }: { ownerId: string }) {
+  const [title, setTitle] = useState("Standup capture");
+  const [tags, setTags] = useState("capture");
+  const preview = useQuery(api.inboxRules.preview, {
+    ownerId,
+    title,
+    tags: tags
+      .split(/[,\s]+/)
+      .map((t) => t.trim())
+      .filter(Boolean),
+  });
+
+  return (
+    <div className="settings-inbox-preview">
+      <h3>Preview — what would happen</h3>
+      <div className="settings-inbox-form">
+        <input
+          className="settings-input"
+          placeholder="Sample title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        <input
+          className="settings-input"
+          placeholder="Sample tags"
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+        />
+      </div>
+      {preview ? (
+        <div className="settings-inbox-preview-body">
+          <p className="settings-hint">{preview.summary}</p>
+          {preview.matched.map((m) => (
+            <p key={m.id} className="text-sm">
+              <strong>{m.name}</strong>
+              {m.effects.length ? ` — ${m.effects.join("; ")}` : " — match, no changes"}
+            </p>
+          ))}
+          {preview.matched.length > 0 ? (
+            <p className="text-xs text-muted font-mono">
+              → tags: [{preview.resulting.tags.join(", ")}]
+              {preview.resulting.status ? ` · status: ${preview.resulting.status}` : ""}
+              {preview.resulting.remindInHours
+                ? ` · remind ${preview.resulting.remindInHours}h`
+                : ""}
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="settings-empty">Loading preview…</p>
+      )}
+    </div>
   );
 }
 
@@ -329,6 +473,146 @@ export function SettingsSavedQueries({ ownerId }: Props) {
         >
           <Plus className="size-3.5" />
           Save query
+        </button>
+      </div>
+    </section>
+  );
+}
+
+const WEEKDAYS = [
+  { v: 1 as const, label: "Mon" },
+  { v: 2 as const, label: "Tue" },
+  { v: 3 as const, label: "Wed" },
+  { v: 4 as const, label: "Thu" },
+  { v: 5 as const, label: "Fri" },
+  { v: 6 as const, label: "Sat" },
+  { v: 0 as const, label: "Sun" },
+];
+
+export function SettingsRecurringTemplates({ ownerId }: Props) {
+  const toast = useToast();
+  const items = useQuery(api.recurringTemplates.list, { ownerId });
+  const upsert = useMutation(api.recurringTemplates.upsert);
+  const remove = useMutation(api.recurringTemplates.remove);
+  const runDue = useMutation(api.recurringTemplates.runDue);
+  const [name, setName] = useState("Monday standup");
+  const [titleTemplate, setTitleTemplate] = useState("Standup {{date}}");
+  const [weekday, setWeekday] = useState<0 | 1 | 2 | 3 | 4 | 5 | 6>(1);
+
+  useEffect(() => {
+    void runDue({ ownerId }).catch(() => undefined);
+  }, [ownerId, runDue]);
+
+  return (
+    <section className="settings-section">
+      <div className="settings-section-head">
+        <Filter className="size-4 text-accent" />
+        <div>
+          <h2>Recurring templates</h2>
+          <p>Auto-create a page on a weekday (e.g. every Monday standup)</p>
+        </div>
+      </div>
+      {items && items.length > 0 ? (
+        <ul className="settings-template-list">
+          {items.map((t) => (
+            <li key={t._id} className="settings-template-row">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">
+                  {t.enabled ? "" : "(off) "}
+                  {t.name}
+                </span>
+                <span className="block truncate text-xs text-muted">
+                  {WEEKDAYS.find((w) => w.v === t.weekday)?.label ?? t.weekday} ·{" "}
+                  {t.titleTemplate}
+                </span>
+              </span>
+              <button
+                type="button"
+                className="settings-icon-btn"
+                aria-label={`Delete ${t.name}`}
+                onClick={() =>
+                  void remove({ ownerId, id: t._id }).then(
+                    () => toast.success("Removed"),
+                    () => toast.error("Couldn’t remove"),
+                  )
+                }
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="settings-empty">No recurring templates yet.</p>
+      )}
+      <div className="settings-inbox-form">
+        <input
+          className="settings-input"
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <input
+          className="settings-input"
+          placeholder="Title template ({{name}} {{date}})"
+          value={titleTemplate}
+          onChange={(e) => setTitleTemplate(e.target.value)}
+        />
+        <select
+          className="settings-select"
+          value={weekday}
+          onChange={(e) => setWeekday(Number(e.target.value) as typeof weekday)}
+        >
+          {WEEKDAYS.map((w) => (
+            <option key={w.v} value={w.v}>
+              Every {w.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="settings-btn"
+          onClick={() =>
+            void upsert({
+              ownerId,
+              name,
+              titleTemplate,
+              weekday,
+              enabled: true,
+              tags: ["recurring"],
+              blocks: [
+                {
+                  id: crypto.randomUUID(),
+                  type: "heading2",
+                  text: name,
+                },
+                { id: crypto.randomUUID(), type: "todo", text: "Wins", checked: false },
+                { id: crypto.randomUUID(), type: "todo", text: "Blockers", checked: false },
+                { id: crypto.randomUUID(), type: "paragraph", text: "" },
+              ],
+            }).then(
+              () => toast.success("Recurring template saved"),
+              () => toast.error("Couldn’t save"),
+            )
+          }
+        >
+          <Plus className="size-3.5" />
+          Add recurring
+        </button>
+        <button
+          type="button"
+          className="settings-btn settings-btn-ghost"
+          onClick={() =>
+            void runDue({ ownerId }).then(
+              (r) =>
+                toast.success(
+                  r.created ? `Created ${r.created} page(s)` : "Nothing due today",
+                ),
+              () => toast.error("Couldn’t run"),
+            )
+          }
+        >
+          Run due now
         </button>
       </div>
     </section>

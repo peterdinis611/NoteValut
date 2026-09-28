@@ -16,6 +16,7 @@ import {
   Printer,
   Smile,
   SmilePlus,
+  Eye,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AnimePresence } from "@/lib/anime-ui";
@@ -108,5 +109,6 @@ export const MoreActionIcons = {
   hideIcon: <Smile className="size-3.5" />,
   template: <LayoutTemplate className="size-3.5" />,
   markdown: <FileText className="size-3.5" />,
+  preview: <Eye className="size-3.5" />,
   pdf: <Printer className="size-3.5" />,
 };

@@ -113,3 +113,101 @@ export const setActive = mutation({
     return args.workspaceId;
   },
 });
+
+/** Invite a Clerk user (by subject id) into a team workspace with a role. */
+export const inviteMember = mutation({
+  args: {
+    ownerId: v.string(),
+    workspaceId: v.string(),
+    memberUserId: v.string(),
+    role: v.union(v.literal("admin"), v.literal("member")),
+    displayName: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const mine = await ctx.db
+      .query("workspaces")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+    const ws = mine.find((r) => r.workspaceId === args.workspaceId);
+    if (!ws || ws.kind !== "team") throw new Error("Team workspace not found");
+    if (ws.role !== "owner" && ws.role !== "admin") throw new Error("Only owners/admins can invite");
+
+    const existing = await ctx.db
+      .query("workspaces")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.memberUserId))
+      .collect();
+    const hit = existing.find((r) => r.workspaceId === args.workspaceId);
+    if (hit) {
+      await ctx.db.patch(hit._id, {
+        role: args.role,
+        name: args.displayName?.trim() || hit.name,
+        updatedAt: Date.now(),
+      });
+      return hit._id;
+    }
+    return await ctx.db.insert("workspaces", {
+      ownerId: args.memberUserId,
+      workspaceId: args.workspaceId,
+      name: args.displayName?.trim() || ws.name,
+      kind: "team",
+      orgId: ws.orgId,
+      role: args.role,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/** Set per-note edit ACL for org-shared notes. */
+export const setNoteAcl = mutation({
+  args: {
+    ownerId: v.string(),
+    noteId: v.id("notes"),
+    minEditRole: v.union(v.literal("owner"), v.literal("admin"), v.literal("member")),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const note = await ctx.db.get(args.noteId);
+    if (!note || note.ownerId !== args.ownerId) throw new Error("Not found");
+    const workspaceId = note.workspaceId ?? args.ownerId;
+    const existing = await ctx.db
+      .query("noteAcl")
+      .withIndex("by_note", (q) => q.eq("noteId", args.noteId))
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        minEditRole: args.minEditRole,
+        workspaceId,
+        updatedAt: Date.now(),
+      });
+      return existing._id;
+    }
+    return await ctx.db.insert("noteAcl", {
+      noteId: args.noteId,
+      workspaceId,
+      minEditRole: args.minEditRole,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const listMembers = query({
+  args: { ownerId: v.string(), workspaceId: v.string() },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const mine = await ctx.db
+      .query("workspaces")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+    if (!mine.some((r) => r.workspaceId === args.workspaceId)) return [];
+    const rows = await ctx.db
+      .query("workspaces")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .collect();
+    return rows.map((r) => ({
+      userId: r.ownerId,
+      name: r.name,
+      role: r.role ?? "member",
+    }));
+  },
+});

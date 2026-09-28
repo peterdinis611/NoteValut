@@ -42,6 +42,7 @@ import { applyThemePack, downloadThemePack, parseThemePack } from "@/lib/theme-p
 import { CssVarsEditor } from "./css-vars-editor";
 import {
   SettingsInboxRules,
+  SettingsRecurringTemplates,
   SettingsSavedQueries,
   SettingsWorkspaces,
 } from "./settings-db20";
@@ -678,6 +679,7 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
       <SettingsWorkspaces ownerId={ownerId} />
       <SettingsInboxRules ownerId={ownerId} />
       <SettingsSavedQueries ownerId={ownerId} />
+      <SettingsRecurringTemplates ownerId={ownerId} />
 
       <section className="settings-section">
         <div className="settings-section-head">

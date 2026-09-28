@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { X, Zap } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { AnimePresence } from "@/lib/anime-ui";
@@ -14,7 +14,9 @@ type Props = {
   ownerId: string;
   open: boolean;
   onClose: () => void;
-  onCreated: (id: Id<"notes">) => void;
+  onCreated?: (id: Id<"notes">) => void;
+  /** Prefill body from OS share sheet / deep link. */
+  initialText?: string;
 };
 
 function localDailyKey(ms: number) {
@@ -25,15 +27,19 @@ function localDailyKey(ms: number) {
   return `${y}-${m}-${day}`;
 }
 
-export function QuickCapture({ ownerId, open, onClose, onCreated }: Props) {
+export function QuickCapture({ ownerId, open, onClose, onCreated, initialText }: Props) {
   const toast = useToast();
   const notes = useQuery(api.notes.list, { ownerId });
   const createNote = useMutation(api.notes.create);
   const applyRules = useMutation(api.inboxRules.applyToNote);
   const scheduleReminder = useMutation(api.reminders.schedule);
   const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(initialText ?? "");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open && initialText) setBody(initialText);
+  }, [open, initialText]);
 
   const inbox = notes?.find((n) => n.kind === "folder" && n.title.toLowerCase() === "inbox");
 
@@ -79,7 +85,7 @@ export function QuickCapture({ ownerId, open, onClose, onCreated }: Props) {
 
       setTitle("");
       setBody("");
-      onCreated(id);
+      onCreated?.(id);
       onClose();
     } catch {
       toast.error("Couldn’t save capture");

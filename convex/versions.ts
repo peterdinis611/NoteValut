@@ -12,11 +12,11 @@ export async function snapshotNote(
   ctx: MutationCtx,
   noteId: Id<"notes">,
   label?: string,
-) {
+): Promise<Id<"noteVersions"> | null> {
   const note = await ctx.db.get(noteId);
-  if (!note || note.kind === "folder") return;
+  if (!note || note.kind === "folder") return null;
 
-  await ctx.db.insert("noteVersions", {
+  const versionId = await ctx.db.insert("noteVersions", {
     noteId: note._id,
     ownerId: note.ownerId,
     title: note.title,
@@ -28,6 +28,7 @@ export async function snapshotNote(
   });
 
   await pruneVersions(ctx, noteId);
+  return versionId;
 }
 
 async function pruneVersions(ctx: MutationCtx, noteId: Id<"notes">) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { ChevronRight, Copy, Eye, Globe, PanelLeft, Pin, Share2, Trash2 } from "lucide-react";
+import { ChevronRight, Columns2, Copy, Eye, Globe, MessageSquarePlus, PanelLeft, Pin, Share2, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
@@ -26,6 +26,9 @@ import { saveCustomTemplate } from "@/db/templates-collection";
 import { CollectionDetail } from "./collection-detail";
 import { IconPicker } from "./icon-picker";
 import { MoreActionIcons, MoreActionsMenu, type MoreActionItem } from "./more-actions-menu";
+import { MarkdownPreviewPanel } from "./markdown-preview-panel";
+import { MarkdownView } from "./markdown-view";
+import { SharePresenceBar } from "./share-presence";
 import { MoveDialog } from "./move-dialog";
 import { PageBreadcrumbs } from "./page-breadcrumbs";
 import { CoverBanner } from "./cover-banner";
@@ -101,6 +104,9 @@ export function NoteEditor({
   const [moveOpen, setMoveOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [fontOpen, setFontOpen] = useState(false);
+  const [mdPreviewOpen, setMdPreviewOpen] = useState(false);
+  const [mdSplit, setMdSplit] = useState(false);
+  const [commentBlockId, setCommentBlockId] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving" | "queued">("saved");
@@ -431,6 +437,12 @@ export function NoteEditor({
           onClick: downloadMarkdown,
         },
         {
+          id: "preview-md",
+          label: "Preview Markdown",
+          icon: MoreActionIcons.preview,
+          onClick: () => setMdPreviewOpen(true),
+        },
+        {
           id: "export-pdf",
           label: "Export PDF…",
           icon: MoreActionIcons.pdf,
@@ -524,6 +536,18 @@ export function NoteEditor({
           onClick: downloadMarkdown,
         },
         {
+          id: "preview-md",
+          label: "Preview Markdown",
+          icon: MoreActionIcons.preview,
+          onClick: () => setMdPreviewOpen(true),
+        },
+        {
+          id: "split-md",
+          label: mdSplit ? "Hide split preview" : "Split Markdown preview",
+          icon: MoreActionIcons.preview,
+          onClick: () => setMdSplit((v) => !v),
+        },
+        {
           id: "export-pdf",
           label: "Export PDF…",
           icon: MoreActionIcons.pdf,
@@ -575,6 +599,40 @@ export function NoteEditor({
                   ? "Queued offline"
                   : "Saved"}
             </span>
+          )}
+          {!isFolder(note) && !readOnly && (
+            <UiTooltip label={mdSplit ? "Hide Markdown split" : "Split Markdown preview"}>
+              <button
+                type="button"
+                className={`topbar-btn ${mdSplit ? "text-accent" : ""}`}
+                aria-label="Split Markdown preview"
+                aria-pressed={mdSplit}
+                onClick={() => setMdSplit((v) => !v)}
+              >
+                <Columns2 className="size-4" />
+              </button>
+            </UiTooltip>
+          )}
+          {!isFolder(note) && !readOnly && (
+            <UiTooltip label="Comment on selection">
+              <button
+                type="button"
+                className={`topbar-btn ${commentBlockId ? "text-accent" : ""}`}
+                aria-label="Comment on focused block"
+                onClick={() => {
+                  const el = document.activeElement?.closest<HTMLElement>("[data-block-id]");
+                  const id = el?.dataset.blockId;
+                  if (id) {
+                    setCommentBlockId(id);
+                    toast.success("Comment anchored to block");
+                  } else {
+                    toast.error("Focus a block first");
+                  }
+                }}
+              >
+                <MessageSquarePlus className="size-4" />
+              </button>
+            </UiTooltip>
           )}
           {canShare && (
             <UiTooltip label="Share">
@@ -715,8 +773,16 @@ export function NoteEditor({
               }}
             />
 
-            <div className="page-body-layout">
+            <div className={`page-body-layout ${mdSplit ? "page-body-split" : ""}`}>
               <div className="page-body">
+                {!readOnly ? (
+                  <SharePresenceBar
+                    shareToken={`vault:${ownerId}`}
+                    noteId={noteId}
+                    displayName="You"
+                    enabled
+                  />
+                ) : null}
                 <VaultEditor
                   blocks={blocks}
                   readOnly={readOnly}
@@ -733,16 +799,30 @@ export function NoteEditor({
                   noteId={noteId}
                   authorId={ownerId}
                   authorName="You"
+                  blockId={commentBlockId}
+                  onClearBlock={() => setCommentBlockId(null)}
                 />
               </div>
-              <TableOfContents
-                blocks={blocks}
-                onJump={(blockId) => {
-                  const el = document.querySelector<HTMLElement>(`[data-block-id="${blockId}"]`);
-                  el?.scrollIntoView({ behavior: "smooth", block: "center" });
-                  el?.focus();
-                }}
-              />
+              {mdSplit ? (
+                <aside className="page-md-split note-scroll" aria-label="Markdown preview">
+                  <header className="page-md-split-head">
+                    <Eye className="size-3.5" />
+                    <span>TanStack Markdown</span>
+                  </header>
+                  <MarkdownView>
+                    {`# ${title || "Untitled"}\n\n${blocksToMarkdown(blocks)}`}
+                  </MarkdownView>
+                </aside>
+              ) : (
+                <TableOfContents
+                  blocks={blocks}
+                  onJump={(blockId) => {
+                    const el = document.querySelector<HTMLElement>(`[data-block-id="${blockId}"]`);
+                    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    el?.focus();
+                  }}
+                />
+              )}
             </div>
 
             {children && children.length > 0 && (
@@ -806,6 +886,14 @@ export function NoteEditor({
           onClose={() => setHistoryOpen(false)}
           noteId={noteId}
           readOnly={readOnly}
+        />
+      )}
+      {!isFolder(note) && (
+        <MarkdownPreviewPanel
+          open={mdPreviewOpen}
+          onClose={() => setMdPreviewOpen(false)}
+          title={title}
+          blocks={blocks}
         />
       )}
       {!isFolder(note) && fontOpen && !readOnly && (

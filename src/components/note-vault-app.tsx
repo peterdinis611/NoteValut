@@ -23,6 +23,7 @@ import { toggleFocusMode } from "@/lib/focus-mode";
 import { GraphView } from "./graph-view";
 import { AttachmentsBrowser } from "./attachments-browser";
 import { InboxTriage } from "./inbox-triage";
+import { LinkDocumentsDialog } from "./link-documents-dialog";
 import { TemplatesMarketplace } from "./templates-marketplace";
 import { KeyboardCheatSheet } from "./keyboard-cheat-sheet";
 import { LottieStatus } from "./lottie-status";
@@ -30,6 +31,7 @@ import { MobileBottomNav } from "./mobile-bottom-nav";
 import { NoteEditor } from "./note-editor";
 import { ActivityFeed } from "./activity-feed";
 import { AiVaultPanel } from "./ai-vault-panel";
+import { NotificationsBell } from "./notifications-bell";
 import { QuickCapture, QuickCaptureFab } from "./quick-capture";
 import { ReminderListener } from "./reminder-listener";
 import { ScrollToTop } from "./scroll-to-top";
@@ -61,6 +63,7 @@ export function NoteVaultApp() {
   const isMobile = useIsMobile();
   useVaultSettings();
   const seedDemo = useMutation(api.notes.seedDemo);
+  const runRecurring = useMutation(api.recurringTemplates.runDue);
   const createNote = useMutation(api.notes.create);
   const getOrCreateDaily = useMutation(api.notes.getOrCreateDaily);
   const canQuery = Boolean(ownerId && isAuthenticated);
@@ -81,6 +84,7 @@ export function NoteVaultApp() {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
+  const [linkDocsOpen, setLinkDocsOpen] = useState(false);
   const [shareSignal, setShareSignal] = useState(0);
   const [noteShareSignal, setNoteShareSignal] = useState(0);
   const [noteMoveSignal, setNoteMoveSignal] = useState(0);
@@ -123,6 +127,11 @@ export function NoteVaultApp() {
         /* auth race — retry next mount */
       });
   }, [canQuery, ownerId, seeded, seedDemo]);
+
+  useEffect(() => {
+    if (!canQuery || !ownerId) return;
+    void runRecurring({ ownerId }).catch(() => undefined);
+  }, [canQuery, ownerId, runRecurring]);
 
   useEffect(() => {
     if (!activeId || !notes) return;
@@ -428,10 +437,18 @@ export function NoteVaultApp() {
       {
         id: "graph",
         label: "Page graph",
-        hint: "See linked pages",
+        hint: "See linked pages · drag handles to connect",
         icon: CommandIcons.network,
-        keywords: ["graph", "links", "backlinks", "network"],
+        keywords: ["graph", "links", "backlinks", "network", "xyflow"],
         run: () => setGraphOpen(true),
+      },
+      {
+        id: "link-documents",
+        label: "Link documents",
+        hint: "Create a [[vault link]] between pages",
+        icon: CommandIcons.share,
+        keywords: ["link", "wikilink", "connection", "pagelink", "relate"],
+        run: () => setLinkDocsOpen(true),
       },
       {
         id: "attachments",
@@ -646,6 +663,9 @@ export function NoteVaultApp() {
             onCreateCollection={handleCreateCollection}
             onQuickCapture={() => setQuickCaptureOpen(true)}
             onBrowseTemplates={() => setTemplatesOpen(true)}
+            onOpenToday={() => void openToday()}
+            onOpenGraph={() => setGraphOpen(true)}
+            onLinkDocuments={() => setLinkDocsOpen(true)}
             openShareSignal={shareSignal}
           />
         ) : null}
@@ -653,6 +673,12 @@ export function NoteVaultApp() {
           {isMobile && (
             <div className="app-conn-bar">
               <ConnectionStatus />
+              <NotificationsBell
+                ownerId={ownerId}
+                onNavigate={(id) => {
+                  selectNote(id);
+                }}
+              />
             </div>
           )}
           <AnimePresence show={!sidebarOpen} kind="pop">
@@ -802,6 +828,15 @@ export function NoteVaultApp() {
             onClose={() => setGraphOpen(false)}
             notes={notes}
             onNavigate={selectNote}
+            onLinkDocuments={() => setLinkDocsOpen(true)}
+          />
+          <LinkDocumentsDialog
+            open={linkDocsOpen}
+            onClose={() => setLinkDocsOpen(false)}
+            notes={notes}
+            defaultFromId={activeId}
+            onNavigate={selectNote}
+            onOpenGraph={() => setGraphOpen(true)}
           />
           <TemplatesMarketplace
             open={templatesOpen}
