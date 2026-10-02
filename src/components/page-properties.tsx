@@ -60,6 +60,18 @@ export function PageProperties({
     api.notes.list,
     ownerId && relationOpen ? { ownerId } : "skip",
   );
+  const vaultRemote = useQuery(
+    api.vaultSettings.get,
+    ownerId ? { ownerId } : "skip",
+  );
+  const workspacePeople = useQuery(
+    api.workspaces.listMembers,
+    ownerId && vaultRemote?.activeWorkspaceId
+      ? { ownerId, workspaceId: vaultRemote.activeWorkspaceId }
+      : ownerId
+        ? { ownerId, workspaceId: ownerId }
+        : "skip",
+  );
 
   const defs: PropertyDef[] = useMemo(() => {
     const fromFolder = (parent?.propertyDefs as PropertyDef[] | undefined) ?? [];
@@ -231,6 +243,22 @@ export function PageProperties({
                     return evalRollup(def, related);
                   })()}
                 </span>
+              ) : def.type === "person" ? (
+                <select
+                  className="page-prop-input"
+                  value={String(raw ?? "")}
+                  onChange={(e) => setProp(def, e.target.value || null)}
+                >
+                  <option value="">— Unassigned</option>
+                  {(workspacePeople ?? []).map((p) => (
+                    <option key={p.userId} value={p.userId}>
+                      {p.name || p.userId.slice(0, 12)}
+                    </option>
+                  ))}
+                  {ownerId && !(workspacePeople ?? []).some((p) => p.userId === ownerId) ? (
+                    <option value={ownerId}>Me</option>
+                  ) : null}
+                </select>
               ) : def.type === "relation" ? (
                 <div className="page-prop-relation">
                   {(Array.isArray(raw) ? raw : raw ? [String(raw)] : []).map((id) => {
@@ -406,16 +434,124 @@ export function CollectionPropertySchema({
   folderId,
   defs,
   readOnly,
+  ownerId,
 }: {
   folderId: Id<"notes">;
   defs: PropertyDef[] | undefined;
   readOnly?: boolean;
+  ownerId?: string;
 }) {
   const updateNote = useMutation(api.notes.update);
   const toast = useToast();
+  const folders = useQuery(
+    api.notes.list,
+    ownerId ? { ownerId } : "skip",
+  );
+  const collections =
+    folders?.filter((n) => n.kind === "folder" && !n.trashed && !n.archived) ?? [];
   const list = defs?.length ? defs : defaultPropertyDefs();
 
-  if (readOnly) return null;
+  const [name, setName] = useState("");
+  const [type, setType] = useState<PropertyDef["type"]>("select");
+  const [formula, setFormula] = useState("prop('priority')");
+  const [relationFolderId, setRelationFolderId] = useState("");
+  const [rollupRelationId, setRollupRelationId] = useState("");
+  const [rollupPropertyId, setRollupPropertyId] = useState("status");
+  const [rollupAgg, setRollupAgg] =
+    useState<NonNullable<PropertyDef["rollupAgg"]>>("count");
+  const [options, setOptions] = useState("Option A, Option B");
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  if (readOnly) {
+    return (
+      <div className="db-schema">
+        <p className="db-schema-label">Properties</p>
+        <ul className="db-schema-list">
+          {list.map((d) => (
+            <li key={d.id}>
+              <strong>{d.name}</strong>
+              <span>{d.type}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  const relationDefs = list.filter((d) => d.type === "relation");
+
+  function resetForm() {
+    setName("");
+    setType("select");
+    setFormula("prop('priority')");
+    setRelationFolderId("");
+    setRollupRelationId("");
+    setRollupPropertyId("status");
+    setRollupAgg("count");
+    setOptions("Option A, Option B");
+    setEditingId(null);
+  }
+
+  function loadEdit(d: PropertyDef) {
+    setEditingId(d.id);
+    setName(d.name);
+    setType(d.type);
+    setFormula(d.formula ?? "prop('priority')");
+    setRelationFolderId(d.relationFolderId ?? "");
+    setRollupRelationId(d.rollupRelationId ?? "");
+    setRollupPropertyId(d.rollupPropertyId ?? "status");
+    setRollupAgg(d.rollupAgg ?? "count");
+    setOptions((d.options ?? []).join(", "));
+  }
+
+  async function saveProperty() {
+    if (!name.trim()) {
+      toast.error("Name required");
+      return;
+    }
+    const id = editingId ?? crypto.randomUUID().slice(0, 8);
+    const nextDef: PropertyDef = {
+      id,
+      name: name.trim(),
+      type,
+      options:
+        type === "select" || type === "multiSelect"
+          ? options
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : undefined,
+      formula: type === "formula" ? formula.trim() || undefined : undefined,
+      relationFolderId:
+        type === "relation" ? relationFolderId || undefined : undefined,
+      rollupRelationId:
+        type === "rollup" ? rollupRelationId || undefined : undefined,
+      rollupPropertyId:
+        type === "rollup" ? rollupPropertyId || undefined : undefined,
+      rollupAgg: type === "rollup" ? rollupAgg : undefined,
+    };
+    const next = editingId
+      ? list.map((d) => (d.id === editingId ? nextDef : d))
+      : [...list, nextDef];
+    try {
+      await updateNote({ id: folderId, propertyDefs: next });
+      toast.success(editingId ? "Property updated" : "Property added");
+      resetForm();
+    } catch {
+      toast.error("Couldn’t save property");
+    }
+  }
+
+  async function removeProperty(id: string) {
+    const next = list.filter((d) => d.id !== id);
+    try {
+      await updateNote({ id: folderId, propertyDefs: next });
+      toast.success("Property removed");
+      if (editingId === id) resetForm();
+    } catch {
+      toast.error("Couldn’t remove");
+    }
+  }
 
   return (
     <div className="db-schema">
@@ -423,45 +559,135 @@ export function CollectionPropertySchema({
       <ul className="db-schema-list">
         {list.map((d) => (
           <li key={d.id}>
-            <strong>{d.name}</strong>
-            <span>{d.type}</span>
+            <button type="button" className="db-schema-edit" onClick={() => loadEdit(d)}>
+              <strong>{d.name}</strong>
+              <span>{d.type}</span>
+            </button>
+            {!["status", "priority", "due", "assignee"].includes(d.id) ? (
+              <button
+                type="button"
+                className="settings-icon-btn"
+                aria-label={`Remove ${d.name}`}
+                onClick={() => void removeProperty(d.id)}
+              >
+                <X className="size-3.5" />
+              </button>
+            ) : null}
           </li>
         ))}
       </ul>
-      <button
-        type="button"
-        className="settings-btn settings-btn-ghost"
-        onClick={() => {
-          const name = window.prompt("Property name");
-          if (!name?.trim()) return;
-          const type = window.prompt(
-            "Type: text | number | select | date | checkbox | url | relation | formula | rollup",
-            "select",
-          );
-          const t = (type?.trim() || "text") as PropertyDef["type"];
-          const formula =
-            t === "formula"
-              ? window.prompt("Formula (use prop('Priority') etc.)", "prop('priority')") ?? undefined
-              : undefined;
-          const next = [
-            ...list,
-            {
-              id: crypto.randomUUID().slice(0, 8),
-              name: name.trim(),
-              type: t,
-              options: t === "select" ? ["Option A", "Option B"] : undefined,
-              formula,
-              rollupAgg: t === "rollup" ? ("count" as const) : undefined,
-            },
-          ];
-          void updateNote({ id: folderId, propertyDefs: next }).then(
-            () => toast.success("Property added"),
-            () => toast.error("Couldn’t add property"),
-          );
-        }}
-      >
-        Add property
-      </button>
+
+      <div className="db-schema-form">
+        <p className="db-schema-label">{editingId ? "Edit property" : "Add property"}</p>
+        <input
+          className="settings-input"
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <select
+          className="settings-select"
+          value={type}
+          onChange={(e) => setType(e.target.value as PropertyDef["type"])}
+        >
+          {(
+            [
+              "text",
+              "number",
+              "select",
+              "multiSelect",
+              "date",
+              "checkbox",
+              "url",
+              "person",
+              "relation",
+              "formula",
+              "rollup",
+            ] as const
+          ).map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+        {(type === "select" || type === "multiSelect") && (
+          <input
+            className="settings-input"
+            placeholder="Options (comma-separated)"
+            value={options}
+            onChange={(e) => setOptions(e.target.value)}
+          />
+        )}
+        {type === "formula" && (
+          <input
+            className="settings-input"
+            placeholder="prop('priority') * 2 · daysUntil(prop('due'))"
+            value={formula}
+            onChange={(e) => setFormula(e.target.value)}
+          />
+        )}
+        {type === "relation" && (
+          <select
+            className="settings-select"
+            value={relationFolderId}
+            onChange={(e) => setRelationFolderId(e.target.value)}
+          >
+            <option value="">Any collection / vault</option>
+            {collections.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.icon} {c.title || "Untitled"}
+              </option>
+            ))}
+          </select>
+        )}
+        {type === "rollup" && (
+          <>
+            <select
+              className="settings-select"
+              value={rollupRelationId}
+              onChange={(e) => setRollupRelationId(e.target.value)}
+            >
+              <option value="">Relation property…</option>
+              {relationDefs.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+            <input
+              className="settings-input"
+              placeholder="Property on related (e.g. status, priority)"
+              value={rollupPropertyId}
+              onChange={(e) => setRollupPropertyId(e.target.value)}
+            />
+            <select
+              className="settings-select"
+              value={rollupAgg}
+              onChange={(e) =>
+                setRollupAgg(e.target.value as NonNullable<PropertyDef["rollupAgg"]>)
+              }
+            >
+              <option value="count">count</option>
+              <option value="sum">sum</option>
+              <option value="avg">avg</option>
+              <option value="min">min</option>
+              <option value="max">max</option>
+              <option value="unique">unique</option>
+              <option value="countNonEmpty">count non-empty</option>
+            </select>
+          </>
+        )}
+        <div className="db-schema-form-actions">
+          <button type="button" className="settings-btn" onClick={() => void saveProperty()}>
+            {editingId ? "Save" : "Add property"}
+          </button>
+          {editingId ? (
+            <button type="button" className="settings-btn settings-btn-ghost" onClick={resetForm}>
+              Cancel
+            </button>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }

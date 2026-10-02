@@ -119,6 +119,7 @@ function WorkspaceInvite({
   const teams = workspaces.filter((w) => w.kind === "team");
   const [workspaceId, setWorkspaceId] = useState(teams[0]?.workspaceId ?? "");
   const [memberUserId, setMemberUserId] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<"admin" | "member">("member");
   const members = useQuery(
     api.workspaces.listMembers,
@@ -129,7 +130,7 @@ function WorkspaceInvite({
 
   return (
     <div className="settings-inbox-form" style={{ marginTop: "0.75rem" }}>
-      <p className="settings-hint">Invite teammate (Clerk user id) + role</p>
+      <p className="settings-hint">Invite by display name + Clerk user id</p>
       <select
         className="settings-select"
         value={workspaceId}
@@ -143,7 +144,13 @@ function WorkspaceInvite({
       </select>
       <input
         className="settings-input"
-        placeholder="Clerk user id (subject)"
+        placeholder="Display name (e.g. Ada Lovelace)"
+        value={displayName}
+        onChange={(e) => setDisplayName(e.target.value)}
+      />
+      <input
+        className="settings-input"
+        placeholder="Clerk user id"
         value={memberUserId}
         onChange={(e) => setMemberUserId(e.target.value)}
       />
@@ -158,17 +165,19 @@ function WorkspaceInvite({
       <button
         type="button"
         className="settings-btn"
-        disabled={!memberUserId.trim() || !workspaceId}
+        disabled={!memberUserId.trim() || !workspaceId || !displayName.trim()}
         onClick={() =>
           void invite({
             ownerId,
             workspaceId,
             memberUserId: memberUserId.trim(),
             role,
+            displayName: displayName.trim(),
           }).then(
             () => {
-              toast.success("Member invited");
+              toast.success(`Invited ${displayName.trim()}`);
               setMemberUserId("");
+              setDisplayName("");
             },
             () => toast.error("Couldn’t invite"),
           )
@@ -206,6 +215,7 @@ export function SettingsInboxRules({ ownerId }: Props) {
   const [setStatus, setSetStatus] = useState("Todo");
   const [moveTo, setMoveTo] = useState<string>("");
   const [remindHours, setRemindHours] = useState("");
+  const [editingId, setEditingId] = useState<Id<"inboxRules"> | null>(null);
 
   const collections =
     folders?.filter((n) => n.kind === "folder" && !n.trashed && !n.archived) ?? [];
@@ -214,6 +224,7 @@ export function SettingsInboxRules({ ownerId }: Props) {
     try {
       await upsert({
         ownerId,
+        id: editingId ?? undefined,
         name,
         enabled: true,
         matchType,
@@ -226,7 +237,8 @@ export function SettingsInboxRules({ ownerId }: Props) {
         moveToFolderId: moveTo ? (moveTo as Id<"notes">) : undefined,
         remindInHours: remindHours ? Number(remindHours) : undefined,
       });
-      toast.success("Inbox rule saved");
+      toast.success(editingId ? "Rule updated" : "Inbox rule saved");
+      setEditingId(null);
     } catch {
       toast.error("Couldn’t save rule");
     }
@@ -251,7 +263,7 @@ export function SettingsInboxRules({ ownerId }: Props) {
           {rules
             .slice()
             .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-            .map((rule) => (
+            .map((rule, index, arr) => (
               <li key={rule._id} className="settings-template-row">
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">
@@ -266,6 +278,90 @@ export function SettingsInboxRules({ ownerId }: Props) {
                     {rule.remindInHours ? ` · remind ${rule.remindInHours}h` : ""}
                   </span>
                 </span>
+                <button
+                  type="button"
+                  className="settings-btn settings-btn-ghost"
+                  title={rule.enabled ? "Disable" : "Enable"}
+                  onClick={() =>
+                    void upsert({
+                      ownerId,
+                      id: rule._id,
+                      name: rule.name,
+                      enabled: !rule.enabled,
+                      matchType: rule.matchType,
+                      matchValue: rule.matchValue,
+                      addTags: rule.addTags,
+                      setStatus: rule.setStatus,
+                      moveToFolderId: rule.moveToFolderId,
+                      remindInHours: rule.remindInHours,
+                      sortOrder: rule.sortOrder,
+                    }).then(
+                      () => toast.success(rule.enabled ? "Disabled" : "Enabled"),
+                      () => toast.error("Couldn’t update"),
+                    )
+                  }
+                >
+                  {rule.enabled ? "On" : "Off"}
+                </button>
+                <button
+                  type="button"
+                  className="settings-btn settings-btn-ghost"
+                  disabled={index === 0}
+                  aria-label="Move up"
+                  onClick={() => {
+                    const prev = arr[index - 1];
+                    if (!prev) return;
+                    void Promise.all([
+                      upsert({
+                        ownerId,
+                        id: rule._id,
+                        name: rule.name,
+                        enabled: rule.enabled,
+                        matchType: rule.matchType,
+                        matchValue: rule.matchValue,
+                        addTags: rule.addTags,
+                        setStatus: rule.setStatus,
+                        moveToFolderId: rule.moveToFolderId,
+                        remindInHours: rule.remindInHours,
+                        sortOrder: prev.sortOrder ?? index - 1,
+                      }),
+                      upsert({
+                        ownerId,
+                        id: prev._id,
+                        name: prev.name,
+                        enabled: prev.enabled,
+                        matchType: prev.matchType,
+                        matchValue: prev.matchValue,
+                        addTags: prev.addTags,
+                        setStatus: prev.setStatus,
+                        moveToFolderId: prev.moveToFolderId,
+                        remindInHours: prev.remindInHours,
+                        sortOrder: rule.sortOrder ?? index,
+                      }),
+                    ]).then(
+                      () => toast.success("Reordered"),
+                      () => toast.error("Couldn’t reorder"),
+                    );
+                  }}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  className="settings-btn settings-btn-ghost"
+                  onClick={() => {
+                    setName(rule.name);
+                    setMatchType(rule.matchType);
+                    setMatchValue(rule.matchValue ?? "");
+                    setAddTags((rule.addTags ?? []).join(", "));
+                    setSetStatus(rule.setStatus ?? "");
+                    setMoveTo(rule.moveToFolderId ?? "");
+                    setRemindHours(rule.remindInHours ? String(rule.remindInHours) : "");
+                    setEditingId(rule._id);
+                  }}
+                >
+                  Edit
+                </button>
                 <button
                   type="button"
                   className="settings-icon-btn"
@@ -341,8 +437,17 @@ export function SettingsInboxRules({ ownerId }: Props) {
         />
         <button type="button" className="settings-btn" onClick={() => void handleAdd()}>
           <Plus className="size-3.5" />
-          Add rule
+          {editingId ? "Update rule" : "Add rule"}
         </button>
+        {editingId ? (
+          <button
+            type="button"
+            className="settings-btn settings-btn-ghost"
+            onClick={() => setEditingId(null)}
+          >
+            Cancel edit
+          </button>
+        ) : null}
       </div>
 
       <InboxRulesPreview ownerId={ownerId} />

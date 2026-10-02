@@ -389,8 +389,12 @@ export function CollectionDetail({
               <CollectionTable
                 items={viewItems}
                 propertyDefs={propertyDefs}
+                viewConfig={viewConfig}
                 readOnly={readOnly}
                 onNavigate={onNavigate}
+                onUpdateViewConfig={(next) =>
+                  void updateNote({ id: folder._id, viewConfig: next })
+                }
                 onUpdate={(id, patch) => void updateNote({ id, ...patch })}
               />
             ) : (
@@ -438,6 +442,7 @@ export function CollectionDetail({
               folderId={folder._id}
               defs={folder.propertyDefs as PropertyDef[] | undefined}
               readOnly={readOnly}
+              ownerId={ownerId}
             />
 
             <SettingRow label="Group / sort (views)">
@@ -810,14 +815,18 @@ function CollectionCalendar({
 function CollectionTable({
   items,
   propertyDefs,
+  viewConfig,
   readOnly,
   onNavigate,
   onUpdate,
+  onUpdateViewConfig,
 }: {
   items: Doc<"notes">[];
   propertyDefs: PropertyDef[];
+  viewConfig?: ViewConfig;
   readOnly?: boolean;
   onNavigate: (id: Id<"notes">) => void;
+  onUpdateViewConfig?: (next: ViewConfig) => void;
   onUpdate: (
     id: Id<"notes">,
     patch: {
@@ -828,40 +837,49 @@ function CollectionTable({
     },
   ) => void;
 }) {
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [tagFilter, setTagFilter] = useState("");
   const extraDefs = propertyDefs.filter((d) => d.id !== "status" && d.id !== "tags");
+
+  const statusFilter = useMemo(() => {
+    const empty = viewConfig?.filters?.find((f) => f.builtin === "status" && f.op === "empty");
+    if (empty) return "none";
+    const eq = viewConfig?.filters?.find((f) => f.builtin === "status" && f.op === "eq");
+    return eq?.value != null ? String(eq.value) : "all";
+  }, [viewConfig]);
+
+  const tagFilter = useMemo(() => {
+    const hit = viewConfig?.filters?.find((f) => f.builtin === "tags" && f.op === "contains");
+    return hit?.value != null ? String(hit.value) : "";
+  }, [viewConfig]);
 
   const tags = useMemo(() => {
     const set = new Set<string>();
     for (const item of items) {
       for (const t of item.tags ?? []) set.add(t);
     }
+    if (tagFilter) set.add(tagFilter);
     return [...set].sort();
-  }, [items]);
+  }, [items, tagFilter]);
 
-  const filtered = useMemo(() => {
-    return items.filter((item) => {
-      if (statusFilter !== "all") {
-        const st = item.status || "";
-        if (statusFilter === "none" ? st !== "" : st !== statusFilter) return false;
-      }
-      if (
-        tagFilter &&
-        !(item.tags ?? []).some((t) => t.toLowerCase() === tagFilter.toLowerCase())
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [items, statusFilter, tagFilter]);
+  function patchFilters(status: string, tag: string) {
+    const filters: NonNullable<ViewConfig["filters"]> = (viewConfig?.filters ?? []).filter(
+      (f) => !(f.builtin === "status" || f.builtin === "tags"),
+    );
+    if (status === "none") filters.push({ builtin: "status", op: "empty" });
+    else if (status !== "all") filters.push({ builtin: "status", op: "eq", value: status });
+    if (tag) filters.push({ builtin: "tags", op: "contains", value: tag });
+    onUpdateViewConfig?.({ ...(viewConfig ?? {}), filters });
+  }
 
   return (
     <div className="db-table-wrap">
       <div className="db-table-filters">
         <label className="db-filter">
           <span>Status</span>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <select
+            value={statusFilter}
+            disabled={readOnly || !onUpdateViewConfig}
+            onChange={(e) => patchFilters(e.target.value, tagFilter)}
+          >
             <option value="all">All</option>
             <option value="none">No status</option>
             {STATUS_OPTIONS.filter(Boolean).map((s) => (
@@ -873,7 +891,11 @@ function CollectionTable({
         </label>
         <label className="db-filter">
           <span>Tag</span>
-          <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
+          <select
+            value={tagFilter}
+            disabled={readOnly || !onUpdateViewConfig}
+            onChange={(e) => patchFilters(statusFilter, e.target.value)}
+          >
             <option value="">All tags</option>
             {tags.map((t) => (
               <option key={t} value={t}>
@@ -898,7 +920,7 @@ function CollectionTable({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((item) => {
+            {items.map((item) => {
               const props = (item.properties ?? {}) as PropertyMap;
               return (
                 <tr key={item._id}>
@@ -960,7 +982,7 @@ function CollectionTable({
                         type="button"
                         className="db-tag"
                         title={`Filter by #${t}`}
-                        onClick={() => setTagFilter(t)}
+                        onClick={() => patchFilters(statusFilter, t)}
                       >
                         {t}
                       </button>

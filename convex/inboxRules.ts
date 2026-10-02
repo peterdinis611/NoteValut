@@ -129,6 +129,16 @@ export const applyToNote = mutation({
         action: "inbox_rule",
         summary: `Applied ${applied} inbox rule${applied === 1 ? "" : "s"}`,
       });
+      await ctx.db.insert("notifications", {
+        ownerId: args.ownerId,
+        recipientId: args.ownerId,
+        kind: "system",
+        noteId: args.noteId,
+        title: "Inbox rules applied",
+        body: `${applied} rule${applied === 1 ? "" : "s"} · ${note.title || "Untitled"}`,
+        read: false,
+        createdAt: Date.now(),
+      });
     }
 
     return { applied, remindInHours, status, tags, parentId };

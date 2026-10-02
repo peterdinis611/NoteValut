@@ -26,6 +26,8 @@ import { saveCustomTemplate } from "@/db/templates-collection";
 import { CollectionDetail } from "./collection-detail";
 import { IconPicker } from "./icon-picker";
 import { MoreActionIcons, MoreActionsMenu, type MoreActionItem } from "./more-actions-menu";
+import { NoteAclControls } from "./note-acl-controls";
+import { useDisplayName } from "@/hooks/use-display-name";
 import { MarkdownPreviewPanel } from "./markdown-preview-panel";
 import { MarkdownView } from "./markdown-view";
 import { SharePresenceBar } from "./share-presence";
@@ -83,6 +85,7 @@ export function NoteEditor({
   openTrashSignal = 0,
 }: Props) {
   const toast = useToast();
+  const displayName = useDisplayName();
   const { readOnly: globalReadOnly, role, ability } = useVaultAccess();
   const canShare = ability.can("share", "Note");
   const canUpdate = ability.can("update", "Note");
@@ -752,6 +755,7 @@ export function NoteEditor({
               ownerId={ownerId}
               readOnly={readOnly}
               onOpenTag={onOpenTag}
+              onNavigate={onNavigate}
               onChangeTags={(next) => {
                 setTags(next);
                 scheduleSave({ tags: next });
@@ -763,6 +767,14 @@ export function NoteEditor({
                 void updateNote({ id: noteId, properties });
               }}
             />
+
+            {!readOnly ? (
+              <NoteAclControls
+                ownerId={ownerId}
+                noteId={noteId}
+                workspaceId={note.workspaceId}
+              />
+            ) : null}
 
             <PagePins
               blocks={blocks}
@@ -779,7 +791,7 @@ export function NoteEditor({
                   <SharePresenceBar
                     shareToken={`vault:${ownerId}`}
                     noteId={noteId}
-                    displayName="You"
+                    displayName={displayName}
                     enabled
                   />
                 ) : null}
@@ -798,7 +810,7 @@ export function NoteEditor({
                   ownerId={ownerId}
                   noteId={noteId}
                   authorId={ownerId}
-                  authorName="You"
+                  authorName={displayName}
                   blockId={commentBlockId}
                   onClearBlock={() => setCommentBlockId(null)}
                 />

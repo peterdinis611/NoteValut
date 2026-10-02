@@ -158,10 +158,16 @@ export function Sidebar({
   const vaultSettings = useQuery(api.vaultSettings.get, ownerId ? { ownerId } : "skip");
   const savedQueries = useQuery(api.queries.list, ownerId ? { ownerId } : "skip");
   const [activeQuery, setActiveQuery] = useState<string | null>(null);
+  const [activeSavedId, setActiveSavedId] = useState<Id<"savedQueries"> | null>(null);
   const queryHits = useQuery(
     api.queries.run,
-    ownerId && activeQuery ? { ownerId, query: activeQuery, limit: 40 } : "skip",
+    ownerId && (activeSavedId || activeQuery)
+      ? activeSavedId
+        ? { ownerId, savedId: activeSavedId, limit: 40 }
+        : { ownerId, query: activeQuery!, limit: 40 }
+      : "skip",
   );
+  const queryResults = queryHits?.results;
   const trashRetentionDays = vaultSettings?.trashRetentionDays ?? 30;
 
   const updateNote = useMutation(api.notes.update);
@@ -729,15 +735,21 @@ export function Sidebar({
           ) : browse === "queries" ? (
             <SidebarSection title="Saved searches">
               {(savedQueries ?? []).length === 0 ? (
-                <EmptyHint text="Save queries in Settings → Saved searches (e.g. status:Todo)." />
+                <EmptyHint text="Save queries in Settings → Saved searches (e.g. status:Todo due:week)." />
               ) : (
                 <ul className="sidebar-section-items">
                   {(savedQueries ?? []).map((q) => (
                     <li key={q._id}>
                       <button
                         type="button"
-                        className={`sidebar-link ${activeQuery === q.query ? "sidebar-link-active" : ""}`}
-                        onClick={() => setActiveQuery(q.query)}
+                        className={`sidebar-link ${activeSavedId === q._id ? "sidebar-link-active" : ""}`}
+                        onClick={() => {
+                          setActiveSavedId(q._id);
+                          setActiveQuery(q.query);
+                          if (q.folderId) {
+                            onSelect(q.folderId);
+                          }
+                        }}
                       >
                         <Bookmark className="size-3.5 shrink-0" />
                         <span className="truncate">{q.name}</span>
@@ -746,16 +758,19 @@ export function Sidebar({
                   ))}
                 </ul>
               )}
-              {activeQuery ? (
+              {activeSavedId || activeQuery ? (
                 <div className="sidebar-query-results">
-                  <p className="sidebar-section-title">Results</p>
-                  {queryHits === undefined ? (
+                  <p className="sidebar-section-title">
+                    Results
+                    {queryHits?.viewMode ? ` · ${queryHits.viewMode}` : ""}
+                  </p>
+                  {queryResults === undefined ? (
                     <p className="sidebar-empty">Running…</p>
-                  ) : queryHits.length === 0 ? (
+                  ) : queryResults.length === 0 ? (
                     <EmptyHint text="No matches." />
                   ) : (
                     <ul className="sidebar-section-items">
-                      {queryHits.map((hit) => (
+                      {queryResults.map((hit) => (
                         <li key={hit._id}>
                           <button
                             type="button"

@@ -33,6 +33,7 @@ export function SharePresenceBar({
   const leave = useMutation(api.presence.leave);
   const peers = useQuery(api.presence.listActive, enabled ? { shareToken } : "skip");
   const pointer = useRef({ x: 0, y: 0, blockId: undefined as string | undefined });
+  const highlightRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!enabled) return;
@@ -68,6 +69,31 @@ export function SharePresenceBar({
   }, [enabled, shareToken, sid, displayName, noteId, heartbeat, leave]);
 
   const others = (peers ?? []).filter((p) => p.sessionId !== sid);
+
+  // Highlight remote peers' focused blocks
+  useEffect(() => {
+    const prev = highlightRef.current;
+    if (prev) {
+      document
+        .querySelectorAll(`[data-block-id="${prev}"]`)
+        .forEach((el) => el.classList.remove("nv-presence-block-hot"));
+    }
+    const blockId = others.find((p) => p.cursorBlockId)?.cursorBlockId;
+    highlightRef.current = blockId;
+    if (blockId) {
+      document
+        .querySelectorAll(`[data-block-id="${blockId}"]`)
+        .forEach((el) => el.classList.add("nv-presence-block-hot"));
+    }
+    return () => {
+      if (blockId) {
+        document
+          .querySelectorAll(`[data-block-id="${blockId}"]`)
+          .forEach((el) => el.classList.remove("nv-presence-block-hot"));
+      }
+    };
+  }, [others]);
+
   if (!enabled) return null;
 
   return (
@@ -80,6 +106,7 @@ export function SharePresenceBar({
             <span key={p.sessionId} className="presence-chip" style={{ borderColor: p.color }}>
               <span className="presence-dot" style={{ background: p.color }} />
               {p.displayName}
+              {p.cursorBlockId ? <em className="presence-block-hint">editing</em> : null}
             </span>
           ))
         )}

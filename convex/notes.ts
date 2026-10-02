@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
-import { assertCanAccessNote, requireOwner } from "./lib/auth";
+import { assertCanAccessNote, getWorkspaceRole, requireOwner } from "./lib/auth";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { blockValidator } from "./block";
@@ -34,14 +34,40 @@ export const list = query({
     search: v.optional(v.string()),
     includeArchived: v.optional(v.boolean()),
     includeTrashed: v.optional(v.boolean()),
+    /** Override active workspace; defaults to vaultSettings.activeWorkspaceId */
+    workspaceId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireOwner(ctx, args.ownerId);
-    let notes = await ctx.db
-      .query("notes")
-      .withIndex("by_owner_updated", (q) => q.eq("ownerId", args.ownerId))
-      .order("desc")
-      .collect();
+    const settings = await ctx.db
+      .query("vaultSettings")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .first();
+    const activeWs = args.workspaceId ?? settings?.activeWorkspaceId ?? args.ownerId;
+    const isTeam = activeWs.startsWith("org:");
+
+    let notes;
+    if (isTeam) {
+      const role = await getWorkspaceRole(ctx, args.ownerId, activeWs);
+      if (!role) return [];
+      notes = await ctx.db
+        .query("notes")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", activeWs))
+        .collect();
+    } else {
+      notes = await ctx.db
+        .query("notes")
+        .withIndex("by_owner_updated", (q) => q.eq("ownerId", args.ownerId))
+        .order("desc")
+        .collect();
+      notes = notes.filter(
+        (n) =>
+          !n.workspaceId ||
+          n.workspaceId === args.ownerId ||
+          n.workspaceId === activeWs ||
+          !String(n.workspaceId).startsWith("org:"),
+      );
+    }
 
     if (!args.includeTrashed) {
       notes = notes.filter((n) => !n.trashed);

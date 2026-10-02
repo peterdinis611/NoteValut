@@ -11,6 +11,7 @@ export const PROPERTY_TYPES = [
   "checkbox",
   "url",
   "relation",
+  "person",
   "formula",
   "rollup",
 ] as const;
@@ -32,7 +33,7 @@ export type PropertyDef = {
   /** rollup: property on related pages */
   rollupPropertyId?: string;
   /** rollup aggregation */
-  rollupAgg?: "count" | "sum" | "avg" | "min" | "max";
+  rollupAgg?: "count" | "sum" | "avg" | "min" | "max" | "unique" | "countNonEmpty";
 };
 
 export type PropertyValue =
@@ -87,6 +88,11 @@ export function defaultPropertyDefs(): PropertyDef[] {
       name: "Due",
       type: "date",
     },
+    {
+      id: "assignee",
+      name: "Assignee",
+      type: "person",
+    },
   ];
 }
 
@@ -102,7 +108,7 @@ export function getPropValue(
 
 /**
  * Evaluate a formula against page properties.
- * Supports `prop('NameOrId')` and plain math.js expressions.
+ * Supports `prop('NameOrId')`, `daysUntil(prop('Due'))`, `now()`, and math.js.
  */
 export function evalFormula(
   expression: string | undefined,
@@ -120,20 +126,41 @@ export function evalFormula(
   const byName = new Map(defs.map((d) => [d.name.toLowerCase(), d]));
   const byId = new Map(defs.map((d) => [d.id, d]));
 
-  const resolved = expr.replace(/prop\(\s*['"]([^'"]+)['"]\s*\)/gi, (_m, key: string) => {
+  const resolveProp = (key: string): PropertyValue => {
     const def = byId.get(key) ?? byName.get(key.toLowerCase());
-    let raw: PropertyValue;
     if (def?.id === "status" || key.toLowerCase() === "status") {
-      raw = ctx.status ?? props.status;
-    } else {
-      raw = props[def?.id ?? key];
+      return ctx.status ?? props.status;
     }
+    return props[def?.id ?? key];
+  };
+
+  const propToNum = (raw: PropertyValue): string => {
     if (raw == null || raw === "") return "0";
     if (typeof raw === "boolean") return raw ? "1" : "0";
     if (Array.isArray(raw)) return String(raw.length);
     if (typeof raw === "number") return String(raw);
     const n = Number(raw);
     return Number.isFinite(n) ? String(n) : JSON.stringify(String(raw));
+  };
+
+  let resolved = expr.replace(/prop\(\s*['"]([^'"]+)['"]\s*\)/gi, (_m, key: string) =>
+    propToNum(resolveProp(key)),
+  );
+
+  // daysUntil(ms) — days from now to timestamp
+  resolved = resolved.replace(/daysUntil\(\s*([^)]+)\s*\)/gi, (_m, inner: string) => {
+    const ms = Number(inner.trim());
+    if (!Number.isFinite(ms) || ms === 0) return "0";
+    return String(Math.round((ms - Date.now()) / 86_400_000));
+  });
+
+  // dateMs(prop already resolved) helpers: now()
+  resolved = resolved.replace(/\bnow\(\)/gi, String(Date.now()));
+
+  // empty(prop) → 1/0 — handle before math if still present as empty(0)
+  resolved = resolved.replace(/empty\(\s*([^)]+)\s*\)/gi, (_m, inner: string) => {
+    const v = inner.trim();
+    return v === "0" || v === '""' || v === "''" ? "1" : "0";
   });
 
   const result = evaluateMath(resolved);
@@ -148,6 +175,22 @@ export function evalRollup(
 ): string {
   const agg = def.rollupAgg ?? "count";
   if (agg === "count") return String(related.length);
+
+  if (agg === "unique" || (agg as string) === "countNonEmpty") {
+    const set = new Set<string>();
+    let nonempty = 0;
+    for (const page of related) {
+      const raw =
+        def.rollupPropertyId === "status"
+          ? page.status
+          : page.properties?.[def.rollupPropertyId ?? ""];
+      if (raw == null || raw === "") continue;
+      nonempty += 1;
+      set.add(Array.isArray(raw) ? raw.join(",") : String(raw));
+    }
+    if ((agg as string) === "countNonEmpty") return String(nonempty);
+    return String(set.size);
+  }
 
   const nums: number[] = [];
   for (const page of related) {

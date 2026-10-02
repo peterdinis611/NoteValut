@@ -11024,6 +11024,84 @@ body {
   background: color-mix(in srgb, #fecaca 55%, var(--panel));
 }
 
+.db-schema-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.db-schema-edit {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+  padding: 0.25rem 0;
+}
+.db-schema-form {
+  margin-top: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.db-schema-form-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.note-acl {
+  margin: 0.75rem 0 1rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px dashed var(--border);
+  border-radius: 0.5rem;
+}
+.note-acl-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+  margin-bottom: 0.45rem;
+}
+.note-acl-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+}
+.note-acl-members {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.note-acl-members li {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+}
+.note-acl-members em {
+  font-style: normal;
+  color: var(--muted);
+}
+
+.nv-presence-block-hot {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+.presence-block-hint {
+  font-style: normal;
+  font-size: 0.65rem;
+  opacity: 0.75;
+  margin-left: 0.25rem;
+}
 .collection-calendar {
   display: flex;
   flex-direction: column;

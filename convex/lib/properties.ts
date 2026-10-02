@@ -9,6 +9,7 @@ export const propertyTypeValidator = v.union(
   v.literal("checkbox"),
   v.literal("url"),
   v.literal("relation"),
+  v.literal("person"),
   v.literal("formula"),
   v.literal("rollup"),
 );
@@ -29,6 +30,8 @@ export const propertyDefValidator = v.object({
       v.literal("avg"),
       v.literal("min"),
       v.literal("max"),
+      v.literal("unique"),
+      v.literal("countNonEmpty"),
     ),
   ),
 });
