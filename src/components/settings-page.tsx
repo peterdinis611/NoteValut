@@ -40,6 +40,7 @@ import { listDefaultTemplates } from "@/lib/templates";
 import { parseVaultBackupFile } from "@/lib/vault-backup";
 import { applyThemePack, downloadThemePack, parseThemePack } from "@/lib/theme-pack";
 import { CssVarsEditor } from "./css-vars-editor";
+import { PushNotificationSettings } from "./push-notification-settings";
 import {
   SettingsInboxRules,
   SettingsRecurringTemplates,
@@ -685,8 +686,8 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
         <div className="settings-section-head">
           <FileText className="size-4 text-accent" />
           <div>
-            <h2>Daily notes</h2>
-            <p>Auto-create today’s note when you open the vault</p>
+            <h2>Daily notes & reminders</h2>
+            <p>Auto-create today’s note, schedule push at a time you choose</p>
           </div>
         </div>
         <label className="share-switch">
@@ -718,6 +719,36 @@ export function SettingsPage({ ownerId, onClose, onExport, onExportMarkdown, onS
           />
           <span className="share-switch-track" aria-hidden />
         </label>
+        <label className="settings-field" style={{ marginTop: "0.75rem", display: "block" }}>
+          <span className="share-switch-label">Daily reminder time</span>
+          <span className="share-switch-hint" style={{ display: "block", marginBottom: "0.35rem" }}>
+            Local time (15-min slots). Requires auto-create + push enabled.
+          </span>
+          <input
+            type="time"
+            className="settings-input"
+            step={900}
+            value={vaultRemote?.dailyReminderTime?.slice(0, 5) ?? ""}
+            disabled={vaultRemote === undefined}
+            onChange={(e) => {
+              const v = e.target.value || null;
+              void updateVaultRemote({
+                ownerId,
+                dailyReminderTime: v,
+              }).then(
+                () =>
+                  toast.success(v ? `Reminder at ${v}` : "Daily reminder cleared"),
+                () => toast.error("Couldn’t update reminder time"),
+              );
+            }}
+          />
+        </label>
+        <div style={{ marginTop: "0.85rem" }}>
+          <p className="share-switch-label" style={{ marginBottom: "0.35rem" }}>
+            Push notifications
+          </p>
+          <PushNotificationSettings ownerId={ownerId} />
+        </div>
       </section>
 
       <section className="settings-section">

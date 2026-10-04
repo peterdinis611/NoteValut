@@ -215,3 +215,51 @@ export const fire = internalMutation({
     }
   },
 });
+
+/** Cron: schedule today's daily reminder for vaults with dailyReminderTime set. */
+export const fireDailyReminders = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = now.getMinutes();
+    const slotMin = Math.floor(mm / 15) * 15;
+    const slot = `${hh}:${String(slotMin).padStart(2, "0")}`;
+    const key = localDailyKey(now.getTime());
+
+    const settings = await ctx.db.query("vaultSettings").collect();
+    let scheduled = 0;
+    for (const s of settings) {
+      if (!s.autoDailyNote || !s.dailyReminderTime) continue;
+      const t = s.dailyReminderTime.trim().slice(0, 5);
+      if (t !== slot) continue;
+
+      const existing = await ctx.db
+        .query("reminders")
+        .withIndex("by_owner_daily", (q) =>
+          q.eq("ownerId", s.ownerId).eq("dailyKey", key),
+        )
+        .first();
+      if (existing && (existing.status === "scheduled" || existing.status === "fired")) {
+        continue;
+      }
+
+      const remindAt = Date.now() + 30_000;
+      const reminderId = await ctx.db.insert("reminders", {
+        ownerId: s.ownerId,
+        dailyKey: key,
+        title: formatReminderTitle(key),
+        remindAt,
+        status: "scheduled",
+        createdAt: Date.now(),
+        recurrence: "none",
+      });
+      const jobId = await ctx.scheduler.runAt(remindAt, internal.reminders.fire, {
+        reminderId,
+      });
+      await ctx.db.patch(reminderId, { jobId });
+      scheduled += 1;
+    }
+    return { scheduled, slot, key };
+  },
+});

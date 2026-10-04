@@ -1,14 +1,12 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireOwner } from "./lib/auth";
+import { assertCanAccessNote, getAuthSubject, requireOwner } from "./lib/auth";
 import { notifyMention } from "./notifications";
 
 export const listForNote = query({
   args: { ownerId: v.string(), noteId: v.id("notes") },
   handler: async (ctx, args) => {
-    await requireOwner(ctx, args.ownerId);
-    const note = await ctx.db.get(args.noteId);
-    if (!note || note.ownerId !== args.ownerId) return [];
+    await assertCanAccessNote(ctx, args.noteId);
     return await ctx.db
       .query("comments")
       .withIndex("by_note", (q) => q.eq("noteId", args.noteId))
@@ -29,9 +27,8 @@ export const create = mutation({
     parentId: v.optional(v.id("comments")),
   },
   handler: async (ctx, args) => {
-    await requireOwner(ctx, args.ownerId);
-    const note = await ctx.db.get(args.noteId);
-    if (!note || note.ownerId !== args.ownerId) throw new Error("Not found");
+    const note = await assertCanAccessNote(ctx, args.noteId, { minEditRole: "member" });
+    const subject = await getAuthSubject(ctx);
     const body = args.body.trim();
     if (!body) throw new Error("Empty comment");
     if (args.parentId) {
@@ -40,9 +37,9 @@ export const create = mutation({
     }
     const now = Date.now();
     const commentId = await ctx.db.insert("comments", {
-      ownerId: args.ownerId,
+      ownerId: note.ownerId,
       noteId: args.noteId,
-      authorId: args.authorId,
+      authorId: subject ?? args.authorId,
       authorName: args.authorName.trim() || "You",
       body: body.slice(0, 4000),
       mentionIds: args.mentionIds,
@@ -55,8 +52,8 @@ export const create = mutation({
 
     for (const mid of args.mentionIds ?? []) {
       await notifyMention(ctx, {
-        ownerId: args.ownerId,
-        recipientId: mid === "you" ? args.ownerId : mid,
+        ownerId: note.ownerId,
+        recipientId: mid === "you" ? note.ownerId : mid,
         noteId: args.noteId,
         commentId,
         fromName: args.authorName.trim() || "Someone",
@@ -75,9 +72,9 @@ export const resolve = mutation({
     resolved: v.boolean(),
   },
   handler: async (ctx, args) => {
-    await requireOwner(ctx, args.ownerId);
     const c = await ctx.db.get(args.commentId);
-    if (!c || c.ownerId !== args.ownerId) throw new Error("Not found");
+    if (!c) throw new Error("Not found");
+    await assertCanAccessNote(ctx, c.noteId, { minEditRole: "member" });
     await ctx.db.patch(args.commentId, { resolved: args.resolved, updatedAt: Date.now() });
   },
 });
@@ -85,9 +82,14 @@ export const resolve = mutation({
 export const remove = mutation({
   args: { ownerId: v.string(), commentId: v.id("comments") },
   handler: async (ctx, args) => {
-    await requireOwner(ctx, args.ownerId);
     const c = await ctx.db.get(args.commentId);
-    if (!c || c.ownerId !== args.ownerId) throw new Error("Not found");
+    if (!c) throw new Error("Not found");
+    await assertCanAccessNote(ctx, c.noteId, { minEditRole: "member" });
+    const subject = await getAuthSubject(ctx);
+    // Author or note owner / admin can delete
+    if (subject !== c.authorId && subject !== c.ownerId) {
+      await assertCanAccessNote(ctx, c.noteId, { minEditRole: "admin" });
+    }
     const replies = await ctx.db
       .query("comments")
       .withIndex("by_parent", (q) => q.eq("parentId", args.commentId))
@@ -97,7 +99,7 @@ export const remove = mutation({
   },
 });
 
-/** People you can @mention — share labels + prior comment authors. */
+/** People you can @mention — workspace members + share labels + prior authors. */
 export const listPeople = query({
   args: { ownerId: v.string() },
   handler: async (ctx, args) => {
@@ -128,7 +130,7 @@ export const listPeople = query({
     for (const c of comments) {
       const name = c.authorName.trim();
       if (!name) continue;
-      const id = name.replace(/\s+/g, "-").toLowerCase().slice(0, 40);
+      const id = c.authorId || name.replace(/\s+/g, "-").toLowerCase().slice(0, 40);
       if (!people.has(id)) {
         people.set(id, { id, name, source: "Commenter" });
       }
@@ -150,7 +152,6 @@ export const listPeople = query({
         .withIndex("by_workspace", (q) => q.eq("workspaceId", m.workspaceId))
         .collect();
       for (const p of peers) {
-        if (p.ownerId === args.ownerId) continue;
         if (!people.has(p.ownerId)) {
           people.set(p.ownerId, {
             id: p.ownerId,

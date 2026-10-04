@@ -18,9 +18,12 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Bookmark, GripVertical, Paintbrush, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState, type CSSProperties } from "react";
+import { useQuery } from "convex/react";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
+import { api } from "../../convex/_generated/api";
 import { clampIndent, type Block } from "@/lib/blocks";
 import { mediaKindFromFile, useVaultUpload } from "@/hooks/use-vault-upload";
+import { useOwnerId } from "@/hooks/use-owner-id";
 import { StarterKit } from "./extensions";
 import type { Extension } from "./types";
 import { useEditor } from "./use-editor";
@@ -48,6 +51,11 @@ export function VaultEditor({
   readOnly = false,
 }: Props) {
   const toast = useToast();
+  const ownerId = useOwnerId();
+  const people = useQuery(
+    api.comments.listPeople,
+    ownerId && !readOnly ? { ownerId } : "skip",
+  );
   const { uploadFile } = useVaultUpload();
   const editor = useEditor({
     extensions,
@@ -55,6 +63,7 @@ export function VaultEditor({
     onUpdate: onChange,
     readOnly,
     linkablePages,
+    mentionPeople: people ?? [],
     onNavigate,
   });
   const [colorToolbarId, setColorToolbarId] = useState<string | null>(null);
@@ -399,12 +408,22 @@ function SortableBlockRow({
         {mentionOpen && (
           <div className="nv-slash-anchor">
             <EditorMentionMenu
-              pages={mentionPages}
+              pages={editor.filterMentions(mentionQuery)}
+              people={
+                editor.parseMention(block.text).mode === "at"
+                  ? editor.filterMentionPeople(mentionQuery)
+                  : []
+              }
               query={mentionQuery}
               selectedIndex={editor.mentionIndex}
               onHoverIndex={editor.setMentionIndex}
-              onSelect={(page) =>
+              onSelectPage={(page) =>
                 editor.commands.applyMention(block.id, page._id, page.title || "Untitled")
+              }
+              onSelectPerson={(person) =>
+                editor.commands.applyMention(block.id, person.id, person.name, {
+                  mentionUserId: person.id,
+                })
               }
             />
           </div>

@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireOwner } from "./lib/auth";
+import { assertCanAccessNote, requireOwner } from "./lib/auth";
 
 function slugify(input: string): string {
   return input
@@ -30,7 +30,7 @@ export const list = query({
 export const getForNote = query({
   args: { ownerId: v.string(), noteId: v.id("notes") },
   handler: async (ctx, args) => {
-    await requireOwner(ctx, args.ownerId);
+    await assertCanAccessNote(ctx, args.noteId);
     return await ctx.db
       .query("publications")
       .withIndex("by_note", (q) => q.eq("noteId", args.noteId))
@@ -77,9 +77,7 @@ export const publish = mutation({
     ogImage: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    await requireOwner(ctx, args.ownerId);
-    const note = await ctx.db.get(args.noteId);
-    if (!note || note.ownerId !== args.ownerId) throw new Error("Not found");
+    const note = await assertCanAccessNote(ctx, args.noteId, { minEditRole: "admin" });
     if (note.kind === "folder") throw new Error("Cannot publish a collection");
 
     const slug = ensureSlug(args.slug, note.title || "page");
@@ -98,7 +96,7 @@ export const publish = mutation({
       .first();
 
     const payload = {
-      ownerId: args.ownerId,
+      ownerId: note.ownerId,
       noteId: args.noteId,
       slug,
       title: (args.title ?? note.title).trim() || note.title || "Untitled",
@@ -120,12 +118,12 @@ export const publish = mutation({
 export const unpublish = mutation({
   args: { ownerId: v.string(), noteId: v.id("notes") },
   handler: async (ctx, args) => {
-    await requireOwner(ctx, args.ownerId);
+    await assertCanAccessNote(ctx, args.noteId, { minEditRole: "admin" });
     const forNote = await ctx.db
       .query("publications")
       .withIndex("by_note", (q) => q.eq("noteId", args.noteId))
       .first();
-    if (!forNote || forNote.ownerId !== args.ownerId) return;
+    if (!forNote) return;
     await ctx.db.patch(forNote._id, { published: false, updatedAt: Date.now() });
   },
 });

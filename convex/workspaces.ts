@@ -211,3 +211,95 @@ export const listMembers = query({
     }));
   },
 });
+
+export const getNoteAcl = query({
+  args: { ownerId: v.string(), noteId: v.id("notes") },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const row = await ctx.db
+      .query("noteAcl")
+      .withIndex("by_note", (q) => q.eq("noteId", args.noteId))
+      .first();
+    return row ? { minEditRole: row.minEditRole } : { minEditRole: "member" as const };
+  },
+});
+
+export const removeMember = mutation({
+  args: {
+    ownerId: v.string(),
+    workspaceId: v.string(),
+    memberUserId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    if (args.memberUserId === args.ownerId) throw new Error("Cannot remove yourself this way");
+    const mine = await ctx.db
+      .query("workspaces")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+    const ws = mine.find((r) => r.workspaceId === args.workspaceId);
+    if (!ws || (ws.role !== "owner" && ws.role !== "admin")) {
+      throw new Error("Only owners/admins can remove members");
+    }
+    const rows = await ctx.db
+      .query("workspaces")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.memberUserId))
+      .collect();
+    const hit = rows.find((r) => r.workspaceId === args.workspaceId);
+    if (!hit) throw new Error("Member not found");
+    if (hit.role === "owner") throw new Error("Cannot remove workspace owner");
+    await ctx.db.delete(hit._id);
+  },
+});
+
+export const setMemberRole = mutation({
+  args: {
+    ownerId: v.string(),
+    workspaceId: v.string(),
+    memberUserId: v.string(),
+    role: v.union(v.literal("admin"), v.literal("member")),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const mine = await ctx.db
+      .query("workspaces")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .collect();
+    const ws = mine.find((r) => r.workspaceId === args.workspaceId);
+    if (!ws || ws.role !== "owner") throw new Error("Only owner can change roles");
+    const rows = await ctx.db
+      .query("workspaces")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.memberUserId))
+      .collect();
+    const hit = rows.find((r) => r.workspaceId === args.workspaceId);
+    if (!hit) throw new Error("Member not found");
+    if (hit.role === "owner") throw new Error("Cannot demote owner");
+    await ctx.db.patch(hit._id, { role: args.role, updatedAt: Date.now() });
+  },
+});
+
+/** Directory search within a workspace (name match). */
+export const searchDirectory = query({
+  args: { ownerId: v.string(), workspaceId: v.string(), q: v.string() },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const needle = args.q.trim().toLowerCase();
+    if (!needle) return [];
+    const rows = await ctx.db
+      .query("workspaces")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .collect();
+    return rows
+      .filter(
+        (r) =>
+          r.name.toLowerCase().includes(needle) ||
+          r.ownerId.toLowerCase().includes(needle),
+      )
+      .map((r) => ({
+        userId: r.ownerId,
+        name: r.name,
+        role: r.role ?? "member",
+      }))
+      .slice(0, 20);
+  },
+});

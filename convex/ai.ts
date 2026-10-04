@@ -21,24 +21,55 @@ export const gatherNotes = internalQuery({
     ownerId: v.string(),
     ids: v.optional(v.array(v.id("notes"))),
     limit: v.optional(v.number()),
+    workspaceId: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<NoteSnippet[]> => {
+    const settings = await ctx.db
+      .query("vaultSettings")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .first();
+    const activeWs = args.workspaceId ?? settings?.activeWorkspaceId ?? args.ownerId;
+    const isTeam = activeWs.startsWith("org:");
+
     if (args.ids?.length) {
       const out: NoteSnippet[] = [];
       for (const id of args.ids) {
         const n = await ctx.db.get(id);
-        if (n && n.ownerId === args.ownerId && !n.trashed && n.kind !== "folder") {
-          out.push({
-            _id: n._id,
-            title: n.title,
-            icon: n.icon,
-            preview: (n.searchText || n.content || "").slice(0, 600),
-            tags: n.tags,
-          });
+        if (!n || n.trashed || n.kind === "folder") continue;
+        if (isTeam) {
+          if (n.workspaceId !== activeWs) continue;
+        } else if (n.ownerId !== args.ownerId) {
+          continue;
         }
+        out.push({
+          _id: n._id,
+          title: n.title,
+          icon: n.icon,
+          preview: (n.searchText || n.content || "").slice(0, 600),
+          tags: n.tags,
+        });
       }
       return out;
     }
+
+    if (isTeam) {
+      const notes = await ctx.db
+        .query("notes")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", activeWs))
+        .collect();
+      return notes
+        .filter((n) => !n.trashed && n.kind !== "folder")
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .slice(0, args.limit ?? 80)
+        .map((n) => ({
+          _id: n._id,
+          title: n.title,
+          icon: n.icon,
+          preview: (n.searchText || n.content || "").slice(0, 600),
+          tags: n.tags,
+        }));
+    }
+
     const notes = await ctx.db
       .query("notes")
       .withIndex("by_owner_updated", (q) => q.eq("ownerId", args.ownerId))

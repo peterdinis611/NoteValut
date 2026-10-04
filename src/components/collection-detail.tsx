@@ -477,27 +477,40 @@ export function CollectionDetail({
                   Sort
                   <select
                     className="share-select"
-                    value={viewConfig?.sorts?.[0]?.builtin ?? "updated"}
+                    value={
+                      viewConfig?.sorts?.[0]?.propertyId
+                        ? `prop:${viewConfig.sorts[0].propertyId}`
+                        : (viewConfig?.sorts?.[0]?.builtin ?? "updated")
+                    }
                     disabled={readOnly}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      const sorts =
+                        v.startsWith("prop:")
+                          ? [{ propertyId: v.slice(5), dir: "asc" as const }]
+                          : [
+                              {
+                                builtin: v as "updated" | "title" | "status" | "pinned",
+                                dir: (v === "title" ? "asc" : "desc") as "asc" | "desc",
+                              },
+                            ];
                       void updateNote({
                         id: folder._id,
-                        viewConfig: {
-                          ...(viewConfig ?? {}),
-                          sorts: [
-                            {
-                              builtin: e.target.value as "updated" | "title" | "status" | "pinned",
-                              dir: "desc",
-                            },
-                          ],
-                        },
-                      })
-                    }
+                        viewConfig: { ...(viewConfig ?? {}), sorts },
+                      });
+                    }}
                   >
                     <option value="updated">Last edited</option>
                     <option value="title">Name</option>
                     <option value="status">Status</option>
                     <option value="pinned">Pinned</option>
+                    {propertyDefs
+                      .filter((d) => !["status", "tags"].includes(d.id))
+                      .map((d) => (
+                        <option key={d.id} value={`prop:${d.id}`}>
+                          Property: {d.name}
+                        </option>
+                      ))}
                   </select>
                 </label>
               </div>
@@ -851,6 +864,43 @@ function CollectionTable({
     return hit?.value != null ? String(hit.value) : "";
   }, [viewConfig]);
 
+  const propFilterDef = useMemo(() => {
+    const hit = viewConfig?.filters?.find((f) => f.propertyId);
+    return hit?.propertyId ?? "";
+  }, [viewConfig]);
+
+  const propFilterValue = useMemo(() => {
+    const hit = viewConfig?.filters?.find((f) => f.propertyId === propFilterDef);
+    if (!hit) return "";
+    if (hit.op === "empty") return "__empty__";
+    if (hit.op === "notEmpty") return "__any__";
+    return hit.value != null ? String(hit.value) : "";
+  }, [viewConfig, propFilterDef]);
+
+  const filterableProps = useMemo(
+    () =>
+      propertyDefs.filter(
+        (d) =>
+          !["status", "tags"].includes(d.id) &&
+          (d.type === "select" || d.type === "person" || d.type === "text" || d.type === "date"),
+      ),
+    [propertyDefs],
+  );
+
+  const propValueOptions = useMemo(() => {
+    const def = filterableProps.find((d) => d.id === propFilterDef);
+    if (!def) return [] as string[];
+    if (def.type === "select" && def.options?.length) return def.options;
+    const set = new Set<string>();
+    for (const item of items) {
+      const raw = item.properties?.[propFilterDef];
+      if (raw == null || raw === "") continue;
+      if (Array.isArray(raw)) raw.forEach((x) => set.add(String(x)));
+      else set.add(String(raw));
+    }
+    return [...set].sort();
+  }, [filterableProps, items, propFilterDef]);
+
   const tags = useMemo(() => {
     const set = new Set<string>();
     for (const item of items) {
@@ -860,13 +910,19 @@ function CollectionTable({
     return [...set].sort();
   }, [items, tagFilter]);
 
-  function patchFilters(status: string, tag: string) {
+  function patchFilters(status: string, tag: string, propId: string, propVal: string) {
     const filters: NonNullable<ViewConfig["filters"]> = (viewConfig?.filters ?? []).filter(
-      (f) => !(f.builtin === "status" || f.builtin === "tags"),
+      (f) => !(f.builtin === "status" || f.builtin === "tags" || f.propertyId),
     );
     if (status === "none") filters.push({ builtin: "status", op: "empty" });
     else if (status !== "all") filters.push({ builtin: "status", op: "eq", value: status });
     if (tag) filters.push({ builtin: "tags", op: "contains", value: tag });
+    if (propId) {
+      if (propVal === "__empty__") filters.push({ propertyId: propId, op: "empty" });
+      else if (propVal === "__any__") filters.push({ propertyId: propId, op: "notEmpty" });
+      else if (propVal)
+        filters.push({ propertyId: propId, op: "eq", value: propVal });
+    }
     onUpdateViewConfig?.({ ...(viewConfig ?? {}), filters });
   }
 
@@ -878,7 +934,9 @@ function CollectionTable({
           <select
             value={statusFilter}
             disabled={readOnly || !onUpdateViewConfig}
-            onChange={(e) => patchFilters(e.target.value, tagFilter)}
+            onChange={(e) =>
+              patchFilters(e.target.value, tagFilter, propFilterDef, propFilterValue)
+            }
           >
             <option value="all">All</option>
             <option value="none">No status</option>
@@ -894,7 +952,9 @@ function CollectionTable({
           <select
             value={tagFilter}
             disabled={readOnly || !onUpdateViewConfig}
-            onChange={(e) => patchFilters(statusFilter, e.target.value)}
+            onChange={(e) =>
+              patchFilters(statusFilter, e.target.value, propFilterDef, propFilterValue)
+            }
           >
             <option value="">All tags</option>
             {tags.map((t) => (
@@ -904,6 +964,46 @@ function CollectionTable({
             ))}
           </select>
         </label>
+        {filterableProps.length > 0 ? (
+          <>
+            <label className="db-filter">
+              <span>Property</span>
+              <select
+                value={propFilterDef}
+                disabled={readOnly || !onUpdateViewConfig}
+                onChange={(e) => patchFilters(statusFilter, tagFilter, e.target.value, "")}
+              >
+                <option value="">Any property</option>
+                {filterableProps.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {propFilterDef ? (
+              <label className="db-filter">
+                <span>Value</span>
+                <select
+                  value={propFilterValue}
+                  disabled={readOnly || !onUpdateViewConfig}
+                  onChange={(e) =>
+                    patchFilters(statusFilter, tagFilter, propFilterDef, e.target.value)
+                  }
+                >
+                  <option value="">Any</option>
+                  <option value="__any__">Has value</option>
+                  <option value="__empty__">Empty</option>
+                  {propValueOptions.map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </>
+        ) : null}
       </div>
       <div className="db-table note-scroll">
         <table>
@@ -982,7 +1082,9 @@ function CollectionTable({
                         type="button"
                         className="db-tag"
                         title={`Filter by #${t}`}
-                        onClick={() => patchFilters(statusFilter, t)}
+                        onClick={() =>
+                          patchFilters(statusFilter, t, propFilterDef, propFilterValue)
+                        }
                       >
                         {t}
                       </button>

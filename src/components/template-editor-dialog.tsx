@@ -8,13 +8,39 @@ import { AnimePresence } from "@/lib/anime-ui";
 import { createBlock, type Block } from "@/lib/blocks";
 import { createCustomTemplate } from "@/lib/create-custom-template";
 
+export type TemplateEditorInitial = {
+  name?: string;
+  icon?: string;
+  description?: string;
+  tagsDraft?: string;
+  blocks?: Block[];
+};
+
 type Props = {
   open: boolean;
   onClose: () => void;
   onSaved?: (name: string) => void;
+  /** When set, skips local custom-template store and returns blocks. */
+  onSaveBlocks?: (data: {
+    name: string;
+    icon: string;
+    description: string;
+    blocks: Block[];
+  }) => void;
+  initial?: TemplateEditorInitial;
+  title?: string;
+  subtitle?: string;
 };
 
-export function TemplateEditorDialog({ open, onClose, onSaved }: Props) {
+export function TemplateEditorDialog({
+  open,
+  onClose,
+  onSaved,
+  onSaveBlocks,
+  initial,
+  title = "Create template",
+  subtitle = "Define starter blocks for new pages from the create menu",
+}: Props) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("✦");
   const [description, setDescription] = useState("");
@@ -27,13 +53,17 @@ export function TemplateEditorDialog({ open, onClose, onSaved }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    setName("");
-    setIcon("✦");
-    setDescription("");
-    setTagsDraft("");
-    setBlocks([createBlock("heading2", "Section"), createBlock("paragraph", "")]);
+    setName(initial?.name ?? "");
+    setIcon(initial?.icon ?? "✦");
+    setDescription(initial?.description ?? "");
+    setTagsDraft(initial?.tagsDraft ?? "");
+    setBlocks(
+      initial?.blocks?.length
+        ? initial.blocks
+        : [createBlock("heading2", "Section"), createBlock("paragraph", "")],
+    );
     setError(null);
-  }, [open]);
+  }, [open, initial]);
 
   useEffect(() => {
     if (!open) return;
@@ -45,6 +75,20 @@ export function TemplateEditorDialog({ open, onClose, onSaved }: Props) {
   }, [open, onClose]);
 
   function handleSave() {
+    if (onSaveBlocks) {
+      if (!name.trim()) {
+        setError("Name is required");
+        return;
+      }
+      onSaveBlocks({
+        name: name.trim(),
+        icon,
+        description: description.trim(),
+        blocks,
+      });
+      onClose();
+      return;
+    }
     const result = createCustomTemplate({
       name,
       icon,
@@ -70,41 +114,40 @@ export function TemplateEditorDialog({ open, onClose, onSaved }: Props) {
           aria-labelledby="template-editor-title"
           onClick={(e) => e.stopPropagation()}
         >
-            <header className="template-preview-header">
-              <div className="min-w-0 flex-1">
-                <p className="template-preview-kicker">
-                  <Plus className="size-3.5" />
-                  New template
-                </p>
-                <h2 id="template-editor-title" className="template-preview-title">
-                  Create template
-                </h2>
-                <p className="template-preview-desc">
-                  Define starter blocks for new pages from the create menu
-                </p>
-              </div>
-              <button type="button" className="settings-close" onClick={onClose} aria-label="Close">
-                <X className="size-4" />
-              </button>
-            </header>
-
-            <div className="template-editor-meta">
-              <div className="template-editor-icon">
-                <IconPicker value={icon} onChange={setIcon} size="sm" />
-              </div>
-              <label className="settings-field template-editor-name">
-                Name
-                <input
-                  className="settings-input"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Sprint retro"
-                  maxLength={60}
-                  autoFocus
-                />
-              </label>
+          <header className="template-preview-header">
+            <div className="min-w-0 flex-1">
+              <p className="template-preview-kicker">
+                <Plus className="size-3.5" />
+                {onSaveBlocks ? "Recurring body" : "New template"}
+              </p>
+              <h2 id="template-editor-title" className="template-preview-title">
+                {title}
+              </h2>
+              <p className="template-preview-desc">{subtitle}</p>
             </div>
+            <button type="button" className="settings-close" onClick={onClose} aria-label="Close">
+              <X className="size-4" />
+            </button>
+          </header>
 
+          <div className="template-editor-meta">
+            <div className="template-editor-icon">
+              <IconPicker value={icon} onChange={setIcon} size="sm" />
+            </div>
+            <label className="settings-field template-editor-name">
+              Name
+              <input
+                className="settings-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Sprint retro"
+                maxLength={60}
+                autoFocus
+              />
+            </label>
+          </div>
+
+          {!onSaveBlocks ? (
             <div className="template-editor-fields">
               <label className="settings-field">
                 Description
@@ -126,23 +169,24 @@ export function TemplateEditorDialog({ open, onClose, onSaved }: Props) {
                 />
               </label>
             </div>
+          ) : null}
 
-            <div className="template-editor-body note-scroll">
-              <p className="template-editor-body-label">Starter content</p>
-              <VaultEditor blocks={blocks} onChange={setBlocks} />
-            </div>
+          <div className="template-editor-body note-scroll">
+            <p className="template-editor-body-label">Starter content</p>
+            <VaultEditor blocks={blocks} onChange={setBlocks} />
+          </div>
 
-            {error && <p className="template-editor-error">{error}</p>}
+          {error && <p className="template-editor-error">{error}</p>}
 
-            <footer className="template-editor-footer">
-              <button type="button" className="settings-btn settings-btn-ghost" onClick={onClose}>
-                Cancel
-              </button>
-              <button type="button" className="vault-btn-primary" onClick={handleSave}>
-                <Plus className="size-3.5" />
-                Save template
-              </button>
-            </footer>
+          <footer className="template-editor-footer">
+            <button type="button" className="settings-btn settings-btn-ghost" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="button" className="vault-btn-primary" onClick={handleSave}>
+              <Plus className="size-3.5" />
+              Save
+            </button>
+          </footer>
         </div>
       </div>
     </AnimePresence>

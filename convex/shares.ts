@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireOwner } from "./lib/auth";
+import { assertCanAccessNote, requireOwner } from "./lib/auth";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 
@@ -66,14 +66,14 @@ export const create = mutation({
     password: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireOwner(ctx, args.ownerId);
-    if (args.scope !== "vault" && !args.noteId) {
+    let ownerId = args.ownerId;
+    if (args.scope === "vault") {
+      await requireOwner(ctx, args.ownerId);
+    } else if (args.noteId) {
+      const note = await assertCanAccessNote(ctx, args.noteId, { minEditRole: "admin" });
+      ownerId = note.ownerId;
+    } else {
       throw new Error("noteId required for collection/entry shares");
-    }
-
-    if (args.noteId) {
-      const note = await ctx.db.get(args.noteId);
-      if (!note || note.ownerId !== args.ownerId) throw new Error("Not found");
     }
 
     const now = Date.now();
@@ -84,7 +84,7 @@ export const create = mutation({
         : undefined;
 
     return await ctx.db.insert("shares", {
-      ownerId: args.ownerId,
+      ownerId,
       token,
       scope: args.scope,
       noteId: args.noteId,

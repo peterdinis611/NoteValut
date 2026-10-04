@@ -101,18 +101,55 @@ export const search = query({
     ownerId: v.string(),
     query: v.string(),
     limit: v.optional(v.number()),
+    workspaceId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireOwner(ctx, args.ownerId);
     const q = args.query.trim();
     if (!q) return [];
     const limit = Math.min(args.limit ?? 24, 48);
+    const settings = await ctx.db
+      .query("vaultSettings")
+      .withIndex("by_owner", (q2) => q2.eq("ownerId", args.ownerId))
+      .first();
+    const activeWs = args.workspaceId ?? settings?.activeWorkspaceId ?? args.ownerId;
+    const isTeam = activeWs.startsWith("org:");
+
+    if (isTeam) {
+      const role = await getWorkspaceRole(ctx, args.ownerId, activeWs);
+      if (!role) return [];
+      const notes = await ctx.db
+        .query("notes")
+        .withIndex("by_workspace", (q2) => q2.eq("workspaceId", activeWs))
+        .collect();
+      const needle = q.toLowerCase();
+      return notes
+        .filter(
+          (n) =>
+            !n.trashed &&
+            !n.archived &&
+            ((n.searchText || `${n.title} ${n.content}`).toLowerCase().includes(needle) ||
+              n.tags.some((t) => t.toLowerCase().includes(needle))),
+        )
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .slice(0, limit);
+    }
+
     const hits = await ctx.db
       .query("notes")
       .withSearchIndex("search_body", (s) => s.search("searchText", q).eq("ownerId", args.ownerId))
       .take(limit * 2);
 
-    return hits.filter((n) => !n.trashed && !n.archived).slice(0, limit);
+    return hits
+      .filter(
+        (n) =>
+          !n.trashed &&
+          !n.archived &&
+          (!n.workspaceId ||
+            n.workspaceId === args.ownerId ||
+            !String(n.workspaceId).startsWith("org:")),
+      )
+      .slice(0, limit);
   },
 });
 
@@ -444,7 +481,7 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     const { id, expectedUpdatedAt, ...patch } = args;
-    const existing = await assertCanAccessNote(ctx, id);
+    const existing = await assertCanAccessNote(ctx, id, { minEditRole: "member" });
     if (
       expectedUpdatedAt !== undefined &&
       existing.updatedAt > expectedUpdatedAt + 50

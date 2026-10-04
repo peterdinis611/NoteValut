@@ -10,6 +10,7 @@ import {
   resolveShareImage,
 } from "@/lib/published-seo";
 import { absoluteUrl } from "@/lib/site-url";
+import { PublishedCanvas } from "./published-canvas";
 import { PublishedMath } from "./published-math";
 
 type Props = {
@@ -389,10 +390,40 @@ function PublishedBlock({ block }: { block: Block }) {
           {block.text}
         </p>
       );
+    case "query": {
+      const q = (block.text || block.label || "").trim();
+      return (
+        <aside className="published-query" style={style}>
+          <p className="published-query-label">Saved query</p>
+          <code className="published-query-dsl">{q || "—"}</code>
+          <p className="published-query-hint">
+            Live results stay in the vault; this is a snapshot of the query.
+          </p>
+        </aside>
+      );
+    }
+    case "synced":
+      return (
+        <aside className="published-synced" style={style}>
+          <p className="published-synced-badge">Synced block</p>
+          <p className="published-p">{block.text || "—"}</p>
+        </aside>
+      );
+    case "canvas":
+      return (
+        <figure className="published-canvas" style={style}>
+          <PublishedCanvas strokesJson={block.text} />
+          <figcaption className="sr-only">Whiteboard sketch</figcaption>
+        </figure>
+      );
     default:
       return block.text?.trim() ? (
         <p className="published-p" style={style}>
-          {block.text}
+          {block.mentionUserId ? (
+            <span className="published-mention">@{block.text}</span>
+          ) : (
+            block.text
+          )}
         </p>
       ) : null;
   }

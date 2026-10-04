@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireOwner } from "./lib/auth";
 import { blockValidator } from "./block";
 import { buildNoteSearchText } from "./lib/searchText";
@@ -137,5 +137,67 @@ export const runDue = mutation({
       created.push(noteId);
     }
     return { created: created.length, key };
+  },
+});
+
+/** Internal: run due templates for every owner that has enabled ones. */
+export const runDueAll = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const today = new Date();
+    const weekday = today.getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6;
+    const key = dayKey(today.getTime());
+    const all = await ctx.db.query("recurringTemplates").collect();
+    const byOwner = new Map<string, typeof all>();
+    for (const t of all) {
+      if (!t.enabled || t.weekday !== weekday || t.lastFiredKey === key) continue;
+      const list = byOwner.get(t.ownerId) ?? [];
+      list.push(t);
+      byOwner.set(t.ownerId, list);
+    }
+
+    let created = 0;
+    for (const [ownerId, templates] of byOwner) {
+      const settings = await ctx.db
+        .query("vaultSettings")
+        .withIndex("by_owner", (q) => q.eq("ownerId", ownerId))
+        .first();
+      const workspaceId = settings?.activeWorkspaceId ?? ownerId;
+      for (const t of templates) {
+        const title = t.titleTemplate
+          .replaceAll("{{name}}", t.name)
+          .replaceAll("{{date}}", key);
+        const blocks = t.blocks?.length
+          ? t.blocks
+          : [{ id: crypto.randomUUID(), type: "paragraph" as const, text: "" }];
+        const content = blocks.map((b) => b.text).join("\n");
+        const searchText = buildNoteSearchText({
+          title,
+          content,
+          tags: t.tags,
+          blocks,
+        });
+        await ctx.db.insert("notes", {
+          ownerId,
+          workspaceId,
+          title,
+          content,
+          blocks,
+          icon: "🔁",
+          parentId: t.parentId,
+          kind: "page",
+          pinned: false,
+          archived: false,
+          trashed: false,
+          tags: t.tags ?? [],
+          searchText,
+          embedding: embedText(searchText),
+          updatedAt: Date.now(),
+        });
+        await ctx.db.patch(t._id, { lastFiredKey: key, updatedAt: Date.now() });
+        created += 1;
+      }
+    }
+    return { created, key };
   },
 });

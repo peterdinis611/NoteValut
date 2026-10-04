@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { Shield } from "lucide-react";
+import { useEffect, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useToast } from "./toast";
@@ -15,12 +16,19 @@ type Props = {
 export function NoteAclControls({ ownerId, noteId, workspaceId }: Props) {
   const toast = useToast();
   const setAcl = useMutation(api.workspaces.setNoteAcl);
+  const acl = useQuery(
+    api.workspaces.getNoteAcl,
+    workspaceId?.startsWith("org:") ? { ownerId, noteId } : "skip",
+  );
   const members = useQuery(
     api.workspaces.listMembers,
-    workspaceId && workspaceId.startsWith("org:")
-      ? { ownerId, workspaceId }
-      : "skip",
+    workspaceId?.startsWith("org:") ? { ownerId, workspaceId } : "skip",
   );
+  const [role, setRole] = useState<"owner" | "admin" | "member">("member");
+
+  useEffect(() => {
+    if (acl?.minEditRole) setRole(acl.minEditRole);
+  }, [acl?.minEditRole]);
 
   if (!workspaceId?.startsWith("org:")) return null;
 
@@ -34,17 +42,15 @@ export function NoteAclControls({ ownerId, noteId, workspaceId }: Props) {
         <span>Min role to edit</span>
         <select
           className="settings-select"
-          defaultValue="member"
-          onChange={(e) =>
-            void setAcl({
-              ownerId,
-              noteId,
-              minEditRole: e.target.value as "owner" | "admin" | "member",
-            }).then(
+          value={role}
+          onChange={(e) => {
+            const next = e.target.value as "owner" | "admin" | "member";
+            setRole(next);
+            void setAcl({ ownerId, noteId, minEditRole: next }).then(
               () => toast.success("ACL updated"),
               () => toast.error("Couldn’t update ACL"),
-            )
-          }
+            );
+          }}
         >
           <option value="member">Any member</option>
           <option value="admin">Admin+</option>

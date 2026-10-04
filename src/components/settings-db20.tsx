@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useToast } from "./toast";
+import { TemplateEditorDialog } from "./template-editor-dialog";
 
 type Props = { ownerId: string };
 
@@ -121,16 +122,25 @@ function WorkspaceInvite({
   const [memberUserId, setMemberUserId] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<"admin" | "member">("member");
+  const [search, setSearch] = useState("");
+  const removeMember = useMutation(api.workspaces.removeMember);
+  const setMemberRole = useMutation(api.workspaces.setMemberRole);
   const members = useQuery(
     api.workspaces.listMembers,
     workspaceId ? { ownerId, workspaceId } : "skip",
+  );
+  const directory = useQuery(
+    api.workspaces.searchDirectory,
+    workspaceId && search.trim().length >= 2
+      ? { ownerId, workspaceId, q: search.trim() }
+      : "skip",
   );
 
   if (teams.length === 0) return null;
 
   return (
     <div className="settings-inbox-form" style={{ marginTop: "0.75rem" }}>
-      <p className="settings-hint">Invite by display name + Clerk user id</p>
+      <p className="settings-hint">Invite by display name + Clerk user id (search existing)</p>
       <select
         className="settings-select"
         value={workspaceId}
@@ -142,6 +152,33 @@ function WorkspaceInvite({
           </option>
         ))}
       </select>
+      <input
+        className="settings-input"
+        placeholder="Search members by name…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      {directory && directory.length > 0 ? (
+        <ul className="settings-template-list">
+          {directory.map((d) => (
+            <li key={d.userId} className="settings-template-row">
+              <span className="min-w-0 flex-1 truncate text-sm">
+                {d.name} · {d.role}
+              </span>
+              <button
+                type="button"
+                className="settings-btn settings-btn-ghost"
+                onClick={() => {
+                  setDisplayName(d.name);
+                  setMemberUserId(d.userId);
+                }}
+              >
+                Use
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <input
         className="settings-input"
         placeholder="Display name (e.g. Ada Lovelace)"
@@ -192,7 +229,47 @@ function WorkspaceInvite({
               <span className="min-w-0 flex-1 truncate text-sm">
                 {m.name} · {m.role}
               </span>
-              <span className="text-xs text-muted truncate">{m.userId.slice(0, 12)}…</span>
+              {m.role !== "owner" ? (
+                <>
+                  <select
+                    className="settings-select"
+                    value={m.role}
+                    onChange={(e) =>
+                      void setMemberRole({
+                        ownerId,
+                        workspaceId,
+                        memberUserId: m.userId,
+                        role: e.target.value as "admin" | "member",
+                      }).then(
+                        () => toast.success("Role updated"),
+                        () => toast.error("Couldn’t update role"),
+                      )
+                    }
+                  >
+                    <option value="member">member</option>
+                    <option value="admin">admin</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="settings-icon-btn"
+                    aria-label={`Remove ${m.name}`}
+                    onClick={() =>
+                      void removeMember({
+                        ownerId,
+                        workspaceId,
+                        memberUserId: m.userId,
+                      }).then(
+                        () => toast.success("Removed"),
+                        () => toast.error("Couldn’t remove"),
+                      )
+                    }
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </>
+              ) : (
+                <span className="text-xs text-muted truncate">{m.userId.slice(0, 12)}…</span>
+              )}
             </li>
           ))}
         </ul>
@@ -513,10 +590,25 @@ function InboxRulesPreview({ ownerId }: { ownerId: string }) {
 export function SettingsSavedQueries({ ownerId }: Props) {
   const toast = useToast();
   const saved = useQuery(api.queries.list, { ownerId });
+  const folders = useQuery(api.notes.list, { ownerId });
   const save = useMutation(api.queries.save);
   const remove = useMutation(api.queries.remove);
+  const [editingId, setEditingId] = useState<Id<"savedQueries"> | null>(null);
   const [name, setName] = useState("Todos this week");
-  const [query, setQuery] = useState("status:Todo");
+  const [query, setQuery] = useState("status:Todo due:week");
+  const [folderId, setFolderId] = useState("");
+  const [viewMode, setViewMode] = useState("");
+
+  const collections =
+    folders?.filter((n) => n.kind === "folder" && !n.trashed && !n.archived) ?? [];
+
+  function resetForm() {
+    setEditingId(null);
+    setName("Todos this week");
+    setQuery("status:Todo due:week");
+    setFolderId("");
+    setViewMode("");
+  }
 
   return (
     <section className="settings-section">
@@ -524,7 +616,7 @@ export function SettingsSavedQueries({ ownerId }: Props) {
         <Filter className="size-4 text-accent" />
         <div>
           <h2>Saved searches</h2>
-          <p>Dataview-style queries — also insert a /query block in any page</p>
+          <p>Dataview-style queries — sidebar + /query block</p>
         </div>
       </div>
       {saved && saved.length > 0 && (
@@ -534,7 +626,26 @@ export function SettingsSavedQueries({ ownerId }: Props) {
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{q.name}</span>
                 <span className="block truncate text-xs text-muted font-mono">{q.query}</span>
+                {(q.folderId || q.viewMode) && (
+                  <span className="block truncate text-xs text-muted">
+                    {q.viewMode ? `view:${q.viewMode}` : ""}
+                    {q.folderId ? " · folder" : ""}
+                  </span>
+                )}
               </span>
+              <button
+                type="button"
+                className="settings-btn settings-btn-ghost"
+                onClick={() => {
+                  setEditingId(q._id);
+                  setName(q.name);
+                  setQuery(q.query);
+                  setFolderId(q.folderId ?? "");
+                  setViewMode(q.viewMode ?? "");
+                }}
+              >
+                Edit
+              </button>
               <button
                 type="button"
                 className="settings-icon-btn"
@@ -561,24 +672,62 @@ export function SettingsSavedQueries({ ownerId }: Props) {
         />
         <input
           className="settings-input"
-          placeholder="status:Todo tag:work prop:priority=High"
+          placeholder="status:Todo due:week assignee:me"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
+        <select
+          className="settings-select"
+          value={folderId}
+          onChange={(e) => setFolderId(e.target.value)}
+        >
+          <option value="">Any collection</option>
+          {collections.map((c) => (
+            <option key={c._id} value={c._id}>
+              {c.icon} {c.title || "Untitled"}
+            </option>
+          ))}
+        </select>
+        <select
+          className="settings-select"
+          value={viewMode}
+          onChange={(e) => setViewMode(e.target.value)}
+        >
+          <option value="">Default list</option>
+          <option value="table">table</option>
+          <option value="kanban">kanban</option>
+          <option value="gallery">gallery</option>
+          <option value="calendar">calendar</option>
+        </select>
         <button
           type="button"
           className="settings-btn"
           disabled={!query.trim()}
           onClick={() =>
-            void save({ ownerId, name, query }).then(
-              () => toast.success("Query saved"),
+            void save({
+              ownerId,
+              id: editingId ?? undefined,
+              name,
+              query,
+              folderId: folderId ? (folderId as Id<"notes">) : undefined,
+              viewMode: viewMode || undefined,
+            }).then(
+              () => {
+                toast.success(editingId ? "Query updated" : "Query saved");
+                resetForm();
+              },
               () => toast.error("Couldn’t save"),
             )
           }
         >
           <Plus className="size-3.5" />
-          Save query
+          {editingId ? "Update query" : "Save query"}
         </button>
+        {editingId ? (
+          <button type="button" className="settings-btn settings-btn-ghost" onClick={resetForm}>
+            Cancel
+          </button>
+        ) : null}
       </div>
     </section>
   );
@@ -597,16 +746,35 @@ const WEEKDAYS = [
 export function SettingsRecurringTemplates({ ownerId }: Props) {
   const toast = useToast();
   const items = useQuery(api.recurringTemplates.list, { ownerId });
+  const folders = useQuery(api.notes.list, { ownerId });
   const upsert = useMutation(api.recurringTemplates.upsert);
   const remove = useMutation(api.recurringTemplates.remove);
   const runDue = useMutation(api.recurringTemplates.runDue);
+  const [editingId, setEditingId] = useState<Id<"recurringTemplates"> | null>(null);
   const [name, setName] = useState("Monday standup");
   const [titleTemplate, setTitleTemplate] = useState("Standup {{date}}");
   const [weekday, setWeekday] = useState<0 | 1 | 2 | 3 | 4 | 5 | 6>(1);
+  const [parentId, setParentId] = useState("");
+  const [blocks, setBlocks] = useState<
+    Array<{ id: string; type: string; text: string; checked?: boolean; level?: number }>
+  >([]);
+  const [bodyOpen, setBodyOpen] = useState(false);
+
+  const collections =
+    folders?.filter((n) => n.kind === "folder" && !n.trashed && !n.archived) ?? [];
 
   useEffect(() => {
     void runDue({ ownerId }).catch(() => undefined);
   }, [ownerId, runDue]);
+
+  function loadEdit(t: NonNullable<typeof items>[number]) {
+    setEditingId(t._id);
+    setName(t.name);
+    setTitleTemplate(t.titleTemplate);
+    setWeekday(t.weekday as 0 | 1 | 2 | 3 | 4 | 5 | 6);
+    setParentId(t.parentId ?? "");
+    setBlocks((t.blocks as typeof blocks) ?? []);
+  }
 
   return (
     <section className="settings-section">
@@ -614,7 +782,7 @@ export function SettingsRecurringTemplates({ ownerId }: Props) {
         <Filter className="size-4 text-accent" />
         <div>
           <h2>Recurring templates</h2>
-          <p>Auto-create a page on a weekday (e.g. every Monday standup)</p>
+          <p>Hourly cron + weekday match — edit body, folder, enable/disable</p>
         </div>
       </div>
       {items && items.length > 0 ? (
@@ -631,6 +799,35 @@ export function SettingsRecurringTemplates({ ownerId }: Props) {
                   {t.titleTemplate}
                 </span>
               </span>
+              <button
+                type="button"
+                className="settings-btn settings-btn-ghost"
+                onClick={() =>
+                  void upsert({
+                    ownerId,
+                    id: t._id,
+                    name: t.name,
+                    titleTemplate: t.titleTemplate,
+                    weekday: t.weekday as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+                    enabled: !t.enabled,
+                    parentId: t.parentId,
+                    blocks: t.blocks,
+                    tags: t.tags,
+                  }).then(
+                    () => toast.success(t.enabled ? "Disabled" : "Enabled"),
+                    () => toast.error("Couldn’t update"),
+                  )
+                }
+              >
+                {t.enabled ? "On" : "Off"}
+              </button>
+              <button
+                type="button"
+                className="settings-btn settings-btn-ghost"
+                onClick={() => loadEdit(t)}
+              >
+                Edit
+              </button>
               <button
                 type="button"
                 className="settings-icon-btn"
@@ -674,35 +871,53 @@ export function SettingsRecurringTemplates({ ownerId }: Props) {
             </option>
           ))}
         </select>
+        <select
+          className="settings-select"
+          value={parentId}
+          onChange={(e) => setParentId(e.target.value)}
+        >
+          <option value="">Root (no folder)</option>
+          {collections.map((c) => (
+            <option key={c._id} value={c._id}>
+              {c.icon} {c.title || "Untitled"}
+            </option>
+          ))}
+        </select>
+        <button type="button" className="settings-btn settings-btn-ghost" onClick={() => setBodyOpen(true)}>
+          {blocks.length ? `Edit body (${blocks.length} blocks)` : "Edit body…"}
+        </button>
         <button
           type="button"
           className="settings-btn"
           onClick={() =>
             void upsert({
               ownerId,
+              id: editingId ?? undefined,
               name,
               titleTemplate,
               weekday,
               enabled: true,
+              parentId: parentId ? (parentId as Id<"notes">) : undefined,
               tags: ["recurring"],
-              blocks: [
-                {
-                  id: crypto.randomUUID(),
-                  type: "heading2",
-                  text: name,
-                },
-                { id: crypto.randomUUID(), type: "todo", text: "Wins", checked: false },
-                { id: crypto.randomUUID(), type: "todo", text: "Blockers", checked: false },
-                { id: crypto.randomUUID(), type: "paragraph", text: "" },
-              ],
+              blocks: (blocks.length
+                ? blocks
+                : [
+                    { id: crypto.randomUUID(), type: "heading2", text: name },
+                    { id: crypto.randomUUID(), type: "todo", text: "Wins", checked: false },
+                    { id: crypto.randomUUID(), type: "todo", text: "Blockers", checked: false },
+                    { id: crypto.randomUUID(), type: "paragraph", text: "" },
+                  ]) as never,
             }).then(
-              () => toast.success("Recurring template saved"),
+              () => {
+                toast.success(editingId ? "Updated" : "Recurring template saved");
+                setEditingId(null);
+              },
               () => toast.error("Couldn’t save"),
             )
           }
         >
           <Plus className="size-3.5" />
-          Add recurring
+          {editingId ? "Update" : "Add recurring"}
         </button>
         <button
           type="button"
@@ -720,6 +935,18 @@ export function SettingsRecurringTemplates({ ownerId }: Props) {
           Run due now
         </button>
       </div>
+      <TemplateEditorDialog
+        open={bodyOpen}
+        onClose={() => setBodyOpen(false)}
+        title="Recurring page body"
+        subtitle="Blocks inserted when the template fires"
+        initial={{ name, blocks: blocks as never }}
+        onSaveBlocks={(data) => {
+          setName(data.name);
+          setBlocks(data.blocks as typeof blocks);
+          toast.success("Body saved — click Update/Add to persist");
+        }}
+      />
     </section>
   );
 }

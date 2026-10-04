@@ -67,7 +67,12 @@ export type EditorCommands = {
   reorderBlocks: (activeId: string, overId: string) => void;
   focusBlock: (id: string, caret?: "start" | "end") => void;
   applySlashCommand: (blockId: string, command: SlashCommandDef) => void;
-  applyMention: (blockId: string, pageId: string, title: string) => void;
+  applyMention: (
+    blockId: string,
+    pageId: string,
+    title: string,
+    opts?: { mentionUserId?: string },
+  ) => void;
   clearSlash: (blockId: string) => void;
 };
 
@@ -108,11 +113,14 @@ export type Extension = {
   inputTag?: "input" | "textarea" | "none";
 };
 
+export type MentionPerson = { id: string; name: string; source?: string };
+
 export type EditorOptions = {
   extensions: Extension[];
   content: Block[];
   onUpdate: (blocks: Block[]) => void;
   readOnly?: boolean;
   linkablePages?: Doc<"notes">[];
+  mentionPeople?: MentionPerson[];
   onNavigate?: (id: Id<"notes">) => void;
 };

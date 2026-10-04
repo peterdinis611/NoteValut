@@ -252,6 +252,7 @@ export function NoteEditor({
 
     setSaveState(isBrowserOffline() ? "queued" : "saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
+    const baseUpdatedAt = note.updatedAt;
     saveTimer.current = setTimeout(async () => {
       const nextBlocks = patch.blocks ?? blocks;
       const payload = {
@@ -261,7 +262,7 @@ export function NoteEditor({
       };
 
       if (isBrowserOffline()) {
-        enqueueNotePatch(noteId, ownerId, payload, note.updatedAt);
+        enqueueNotePatch(noteId, ownerId, payload, baseUpdatedAt);
         setSaveState("queued");
         toast.success(
           queuedPatchCount() === 1
@@ -272,10 +273,11 @@ export function NoteEditor({
       }
 
       try {
-        // Online saves are last-write-wins. expectedUpdatedAt is only for offline flush.
+        // Online OCC — reject if another session saved since we loaded the note.
         await updateNote({
           id: noteId,
           ...payload,
+          expectedUpdatedAt: baseUpdatedAt,
         });
         setSaveState("saved");
         if (activityTimer.current) clearTimeout(activityTimer.current);
@@ -296,7 +298,7 @@ export function NoteEditor({
               title: conflict.title,
               serverUpdatedAt: conflict.serverUpdatedAt,
               localPatch: payload,
-              baseUpdatedAt: note.updatedAt,
+              baseUpdatedAt,
             });
             toast.error("Conflict — choose a version");
             setSaveState("saved");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
 import {
   createBlock,
   defaultBlocks,
@@ -23,6 +24,7 @@ export function useEditor(options: EditorOptions) {
     onUpdate,
     readOnly = false,
     linkablePages = [],
+    mentionPeople = [],
     onNavigate,
   } = options;
 
@@ -307,23 +309,39 @@ export function useEditor(options: EditorOptions) {
         setSlashIndex(0);
         focusTarget.current = { id: blockId, caret: "start" };
       },
-      applyMention: (blockId, pageId, title) => {
+      applyMention: (blockId, pageId, title, opts) => {
         if (readOnly) return;
         const list = [...blocksRef.current];
         const index = list.findIndex((b) => b.id === blockId);
         if (index < 0) return;
         const current = list[index];
-        const cleaned = current.text.replace(/\[\[[^\]]*$/, "").replace(/\s+$/, "");
-        const link = createBlock("pagelink", title || "Untitled", { pageId });
-        if (!cleaned.trim() && current.type === "paragraph") {
-          list[index] = link;
-          focusTarget.current = { id: link.id, caret: "start" };
+        const cleaned = current.text.replace(/\[\[[^\]]*$/, "").replace(/@[^\s@]*$/, "").replace(/\s+$/, "");
+        if (opts?.mentionUserId) {
+          const mention = createBlock("paragraph", `@${title}`, {
+            mentionUserId: opts.mentionUserId,
+          });
+          if (!cleaned.trim() && current.type === "paragraph") {
+            list[index] = mention;
+            focusTarget.current = { id: mention.id, caret: "end" };
+          } else {
+            list[index] = { ...current, text: cleaned };
+            list.splice(index + 1, 0, mention);
+            const after = createBlock("paragraph", "");
+            list.splice(index + 2, 0, after);
+            focusTarget.current = { id: after.id, caret: "start" };
+          }
         } else {
-          list[index] = { ...current, text: cleaned };
-          list.splice(index + 1, 0, link);
-          const after = createBlock("paragraph", "");
-          list.splice(index + 2, 0, after);
-          focusTarget.current = { id: after.id, caret: "start" };
+          const link = createBlock("pagelink", title || "Untitled", { pageId });
+          if (!cleaned.trim() && current.type === "paragraph") {
+            list[index] = link;
+            focusTarget.current = { id: link.id, caret: "start" };
+          } else {
+            list[index] = { ...current, text: cleaned };
+            list.splice(index + 1, 0, link);
+            const after = createBlock("paragraph", "");
+            list.splice(index + 2, 0, after);
+            focusTarget.current = { id: after.id, caret: "start" };
+          }
         }
         commit(list);
         setMentionBlockId(null);
@@ -355,9 +373,23 @@ export function useEditor(options: EditorOptions) {
   }
 
   function parseMention(text: string) {
-    const match = text.match(/\[\[([^\]]*)$/);
-    if (!match) return { isMention: false as const, query: "" };
-    return { isMention: true as const, query: match[1] };
+    const wiki = text.match(/\[\[([^\]]*)$/);
+    if (wiki) return { isMention: true as const, mode: "wiki" as const, query: wiki[1] ?? "" };
+    const at = text.match(/(?:^|[\s(])@([^\s@]*)$/);
+    if (at) return { isMention: true as const, mode: "at" as const, query: at[1] ?? "" };
+    return { isMention: false as const, mode: "wiki" as const, query: "" };
+  }
+
+  function filterMentionPeople(query: string) {
+    const q = query.trim().toLowerCase();
+    if (!q) return mentionPeople.slice(0, 12);
+    return mentionPeople
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.id.toLowerCase().includes(q),
+      )
+      .slice(0, 12);
   }
 
   function filterMentions(query: string) {
@@ -365,6 +397,20 @@ export function useEditor(options: EditorOptions) {
     const pages = linkablePages.filter((p) => p.kind !== "folder");
     if (!q) return pages.slice(0, 20);
     return pages.filter((p) => (p.title || "").toLowerCase().includes(q)).slice(0, 20);
+  }
+
+  type MentionHit =
+    | { kind: "person"; person: (typeof mentionPeople)[number] }
+    | { kind: "page"; page: Doc<"notes"> };
+
+  function mentionHits(mode: "wiki" | "at", query: string): MentionHit[] {
+    const pages = filterMentions(query).map((page) => ({ kind: "page" as const, page }));
+    if (mode === "wiki") return pages;
+    const people = filterMentionPeople(query).map((person) => ({
+      kind: "person" as const,
+      person,
+    }));
+    return [...people, ...pages].slice(0, 24);
   }
 
   function handleTextChange(block: Block, text: string) {
@@ -486,26 +532,32 @@ export function useEditor(options: EditorOptions) {
 
     const { isSlash, query } = parseSlash(block.text);
     const filtered = isSlash ? filterSlash(query) : [];
-    const { isMention, query: mentionQuery } = parseMention(block.text);
-    const mentionPages = isMention ? filterMentions(mentionQuery) : [];
+    const { isMention, mode: mentionMode, query: mentionQuery } = parseMention(block.text);
+    const hits = isMention ? mentionHits(mentionMode, mentionQuery) : [];
 
     if (mentionBlockId === block.id && isMention) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setMentionIndex((i) => (i + 1) % Math.max(mentionPages.length, 1));
+        setMentionIndex((i) => (i + 1) % Math.max(hits.length, 1));
         return;
       }
       if (e.key === "ArrowUp") {
         e.preventDefault();
         setMentionIndex(
-          (i) => (i - 1 + Math.max(mentionPages.length, 1)) % Math.max(mentionPages.length, 1),
+          (i) => (i - 1 + Math.max(hits.length, 1)) % Math.max(hits.length, 1),
         );
         return;
       }
-      if (e.key === "Enter" && mentionPages.length) {
+      if (e.key === "Enter" && hits.length) {
         e.preventDefault();
-        const page = mentionPages[mentionIndex % mentionPages.length];
-        commands.applyMention(block.id, page._id, page.title || "Untitled");
+        const hit = hits[mentionIndex % hits.length];
+        if (hit?.kind === "person") {
+          commands.applyMention(block.id, hit.person.id, hit.person.name, {
+            mentionUserId: hit.person.id,
+          });
+        } else if (hit?.kind === "page") {
+          commands.applyMention(block.id, hit.page._id, hit.page.title || "Untitled");
+        }
         return;
       }
       if (e.key === "Escape") {
@@ -661,6 +713,8 @@ export function useEditor(options: EditorOptions) {
     mentionIndex,
     setMentionIndex,
     filterMentions,
+    filterMentionPeople,
+    mentionHits,
     parseMention,
     focusedId,
     setFocusedId,
@@ -668,6 +722,7 @@ export function useEditor(options: EditorOptions) {
     setHoveredId,
     readOnly,
     linkablePages,
+    mentionPeople,
     onNavigate,
     filterSlash,
     parseSlash,

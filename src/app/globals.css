@@ -10886,6 +10886,48 @@ body {
   color: var(--danger, #c44);
   font-size: 0.85rem;
 }
+.published-query,
+.published-synced {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+}
+.published-query-label,
+.published-synced-badge {
+  margin: 0 0 0.35rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.published-query-dsl {
+  display: block;
+  font-size: 0.85rem;
+  word-break: break-word;
+}
+.published-query-hint {
+  margin: 0.4rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.published-canvas {
+  margin: 0.75rem 0;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+}
+.published-canvas-surface {
+  display: block;
+  width: 100%;
+  height: 220px;
+}
+.published-mention {
+  color: var(--accent-bright);
+  font-weight: 500;
+}
 .published-footer {
   margin-top: 2.5rem;
   padding-top: 1rem;
