@@ -303,3 +303,101 @@ export const searchDirectory = query({
       .slice(0, 20);
   },
 });
+
+/** Move a note into a team workspace (or back to personal). */
+export const assignNoteWorkspace = mutation({
+  args: {
+    ownerId: v.string(),
+    noteId: v.id("notes"),
+    workspaceId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const note = await ctx.db.get(args.noteId);
+    if (!note || note.ownerId !== args.ownerId) throw new Error("Not found");
+    if (args.workspaceId !== args.ownerId) {
+      const mine = await ctx.db
+        .query("workspaces")
+        .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+        .collect();
+      const ws = mine.find((r) => r.workspaceId === args.workspaceId);
+      if (!ws || ws.kind !== "team") throw new Error("Team workspace not found");
+    }
+    await ctx.db.patch(args.noteId, {
+      workspaceId: args.workspaceId,
+      updatedAt: Date.now(),
+    });
+    return args.noteId;
+  },
+});
+
+export const listNoteGrants = query({
+  args: { ownerId: v.string(), noteId: v.id("notes") },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const note = await ctx.db.get(args.noteId);
+    if (!note || note.ownerId !== args.ownerId) return [];
+    const rows = await ctx.db
+      .query("noteGrants")
+      .withIndex("by_note", (q) => q.eq("noteId", args.noteId))
+      .collect();
+    return rows.map((r) => ({
+      userId: r.userId,
+      role: r.role,
+      updatedAt: r.updatedAt,
+    }));
+  },
+});
+
+export const grantNoteAccess = mutation({
+  args: {
+    ownerId: v.string(),
+    noteId: v.id("notes"),
+    userId: v.string(),
+    role: v.union(v.literal("viewer"), v.literal("editor")),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const note = await ctx.db.get(args.noteId);
+    if (!note || note.ownerId !== args.ownerId) throw new Error("Not found");
+    if (args.userId === args.ownerId) throw new Error("Already owner");
+    const existing = await ctx.db
+      .query("noteGrants")
+      .withIndex("by_note_user", (q) =>
+        q.eq("noteId", args.noteId).eq("userId", args.userId),
+      )
+      .first();
+    const now = Date.now();
+    if (existing) {
+      await ctx.db.patch(existing._id, { role: args.role, updatedAt: now });
+      return existing._id;
+    }
+    return await ctx.db.insert("noteGrants", {
+      noteId: args.noteId,
+      userId: args.userId,
+      role: args.role,
+      grantedBy: args.ownerId,
+      updatedAt: now,
+    });
+  },
+});
+
+export const revokeNoteAccess = mutation({
+  args: {
+    ownerId: v.string(),
+    noteId: v.id("notes"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const note = await ctx.db.get(args.noteId);
+    if (!note || note.ownerId !== args.ownerId) throw new Error("Not found");
+    const existing = await ctx.db
+      .query("noteGrants")
+      .withIndex("by_note_user", (q) =>
+        q.eq("noteId", args.noteId).eq("userId", args.userId),
+      )
+      .first();
+    if (existing) await ctx.db.delete(existing._id);
+  },
+});

@@ -41,6 +41,7 @@ import { CollectionKanban } from "./collection-kanban";
 import { IconPicker } from "./icon-picker";
 import { CoverBanner } from "./cover-banner";
 import { CollectionPropertySchema } from "./page-properties";
+import { NoteAclControls } from "./note-acl-controls";
 import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
 
@@ -568,6 +569,15 @@ export function CollectionDetail({
               </label>
             </SettingRow>
 
+            <SettingRow label="Team access">
+              <NoteAclControls
+                ownerId={ownerId}
+                noteId={folder._id}
+                workspaceId={folder.workspaceId}
+                compact
+              />
+            </SettingRow>
+
             {canShare && (
               <SettingRow label="Sharing">
                 <button
@@ -882,7 +892,11 @@ function CollectionTable({
       propertyDefs.filter(
         (d) =>
           !["status", "tags"].includes(d.id) &&
-          (d.type === "select" || d.type === "person" || d.type === "text" || d.type === "date"),
+          (d.type === "select" ||
+            d.type === "person" ||
+            d.type === "text" ||
+            d.type === "date" ||
+            d.type === "relation"),
       ),
     [propertyDefs],
   );
@@ -1068,6 +1082,36 @@ function CollectionTable({
                             </option>
                           ))}
                         </select>
+                      ) : d.type === "relation" ? (
+                        <div className="db-table-rel">
+                          {(Array.isArray(props[d.id])
+                            ? (props[d.id] as string[])
+                            : props[d.id]
+                              ? [String(props[d.id])]
+                              : []
+                          )
+                            .slice(0, 3)
+                            .map((rid) => {
+                              const linked = items.find((n) => n._id === rid);
+                              return (
+                                <button
+                                  key={rid}
+                                  type="button"
+                                  className="db-rel-chip"
+                                  onClick={() => onNavigate(rid as Id<"notes">)}
+                                >
+                                  {linked
+                                    ? `${linked.icon || ""} ${linked.title || "Untitled"}`.trim()
+                                    : rid.slice(0, 6)}
+                                </button>
+                              );
+                            })}
+                          {!props[d.id] ||
+                          (Array.isArray(props[d.id]) &&
+                            (props[d.id] as string[]).length === 0) ? (
+                            <span className="db-table-muted">—</span>
+                          ) : null}
+                        </div>
                       ) : (
                         <span className="db-table-muted">
                           {props[d.id] == null ? "—" : String(props[d.id])}

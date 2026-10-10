@@ -21,6 +21,8 @@ export const propertyDefValidator = v.object({
   options: v.optional(v.array(v.string())),
   formula: v.optional(v.string()),
   relationFolderId: v.optional(v.string()),
+  /** On related page, property id that should mirror this link (back-relation). */
+  backRelationPropId: v.optional(v.string()),
   rollupRelationId: v.optional(v.string()),
   rollupPropertyId: v.optional(v.string()),
   rollupAgg: v.optional(

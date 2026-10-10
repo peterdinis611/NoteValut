@@ -791,7 +791,11 @@ export function NoteEditor({
               <div className="page-body">
                 {!readOnly ? (
                   <SharePresenceBar
-                    shareToken={`vault:${ownerId}`}
+                    shareToken={
+                      note.workspaceId?.startsWith("org:")
+                        ? `ws:${note.workspaceId}`
+                        : `vault:${ownerId}`
+                    }
                     noteId={noteId}
                     displayName={displayName}
                     enabled

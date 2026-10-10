@@ -1,8 +1,9 @@
 "use client";
 
+import { useOrganization, useOrganizationList } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import { Building2, Filter, Plus, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useToast } from "./toast";
@@ -17,14 +18,54 @@ export function SettingsWorkspaces({ ownerId }: Props) {
   const ensurePersonal = useMutation(api.workspaces.ensurePersonal);
   const linkOrg = useMutation(api.workspaces.linkOrg);
   const setActive = useMutation(api.workspaces.setActive);
-  const [orgId, setOrgId] = useState("");
-  const [orgName, setOrgName] = useState("");
+  const { userMemberships, isLoaded: orgsLoaded } = useOrganizationList({
+    userMemberships: { infinite: true },
+  });
+  const { organization } = useOrganization();
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     void ensurePersonal({ ownerId }).catch(() => undefined);
   }, [ownerId, ensurePersonal]);
 
+  // Auto-link active Clerk org + memberships into Convex workspaces
+  useEffect(() => {
+    if (!orgsLoaded || !userMemberships?.data?.length) return;
+    let cancelled = false;
+    void (async () => {
+      setSyncing(true);
+      try {
+        for (const m of userMemberships.data) {
+          if (cancelled) return;
+          await linkOrg({
+            ownerId,
+            orgId: m.organization.id,
+            name: m.organization.name || "Team",
+          });
+        }
+        if (organization?.id && !cancelled) {
+          await setActive({ ownerId, workspaceId: `org:${organization.id}` });
+        }
+      } catch {
+        /* ignore sync noise */
+      } finally {
+        if (!cancelled) setSyncing(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    orgsLoaded,
+    userMemberships?.data,
+    organization?.id,
+    ownerId,
+    linkOrg,
+    setActive,
+  ]);
+
   const activeId = vaultRemote?.activeWorkspaceId ?? ownerId;
+  const clerkOrgs = useMemo(() => userMemberships?.data ?? [], [userMemberships?.data]);
 
   return (
     <section className="settings-section">
@@ -32,7 +73,7 @@ export function SettingsWorkspaces({ ownerId }: Props) {
         <Building2 className="size-4 text-accent" />
         <div>
           <h2>Workspaces</h2>
-          <p>Personal vault + Clerk org team vaults (foundation)</p>
+          <p>Personal vault + Clerk organizations (picker syncs automatically)</p>
         </div>
       </div>
       <ul className="settings-template-list">
@@ -64,45 +105,53 @@ export function SettingsWorkspaces({ ownerId }: Props) {
           </li>
         ))}
       </ul>
-      <div className="settings-inbox-form">
-        <input
-          className="settings-input"
-          placeholder="Clerk org ID"
-          value={orgId}
-          onChange={(e) => setOrgId(e.target.value)}
-        />
-        <input
-          className="settings-input"
-          placeholder="Team name"
-          value={orgName}
-          onChange={(e) => setOrgName(e.target.value)}
-        />
-        <button
-          type="button"
-          className="settings-btn"
-          disabled={!orgId.trim()}
-          onClick={() => {
-            void linkOrg({
-              ownerId,
-              orgId: orgId.trim(),
-              name: orgName.trim() || "Team",
-            }).then(
-              () => {
-                toast.success("Team workspace linked");
-                setOrgId("");
-                setOrgName("");
-              },
-              () => toast.error("Couldn’t link org"),
-            );
-          }}
-        >
-          Link Clerk org
-        </button>
-      </div>
-      <p className="settings-hint">
-        Team notes are stamped with <code>workspaceId</code>. Members invited below get real
-        roles (owner / admin / member) checked on note access.
-      </p>
+      {clerkOrgs.length > 0 ? (
+        <div className="settings-inbox-form" style={{ marginTop: "0.75rem" }}>
+          <p className="settings-hint">
+            Your Clerk orgs {syncing ? "(syncing…)" : ""} — pick one to activate the team vault
+          </p>
+          <ul className="settings-template-list">
+            {clerkOrgs.map((m) => {
+              const wsId = `org:${m.organization.id}`;
+              return (
+                <li key={m.organization.id} className="settings-template-row">
+                  <span className="min-w-0 flex-1 truncate text-sm">
+                    {m.organization.name}
+                    <span className="text-xs text-muted"> · {m.role}</span>
+                  </span>
+                  {activeId === wsId ? (
+                    <span className="settings-template-badge">Active</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="settings-btn settings-btn-ghost"
+                      onClick={() =>
+                        void linkOrg({
+                          ownerId,
+                          orgId: m.organization.id,
+                          name: m.organization.name || "Team",
+                        })
+                          .then(() => setActive({ ownerId, workspaceId: wsId }))
+                          .then(
+                            () => toast.success(`Team vault: ${m.organization.name}`),
+                            () => toast.error("Couldn’t activate org"),
+                          )
+                      }
+                    >
+                      Use team
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : (
+        <p className="settings-hint" style={{ marginTop: "0.75rem" }}>
+          Create or join an organization from the org switcher in the sidebar (Clerk →
+          Organizations must be enabled).
+        </p>
+      )}
       <WorkspaceInvite ownerId={ownerId} workspaces={workspaces ?? []} />
     </section>
   );
@@ -113,16 +162,17 @@ function WorkspaceInvite({
   workspaces,
 }: {
   ownerId: string;
-  workspaces: Array<{ workspaceId: string; name: string; kind: string; role: string }>;
+  workspaces: Array<{ workspaceId: string; name: string; kind: string; role: string; orgId?: string }>;
 }) {
   const toast = useToast();
   const invite = useMutation(api.workspaces.inviteMember);
+  const { organization } = useOrganization();
   const teams = workspaces.filter((w) => w.kind === "team");
   const [workspaceId, setWorkspaceId] = useState(teams[0]?.workspaceId ?? "");
-  const [memberUserId, setMemberUserId] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "member">("member");
   const [search, setSearch] = useState("");
+  const [busy, setBusy] = useState(false);
   const removeMember = useMutation(api.workspaces.removeMember);
   const setMemberRole = useMutation(api.workspaces.setMemberRole);
   const members = useQuery(
@@ -136,11 +186,56 @@ function WorkspaceInvite({
       : "skip",
   );
 
+  useEffect(() => {
+    if (!workspaceId && teams[0]) setWorkspaceId(teams[0].workspaceId);
+  }, [teams, workspaceId]);
+
   if (teams.length === 0) return null;
+
+  const selected = teams.find((t) => t.workspaceId === workspaceId);
+  const orgMatchesSwitcher =
+    organization?.id && selected?.orgId === organization.id;
+
+  async function inviteByEmail() {
+    const addr = email.trim().toLowerCase();
+    if (!addr || !workspaceId) return;
+    setBusy(true);
+    try {
+      if (orgMatchesSwitcher && organization) {
+        await organization.inviteMember({
+          emailAddress: addr,
+          role: role === "admin" ? "org:admin" : "org:member",
+        });
+      }
+      // Also record in Convex if we already know their user id from directory
+      const known = directory?.find(
+        (d) => d.name.toLowerCase().includes(addr) || d.userId.toLowerCase() === addr,
+      );
+      if (known) {
+        await invite({
+          ownerId,
+          workspaceId,
+          memberUserId: known.userId,
+          role,
+          displayName: known.name || addr,
+        });
+      }
+      toast.success(
+        orgMatchesSwitcher
+          ? `Invite sent to ${addr}`
+          : `Queued invite for ${addr} — switch to that org in the sidebar to send Clerk email`,
+      );
+      setEmail("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn’t invite");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="settings-inbox-form" style={{ marginTop: "0.75rem" }}>
-      <p className="settings-hint">Invite by display name + Clerk user id (search existing)</p>
+      <p className="settings-hint">Invite teammates by email (Clerk) or pick existing members</p>
       <select
         className="settings-select"
         value={workspaceId}
@@ -154,7 +249,30 @@ function WorkspaceInvite({
       </select>
       <input
         className="settings-input"
-        placeholder="Search members by name…"
+        type="email"
+        placeholder="teammate@company.com"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <select
+        className="settings-select"
+        value={role}
+        onChange={(e) => setRole(e.target.value as "admin" | "member")}
+      >
+        <option value="member">member</option>
+        <option value="admin">admin</option>
+      </select>
+      <button
+        type="button"
+        className="settings-btn"
+        disabled={!email.trim() || !workspaceId || busy}
+        onClick={() => void inviteByEmail()}
+      >
+        Invite by email
+      </button>
+      <input
+        className="settings-input"
+        placeholder="Search existing members…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
@@ -168,60 +286,25 @@ function WorkspaceInvite({
               <button
                 type="button"
                 className="settings-btn settings-btn-ghost"
-                onClick={() => {
-                  setDisplayName(d.name);
-                  setMemberUserId(d.userId);
-                }}
+                onClick={() =>
+                  void invite({
+                    ownerId,
+                    workspaceId,
+                    memberUserId: d.userId,
+                    role,
+                    displayName: d.name,
+                  }).then(
+                    () => toast.success(`Added ${d.name}`),
+                    () => toast.error("Couldn’t add"),
+                  )
+                }
               >
-                Use
+                Add
               </button>
             </li>
           ))}
         </ul>
       ) : null}
-      <input
-        className="settings-input"
-        placeholder="Display name (e.g. Ada Lovelace)"
-        value={displayName}
-        onChange={(e) => setDisplayName(e.target.value)}
-      />
-      <input
-        className="settings-input"
-        placeholder="Clerk user id"
-        value={memberUserId}
-        onChange={(e) => setMemberUserId(e.target.value)}
-      />
-      <select
-        className="settings-select"
-        value={role}
-        onChange={(e) => setRole(e.target.value as "admin" | "member")}
-      >
-        <option value="member">member</option>
-        <option value="admin">admin</option>
-      </select>
-      <button
-        type="button"
-        className="settings-btn"
-        disabled={!memberUserId.trim() || !workspaceId || !displayName.trim()}
-        onClick={() =>
-          void invite({
-            ownerId,
-            workspaceId,
-            memberUserId: memberUserId.trim(),
-            role,
-            displayName: displayName.trim(),
-          }).then(
-            () => {
-              toast.success(`Invited ${displayName.trim()}`);
-              setMemberUserId("");
-              setDisplayName("");
-            },
-            () => toast.error("Couldn’t invite"),
-          )
-        }
-      >
-        Invite
-      </button>
       {members && members.length > 0 ? (
         <ul className="settings-template-list">
           {members.map((m) => (

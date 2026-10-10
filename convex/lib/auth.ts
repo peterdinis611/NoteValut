@@ -63,6 +63,20 @@ export async function assertCanAccessNote(
 
   if (note.ownerId === identity.subject) return note;
 
+  // Explicit teammate grant (works even when note stays in personal workspace)
+  const grant = await ctx.db
+    .query("noteGrants")
+    .withIndex("by_note_user", (q) =>
+      q.eq("noteId", noteId).eq("userId", identity.subject),
+    )
+    .first();
+  if (grant) {
+    if (opts?.minEditRole && grant.role === "viewer") {
+      throw new Error("Forbidden");
+    }
+    return note;
+  }
+
   const workspaceId = note.workspaceId;
   if (!workspaceId || workspaceId === note.ownerId) {
     throw new Error("Forbidden");

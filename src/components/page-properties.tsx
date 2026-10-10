@@ -45,6 +45,7 @@ export function PageProperties({
   onNavigate,
 }: Props) {
   const toast = useToast();
+  const syncBack = useMutation(api.notes.syncBackRelation);
   const [draft, setDraft] = useState("");
   const [editingTags, setEditingTags] = useState(false);
   const [suggestIndex, setSuggestIndex] = useState(0);
@@ -59,6 +60,10 @@ export function PageProperties({
   const linkable = useQuery(
     api.notes.list,
     ownerId && relationOpen ? { ownerId } : "skip",
+  );
+  const incoming = useQuery(
+    api.notes.listIncomingRelations,
+    ownerId ? { ownerId, noteId: note._id, limit: 16 } : "skip",
   );
   const vaultRemote = useQuery(
     api.vaultSettings.get,
@@ -142,8 +147,45 @@ export function PageProperties({
       onChangeStatus?.(value ? String(value) : null);
       return;
     }
+    const prev = properties[def.id];
     const next = { ...properties, [def.id]: value };
     onChangeProperties?.(next);
+
+    // Sync back-relations when linking/unlinking pages
+    if (
+      def.type === "relation" &&
+      def.backRelationPropId &&
+      ownerId
+    ) {
+      const prevIds = new Set(
+        (Array.isArray(prev) ? prev : prev ? [String(prev)] : []).map(String),
+      );
+      const nextIds = new Set(
+        (Array.isArray(value) ? value : value ? [String(value)] : []).map(String),
+      );
+      for (const id of nextIds) {
+        if (!prevIds.has(id)) {
+          void syncBack({
+            ownerId,
+            fromNoteId: note._id,
+            toNoteId: id as Id<"notes">,
+            backPropId: def.backRelationPropId,
+            link: true,
+          }).catch(() => undefined);
+        }
+      }
+      for (const id of prevIds) {
+        if (!nextIds.has(id)) {
+          void syncBack({
+            ownerId,
+            fromNoteId: note._id,
+            toNoteId: id as Id<"notes">,
+            backPropId: def.backRelationPropId,
+            link: false,
+          }).catch(() => undefined);
+        }
+      }
+    }
   }
 
   return (
@@ -344,6 +386,25 @@ export function PageProperties({
         );
       })}
 
+      {incoming && incoming.length > 0 ? (
+        <div className="page-property-row">
+          <span className="page-property-label">Linked from</span>
+          <div className="page-property-value page-prop-relation">
+            {incoming.map((row) => (
+              <button
+                key={`${row._id}-${row.propertyId}`}
+                type="button"
+                className="page-prop-rel-chip"
+                title={row.propertyName}
+                onClick={() => onNavigate?.(row._id)}
+              >
+                {row.icon} {row.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <div className="page-property-row">
         <span className="page-property-label">
           <Tag className="mr-1 inline size-3" />
@@ -455,6 +516,7 @@ export function CollectionPropertySchema({
   const [type, setType] = useState<PropertyDef["type"]>("select");
   const [formula, setFormula] = useState("prop('priority')");
   const [relationFolderId, setRelationFolderId] = useState("");
+  const [backRelationPropId, setBackRelationPropId] = useState("");
   const [rollupRelationId, setRollupRelationId] = useState("");
   const [rollupPropertyId, setRollupPropertyId] = useState("status");
   const [rollupAgg, setRollupAgg] =
@@ -485,6 +547,7 @@ export function CollectionPropertySchema({
     setType("select");
     setFormula("prop('priority')");
     setRelationFolderId("");
+    setBackRelationPropId("");
     setRollupRelationId("");
     setRollupPropertyId("status");
     setRollupAgg("count");
@@ -498,6 +561,7 @@ export function CollectionPropertySchema({
     setType(d.type);
     setFormula(d.formula ?? "prop('priority')");
     setRelationFolderId(d.relationFolderId ?? "");
+    setBackRelationPropId(d.backRelationPropId ?? "");
     setRollupRelationId(d.rollupRelationId ?? "");
     setRollupPropertyId(d.rollupPropertyId ?? "status");
     setRollupAgg(d.rollupAgg ?? "count");
@@ -524,6 +588,8 @@ export function CollectionPropertySchema({
       formula: type === "formula" ? formula.trim() || undefined : undefined,
       relationFolderId:
         type === "relation" ? relationFolderId || undefined : undefined,
+      backRelationPropId:
+        type === "relation" ? backRelationPropId || undefined : undefined,
       rollupRelationId:
         type === "rollup" ? rollupRelationId || undefined : undefined,
       rollupPropertyId:
@@ -627,18 +693,34 @@ export function CollectionPropertySchema({
           />
         )}
         {type === "relation" && (
-          <select
-            className="settings-select"
-            value={relationFolderId}
-            onChange={(e) => setRelationFolderId(e.target.value)}
-          >
-            <option value="">Any collection / vault</option>
-            {collections.map((c) => (
-              <option key={c._id} value={c._id}>
-                {c.icon} {c.title || "Untitled"}
-              </option>
-            ))}
-          </select>
+          <>
+            <select
+              className="settings-select"
+              value={relationFolderId}
+              onChange={(e) => setRelationFolderId(e.target.value)}
+            >
+              <option value="">Any collection / vault</option>
+              {collections.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.icon} {c.title || "Untitled"}
+                </option>
+              ))}
+            </select>
+            <select
+              className="settings-select"
+              value={backRelationPropId}
+              onChange={(e) => setBackRelationPropId(e.target.value)}
+            >
+              <option value="">No back-relation</option>
+              {relationDefs
+                .filter((d) => d.id !== editingId)
+                .map((d) => (
+                  <option key={d.id} value={d.id}>
+                    Mirror into: {d.name}
+                  </option>
+                ))}
+            </select>
+          </>
         )}
         {type === "rollup" && (
           <>

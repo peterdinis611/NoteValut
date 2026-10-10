@@ -188,6 +188,106 @@ export const get = query({
   },
 });
 
+/** Pages that link to this note via a relation property (incoming / back-links). */
+export const listIncomingRelations = query({
+  args: {
+    ownerId: v.string(),
+    noteId: v.id("notes"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const target = String(args.noteId);
+    const settings = await ctx.db
+      .query("vaultSettings")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .first();
+    const activeWs = settings?.activeWorkspaceId ?? args.ownerId;
+    const isTeam = activeWs.startsWith("org:");
+    const candidates = isTeam
+      ? await ctx.db
+          .query("notes")
+          .withIndex("by_workspace", (q) => q.eq("workspaceId", activeWs))
+          .take(400)
+      : await ctx.db
+          .query("notes")
+          .withIndex("by_owner_updated", (q) => q.eq("ownerId", args.ownerId))
+          .order("desc")
+          .take(400);
+
+    const out: Array<{
+      _id: typeof args.noteId;
+      title: string;
+      icon: string;
+      propertyId: string;
+      propertyName: string;
+    }> = [];
+    const limit = Math.min(args.limit ?? 24, 48);
+
+    for (const n of candidates) {
+      if (n._id === args.noteId || n.trashed || n.kind === "folder") continue;
+      const props = (n.properties ?? {}) as Record<string, unknown>;
+      let parentDefs: Array<{ id: string; name: string; type: string }> = [];
+      if (n.parentId) {
+        const parent = await ctx.db.get(n.parentId);
+        parentDefs = (parent?.propertyDefs as typeof parentDefs | undefined) ?? [];
+      }
+      for (const [key, raw] of Object.entries(props)) {
+        const ids = Array.isArray(raw) ? raw.map(String) : raw ? [String(raw)] : [];
+        if (!ids.includes(target)) continue;
+        const def = parentDefs.find((d) => d.id === key);
+        if (def && def.type !== "relation") continue;
+        out.push({
+          _id: n._id,
+          title: n.title || "Untitled",
+          icon: n.icon || "📄",
+          propertyId: key,
+          propertyName: def?.name ?? key,
+        });
+        if (out.length >= limit) return out;
+      }
+    }
+    return out;
+  },
+});
+
+/**
+ * Keep a back-relation property in sync when linking/unlinking pages.
+ * Call after updating the forward relation on `fromNoteId`.
+ */
+export const syncBackRelation = mutation({
+  args: {
+    ownerId: v.string(),
+    fromNoteId: v.id("notes"),
+    toNoteId: v.id("notes"),
+    backPropId: v.string(),
+    link: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx, args.ownerId);
+    const target = await assertCanAccessNote(ctx, args.toNoteId, {
+      minEditRole: "member",
+    });
+    const props = { ...((target.properties ?? {}) as Record<string, unknown>) };
+    const cur = Array.isArray(props[args.backPropId])
+      ? [...(props[args.backPropId] as string[])]
+      : props[args.backPropId]
+        ? [String(props[args.backPropId])]
+        : [];
+    const from = String(args.fromNoteId);
+    let next: string[];
+    if (args.link) {
+      next = cur.includes(from) ? cur : [...cur, from];
+    } else {
+      next = cur.filter((id) => id !== from);
+    }
+    await ctx.db.patch(args.toNoteId, {
+      properties: { ...props, [args.backPropId]: next },
+      updatedAt: Date.now(),
+    });
+  },
+});
+
 export const listChildren = query({
   args: { parentId: v.id("notes") },
   handler: async (ctx, args) => {
@@ -476,6 +576,7 @@ export const update = mutation({
     parentId: v.optional(v.union(v.id("notes"), v.null())),
     fontFamily: v.optional(v.union(v.string(), v.null())),
     fontUrl: v.optional(v.union(v.string(), v.null())),
+    workspaceId: v.optional(v.string()),
     /** If set and note.updatedAt is newer, reject with conflict. */
     expectedUpdatedAt: v.optional(v.number()),
   },
@@ -524,6 +625,7 @@ export const update = mutation({
     if (patch.parentId !== undefined) updates.parentId = patch.parentId ?? undefined;
     if (patch.fontFamily !== undefined) updates.fontFamily = patch.fontFamily ?? undefined;
     if (patch.fontUrl !== undefined) updates.fontUrl = patch.fontUrl ?? undefined;
+    if (patch.workspaceId !== undefined) updates.workspaceId = patch.workspaceId;
 
     const nextTitle = (updates.title as string | undefined) ?? existing.title;
     const nextContent = (updates.content as string | undefined) ?? existing.content;

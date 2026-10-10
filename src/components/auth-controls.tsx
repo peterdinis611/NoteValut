@@ -1,6 +1,13 @@
 "use client";
 
-import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import {
+  OrganizationSwitcher,
+  Show,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+} from "@clerk/nextjs";
+import { clerkAppearance } from "@/lib/clerk-appearance";
 
 /** Compact Clerk controls for the sidebar account row. */
 export function AuthControls({ className = "" }: { className?: string }) {
@@ -19,6 +26,19 @@ export function AuthControls({ className = "" }: { className?: string }) {
         </SignUpButton>
       </Show>
       <Show when="signed-in">
+        <OrganizationSwitcher
+          hidePersonal={false}
+          afterCreateOrganizationUrl="/"
+          afterSelectOrganizationUrl="/"
+          appearance={{
+            ...clerkAppearance,
+            elements: {
+              ...clerkAppearance.elements,
+              rootBox: "nv-org-root",
+              organizationSwitcherTrigger: "nv-org-trigger",
+            },
+          }}
+        />
         <UserButton
           appearance={{
             elements: {

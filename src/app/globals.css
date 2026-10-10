@@ -838,6 +838,16 @@ body {
   border-radius: 999px !important;
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent) !important;
 }
+.auth-controls .nv-org-root {
+  width: auto !important;
+}
+.auth-controls .nv-org-trigger {
+  padding: 0.15rem 0.4rem !important;
+  border-radius: 0.35rem !important;
+  font-size: 0.7rem !important;
+  max-width: 7.5rem;
+  overflow: hidden;
+}
 .auth-btn {
   border-radius: 0.35rem;
   border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
@@ -11131,6 +11141,135 @@ body {
 .note-acl-members em {
   font-style: normal;
   color: var(--muted);
+}
+.note-acl-stack {
+  margin-top: 0.5rem;
+}
+.note-acl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+.note-acl-compact {
+  margin: 0;
+  border: none;
+  padding: 0.25rem 0;
+}
+
+.share-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0 1rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.share-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.8rem;
+  border-radius: 0.35rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.share-tab-active {
+  color: var(--foreground);
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+}
+.share-team-block {
+  padding: 0.75rem 1rem;
+  max-height: 50vh;
+  overflow: auto;
+}
+
+.ws-presence {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.35rem 0;
+  margin-bottom: 0.25rem;
+}
+.ws-presence-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ws-presence-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.ws-presence-list li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 100%;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  border: 1px solid var(--border);
+}
+.ws-presence-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--ws-dot, var(--accent));
+  flex-shrink: 0;
+}
+.ws-presence-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 6rem;
+}
+.ws-presence-more {
+  font-size: 0.65rem;
+  color: var(--muted);
+  border: none !important;
+  background: transparent !important;
+}
+
+.db-table-rel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+.db-rel-chip {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.3rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 75%, transparent);
+  max-width: 8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.db-rel-chip:hover {
+  border-color: var(--accent);
+}
+
+.activity-feed-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.activity-feed-filters .settings-select {
+  flex: 1 1 8rem;
+  min-width: 0;
 }
 
 .nv-presence-block-hot {

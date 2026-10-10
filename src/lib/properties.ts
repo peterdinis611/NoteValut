@@ -28,6 +28,8 @@ export type PropertyDef = {
   formula?: string;
   /** relation target collection id (optional) */
   relationFolderId?: string;
+  /** On related page, property id that mirrors this link */
+  backRelationPropId?: string;
   /** rollup: which relation property to walk */
   rollupRelationId?: string;
   /** rollup: property on related pages */

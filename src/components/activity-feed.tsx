@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { Activity, RotateCcw, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -17,13 +17,55 @@ type Props = {
   onNavigate?: (id: Id<"notes">) => void;
 };
 
+const ACTION_OPTIONS = [
+  { value: "", label: "All actions" },
+  { value: "edit", label: "Edits" },
+  { value: "restore", label: "Restores" },
+  { value: "inbox_rule", label: "Inbox rules" },
+  { value: "status", label: "Status" },
+  { value: "tags", label: "Tags" },
+  { value: "properties", label: "Properties" },
+];
+
 export function ActivityFeed({ ownerId, open, onClose, onNavigate }: Props) {
   const toast = useToast();
-  const items = useQuery(api.activity.list, open ? { ownerId, limit: 50 } : "skip");
+  const workspaces = useQuery(api.workspaces.listForUser, open ? { ownerId } : "skip");
+  const vault = useQuery(api.vaultSettings.get, open ? { ownerId } : "skip");
+  const [workspaceFilter, setWorkspaceFilter] = useState<string>("");
+  const [actionFilter, setActionFilter] = useState("");
+  const [actorFilter, setActorFilter] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    const active = vault?.activeWorkspaceId;
+    if (active?.startsWith("org:")) setWorkspaceFilter(active);
+    else setWorkspaceFilter("");
+  }, [open, vault?.activeWorkspaceId]);
+
+  const items = useQuery(
+    api.activity.list,
+    open
+      ? {
+          ownerId,
+          limit: 50,
+          workspaceId: workspaceFilter || undefined,
+          action: actionFilter || undefined,
+          actorId: actorFilter || undefined,
+        }
+      : "skip",
+  );
   const restore = useMutation(api.versions.restore);
   const [mounted, setMounted] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   useEffect(() => setMounted(true), []);
+
+  const actors = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of items ?? []) {
+      map.set(row.actorId, row.actorName || row.actorId.slice(0, 10));
+    }
+    return [...map.entries()];
+  }, [items]);
 
   if (!mounted) return null;
 
@@ -60,13 +102,56 @@ export function ActivityFeed({ ownerId, open, onClose, onNavigate }: Props) {
                 <h2 id="activity-feed-title" className="share-panel-title">
                   Activity
                 </h2>
-                <p className="share-panel-subtitle">Edits, restores, rules — one-click undo</p>
+                <p className="share-panel-subtitle">
+                  Org & vault audit — filter by workspace, action, actor
+                </p>
               </div>
             </div>
             <button type="button" className="share-panel-close" onClick={onClose} aria-label="Close">
               <X className="size-4" />
             </button>
           </header>
+
+          <div className="activity-feed-filters">
+            <select
+              className="settings-select"
+              value={workspaceFilter}
+              onChange={(e) => setWorkspaceFilter(e.target.value)}
+              aria-label="Workspace"
+            >
+              <option value="">All workspaces</option>
+              {(workspaces ?? []).map((w) => (
+                <option key={w.workspaceId} value={w.workspaceId}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+            <select
+              className="settings-select"
+              value={actionFilter}
+              onChange={(e) => setActionFilter(e.target.value)}
+              aria-label="Action"
+            >
+              {ACTION_OPTIONS.map((o) => (
+                <option key={o.value || "all"} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <select
+              className="settings-select"
+              value={actorFilter}
+              onChange={(e) => setActorFilter(e.target.value)}
+              aria-label="Actor"
+            >
+              <option value="">All people</option>
+              {actors.map(([id, name]) => (
+                <option key={id} value={id}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div className="activity-feed-list note-scroll">
             {items === undefined ? (
@@ -86,6 +171,7 @@ export function ActivityFeed({ ownerId, open, onClose, onNavigate }: Props) {
                           <span className="activity-feed-action">{row.action}</span>
                           · {formatRelativeTime(row.createdAt)}
                           {row.actorName ? ` · ${row.actorName}` : ""}
+                          {row.workspaceId?.startsWith("org:") ? " · team" : ""}
                         </p>
                       </div>
                       <div className="activity-feed-actions">

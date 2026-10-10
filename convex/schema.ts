@@ -248,6 +248,18 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_note", ["noteId"]),
 
+  /** Explicit teammate grants on a page/folder (viewer or editor). */
+  noteGrants: defineTable({
+    noteId: v.id("notes"),
+    userId: v.string(),
+    role: v.union(v.literal("viewer"), v.literal("editor")),
+    grantedBy: v.string(),
+    updatedAt: v.number(),
+  })
+    .index("by_note", ["noteId"])
+    .index("by_user", ["userId"])
+    .index("by_note_user", ["noteId", "userId"]),
+
   savedQueries: defineTable({
     ownerId: v.string(),
     folderId: v.optional(v.id("notes")),
@@ -264,13 +276,15 @@ export default defineSchema({
     actorId: v.string(),
     actorName: v.optional(v.string()),
     noteId: v.optional(v.id("notes")),
+    workspaceId: v.optional(v.string()),
     action: v.string(),
     summary: v.string(),
     meta: v.optional(v.any()),
     createdAt: v.number(),
   })
     .index("by_owner_time", ["ownerId", "createdAt"])
-    .index("by_note", ["noteId", "createdAt"]),
+    .index("by_note", ["noteId", "createdAt"])
+    .index("by_workspace_time", ["workspaceId", "createdAt"]),
 
   inboxRules: defineTable({
     ownerId: v.string(),

@@ -47,6 +47,7 @@ import { searchNotes } from "@/lib/search";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { AuthControls } from "./auth-controls";
+import { WorkspacePresence } from "./workspace-presence";
 import { ConnectionStatus } from "./connection-status";
 import { NotificationsBell } from "./notifications-bell";
 import { CreateMenu } from "./create-menu";
@@ -1012,6 +1013,7 @@ export function Sidebar({
           </div>
 
           <div className="sidebar-footer-user">
+            <WorkspacePresence ownerId={ownerId} noteId={activeId} />
             <ConnectionStatus variant="rail" />
             <NotificationsBell ownerId={ownerId} onNavigate={onSelect} />
             <AuthControls />

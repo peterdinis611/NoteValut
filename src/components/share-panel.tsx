@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { Check, Copy, Eye, Link2, Lock, Pencil, Trash2, X } from "lucide-react";
+import { Check, Copy, Eye, Link2, Lock, Pencil, Trash2, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "../../convex/_generated/api";
@@ -9,6 +9,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { ROLE_PERMISSION_MATRIX, roleDescription } from "@/lib/ability";
 import { AnimePresence } from "@/lib/anime-ui";
 import { permissionLabel, shareUrl, type ShareScope } from "@/lib/share";
+import { NoteAclControls } from "./note-acl-controls";
 import { useToast } from "./toast";
 
 type Props = {
@@ -36,8 +37,17 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
   const [mounted, setMounted] = useState(false);
   const [expiresInDays, setExpiresInDays] = useState<"" | "1" | "7" | "30">("");
   const [password, setPassword] = useState("");
+  const [tab, setTab] = useState<"team" | "link">("team");
+  const note = useQuery(
+    api.notes.get,
+    open && noteId ? { id: noteId } : "skip",
+  );
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (open) setTab(noteId ? "team" : "link");
+  }, [open, noteId]);
 
   useEffect(() => {
     if (!open) return;
@@ -163,8 +173,8 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
                   </h2>
                   <p className="share-panel-subtitle">
                     {title
-                      ? `Invite people to “${title}” with a link`
-                      : "Invite people with a link — no account required"}
+                      ? `Share “${title}” with teammates or a link`
+                      : "Share with teammates or a public link"}
                   </p>
                 </div>
               </div>
@@ -178,7 +188,43 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
               </button>
             </header>
 
-            {scope === "vault" && settings && (
+            {noteId ? (
+              <div className="share-tabs" role="tablist">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === "team"}
+                  className={`share-tab ${tab === "team" ? "share-tab-active" : ""}`}
+                  onClick={() => setTab("team")}
+                >
+                  <Users className="size-3.5" />
+                  Teammates
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === "link"}
+                  className={`share-tab ${tab === "link" ? "share-tab-active" : ""}`}
+                  onClick={() => setTab("link")}
+                >
+                  <Link2 className="size-3.5" />
+                  Link
+                </button>
+              </div>
+            ) : null}
+
+            {tab === "team" && noteId ? (
+              <section className="share-team-block" aria-label="Team access">
+                <NoteAclControls
+                  ownerId={ownerId}
+                  noteId={noteId}
+                  workspaceId={note?.workspaceId}
+                  compact
+                />
+              </section>
+            ) : null}
+
+            {(tab === "link" || !noteId) && scope === "vault" && settings && (
               <section className="share-settings-block" aria-label="Sharing preferences">
                 <label className="share-switch">
                   <span className="share-switch-copy">
@@ -234,6 +280,8 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
               </section>
             )}
 
+            {(tab === "link" || !noteId) && (
+            <>
             <section className="share-create" aria-label="Create share link">
               <p className="share-section-label">Permission</p>
               <div className="share-role-seg" role="group" aria-label="Link permission">
@@ -436,6 +484,8 @@ export function SharePanel({ ownerId, open, onClose, scope, noteId, title }: Pro
               <Lock className="size-3.5 shrink-0" />
               Recipients open the link as Viewer or Editor. Only you can create or revoke links.
             </p>
+            </>
+            )}
         </div>
       </div>
     </AnimePresence>,
