@@ -18,10 +18,12 @@ export function SettingsWorkspaces({ ownerId }: Props) {
   const ensurePersonal = useMutation(api.workspaces.ensurePersonal);
   const linkOrg = useMutation(api.workspaces.linkOrg);
   const setActive = useMutation(api.workspaces.setActive);
-  const { userMemberships, isLoaded: orgsLoaded } = useOrganizationList({
+  const orgList = useOrganizationList({
     userMemberships: { infinite: true },
   });
   const { organization } = useOrganization();
+  const orgsLoaded = orgList.isLoaded;
+  const userMemberships = orgList.userMemberships;
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
@@ -43,11 +45,18 @@ export function SettingsWorkspaces({ ownerId }: Props) {
             name: m.organization.name || "Team",
           });
         }
+        // Only switch when Clerk already has an active org — never force away from personal
         if (organization?.id && !cancelled) {
-          await setActive({ ownerId, workspaceId: `org:${organization.id}` });
+          const wsId = `org:${organization.id}`;
+          await linkOrg({
+            ownerId,
+            orgId: organization.id,
+            name: organization.name || "Team",
+          });
+          await setActive({ ownerId, workspaceId: wsId });
         }
       } catch {
-        /* ignore sync noise */
+        /* Orgs may be disabled in Clerk Dashboard */
       } finally {
         if (!cancelled) setSyncing(false);
       }
@@ -59,6 +68,7 @@ export function SettingsWorkspaces({ ownerId }: Props) {
     orgsLoaded,
     userMemberships?.data,
     organization?.id,
+    organization?.name,
     ownerId,
     linkOrg,
     setActive,

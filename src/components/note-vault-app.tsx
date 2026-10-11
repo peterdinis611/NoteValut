@@ -1,5 +1,6 @@
 "use client";
 
+import { useClerk } from "@clerk/nextjs";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { PanelLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -42,6 +43,8 @@ import { TagsHub } from "./tags-hub";
 import { useToast } from "./toast";
 import { VaultHome } from "./vault-home";
 
+const CONVEX_AUTH_TIMEOUT_MS = 12_000;
+
 type MainPanel = "home" | "note" | "settings" | "tags" | "calendar" | "due";
 
 function useIsMobile(breakpoint = 768) {
@@ -58,7 +61,9 @@ function useIsMobile(breakpoint = 768) {
 
 export function NoteVaultApp() {
   const ownerId = useOwnerId();
+  const { signOut } = useClerk();
   const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth();
+  const [authTimedOut, setAuthTimedOut] = useState(false);
   const toast = useToast();
   const isMobile = useIsMobile();
   useVaultSettings();
@@ -67,6 +72,15 @@ export function NoteVaultApp() {
   const createNote = useMutation(api.notes.create);
   const getOrCreateDaily = useMutation(api.notes.getOrCreateDaily);
   const canQuery = Boolean(ownerId && isAuthenticated);
+
+  useEffect(() => {
+    if (!convexAuthLoading || isAuthenticated) {
+      setAuthTimedOut(false);
+      return;
+    }
+    const id = window.setTimeout(() => setAuthTimedOut(true), CONVEX_AUTH_TIMEOUT_MS);
+    return () => window.clearTimeout(id);
+  }, [convexAuthLoading, isAuthenticated]);
   const notes = useQuery(
     api.notes.list,
     canQuery ? { ownerId: ownerId!, includeArchived: true } : "skip",
@@ -589,7 +603,7 @@ export function NoteVaultApp() {
   const viewRef = useAnimeEnter<HTMLDivElement>("page", pageKey);
   const side = useAnimePresence<HTMLDivElement>(sidebarOpen, isMobile ? "drawer" : "slot");
 
-  if (!ownerId || convexAuthLoading) {
+  if (!ownerId) {
     return (
       <LottieStatus
         compact
@@ -600,14 +614,43 @@ export function NoteVaultApp() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (convexAuthLoading && !authTimedOut) {
     return (
       <LottieStatus
         compact
-        variant="error"
-        title="Vault session not linked"
-        description="Clerk is signed in, but Convex did not get a JWT. Create a Clerk JWT template named “convex” (aud: convex), then refresh or sign out and back in."
+        variant="loading"
+        title="Loading workspace…"
+        description="Linking Clerk session to Convex…"
       />
+    );
+  }
+
+  if (!isAuthenticated || authTimedOut) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
+        <LottieStatus
+          compact
+          variant="error"
+          title="Login failed — vault session not linked"
+          description="Clerk signed you in, but Convex never accepted the JWT. In Clerk → JWT templates create “convex” (aud: convex). On the Convex deployment set CLERK_JWT_ISSUER_DOMAIN to your Clerk Frontend API URL, then sign out and back in."
+        />
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            className="settings-btn"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            className="settings-btn settings-btn-ghost"
+            onClick={() => void signOut({ redirectUrl: "/sign-in" })}
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
     );
   }
 

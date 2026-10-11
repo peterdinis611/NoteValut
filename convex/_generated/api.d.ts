@@ -13,6 +13,7 @@ import type * as ai from "../ai.js";
 import type * as block from "../block.js";
 import type * as blog from "../blog.js";
 import type * as comments from "../comments.js";
+import type * as crons from "../crons.js";
 import type * as embeddings from "../embeddings.js";
 import type * as files from "../files.js";
 import type * as googleFonts from "../googleFonts.js";
@@ -52,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   block: typeof block;
   blog: typeof blog;
   comments: typeof comments;
+  crons: typeof crons;
   embeddings: typeof embeddings;
   files: typeof files;
   googleFonts: typeof googleFonts;

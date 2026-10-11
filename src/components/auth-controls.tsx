@@ -8,6 +8,7 @@ import {
   UserButton,
 } from "@clerk/nextjs";
 import { clerkAppearance } from "@/lib/clerk-appearance";
+import { SoftErrorBoundary } from "./soft-error-boundary";
 
 /** Compact Clerk controls for the sidebar account row. */
 export function AuthControls({ className = "" }: { className?: string }) {
@@ -26,19 +27,22 @@ export function AuthControls({ className = "" }: { className?: string }) {
         </SignUpButton>
       </Show>
       <Show when="signed-in">
-        <OrganizationSwitcher
-          hidePersonal={false}
-          afterCreateOrganizationUrl="/"
-          afterSelectOrganizationUrl="/"
-          appearance={{
-            ...clerkAppearance,
-            elements: {
-              ...clerkAppearance.elements,
-              rootBox: "nv-org-root",
-              organizationSwitcherTrigger: "nv-org-trigger",
-            },
-          }}
-        />
+        {/* Orgs may be disabled in Clerk — never take down the vault chrome. */}
+        <SoftErrorBoundary>
+          <OrganizationSwitcher
+            hidePersonal={false}
+            afterCreateOrganizationUrl="/"
+            afterSelectOrganizationUrl="/"
+            appearance={{
+              ...clerkAppearance,
+              elements: {
+                ...clerkAppearance.elements,
+                rootBox: "nv-org-root",
+                organizationSwitcherTrigger: "nv-org-trigger",
+              },
+            }}
+          />
+        </SoftErrorBoundary>
         <UserButton
           appearance={{
             elements: {
