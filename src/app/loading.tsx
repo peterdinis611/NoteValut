@@ -1,9 +1,8 @@
-import { LottieStatus } from "@/components/lottie-status";
+import { VaultPreload } from "@/components/ui/spinner";
 
 export default function Loading() {
   return (
-    <LottieStatus
-      variant="loading"
+    <VaultPreload
       title="Opening your vault…"
       description="Syncing notes and collections. This usually takes a moment."
     />

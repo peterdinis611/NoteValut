@@ -61,7 +61,17 @@ import { CreateMenu } from "./create-menu";
 import { MoveDialog } from "./move-dialog";
 import { SharePanel } from "./share-panel";
 import { useToast } from "./toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 import { VirtualList } from "./virtual-list";
+
+/** Radix Select forbids empty string values. */
+const FACET_ALL = "__all__";
 
 type BrowseMode = "all" | "favorites" | "recent" | "collections" | "archive" | "queries";
 type DropPosition = "before" | "after" | "inside";
@@ -250,9 +260,10 @@ export function Sidebar({
   async function handleTrash(id: Id<"notes">) {
     try {
       await trashNote({ id });
+      if (activeId === id) onSelect(null);
       toast.success("Moved to bin");
-    } catch {
-      toast.error("Couldn’t move to bin");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn’t move to bin");
     }
   }
 
@@ -260,18 +271,22 @@ export function Sidebar({
     try {
       await restoreNote({ id });
       toast.success("Restored from bin");
-    } catch {
-      toast.error("Couldn’t restore item");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn’t restore item");
     }
   }
 
   async function handleEmptyTrash() {
     try {
-      await emptyTrash({ ownerId });
-      toast.success("Bin emptied");
-      setShowBin(false);
-    } catch {
-      toast.error("Couldn’t empty bin");
+      const result = await emptyTrash({ ownerId });
+      toast.success(
+        result.deleted === 0
+          ? "Trash is already empty"
+          : `Permanently deleted ${result.deleted} item${result.deleted === 1 ? "" : "s"}`,
+      );
+      if (result.deleted > 0) setShowBin(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn’t empty bin");
     }
   }
 
@@ -514,50 +529,56 @@ export function Sidebar({
           />
         </div>
         <div className="sidebar-facets" aria-label="Search filters">
-          <select
-            className="sidebar-facet"
-            value={searchFilters.status ?? ""}
-            onChange={(e) =>
+          <Select
+            value={searchFilters.status ?? FACET_ALL}
+            onValueChange={(v) =>
               setSearch(
                 formatSearchFilters({
                   ...searchFilters,
-                  status: e.target.value || undefined,
+                  status: v === FACET_ALL ? undefined : v,
                 }),
               )
             }
-            aria-label="Filter by status"
           >
-            <option value="">Status</option>
-            <option value="none">None</option>
-            {STATUS_OPTIONS.filter(Boolean).map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          <select
-            className="sidebar-facet"
-            value={searchFilters.folderId ?? ""}
-            onChange={(e) =>
-              setSearch(
-                formatSearchFilters({
-                  ...searchFilters,
-                  folderId: e.target.value || undefined,
-                }),
-              )
-            }
-            aria-label="Filter by folder"
-          >
-            <option value="">Folder</option>
-            {(notes ?? [])
-              .filter((n) => isFolder(n) && !n.trashed)
-              .slice(0, 30)
-              .map((f) => (
-                <option key={f._id} value={f._id}>
-                  {f.title || "Untitled"}
-                </option>
+            <SelectTrigger size="sm" className="sidebar-facet" aria-label="Filter by status">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent position="popper" align="start">
+              <SelectItem value={FACET_ALL}>Status</SelectItem>
+              <SelectItem value="none">None</SelectItem>
+              {STATUS_OPTIONS.filter(Boolean).map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
               ))}
-          </select>
+            </SelectContent>
+          </Select>
+          <Select
+            value={searchFilters.folderId ?? FACET_ALL}
+            onValueChange={(v) =>
+              setSearch(
+                formatSearchFilters({
+                  ...searchFilters,
+                  folderId: v === FACET_ALL ? undefined : v,
+                }),
+              )
+            }
+          >
+            <SelectTrigger size="sm" className="sidebar-facet" aria-label="Filter by folder">
+              <SelectValue placeholder="Folder" />
+            </SelectTrigger>
+            <SelectContent position="popper" align="start">
+              <SelectItem value={FACET_ALL}>Folder</SelectItem>
+              {(notes ?? [])
+                .filter((n) => isFolder(n) && !n.trashed)
+                .slice(0, 30)
+                .map((f) => (
+                  <SelectItem key={f._id} value={f._id}>
+                    {f.title || "Untitled"}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="sidebar-menu">
@@ -708,6 +729,62 @@ export function Sidebar({
           )}
           {notes === undefined ? (
             <p className="sidebar-empty">Loading…</p>
+          ) : showBin ? (
+            <SidebarSection title="Trash">
+              {trashed === undefined ? (
+                <p className="sidebar-empty">Loading…</p>
+              ) : trashCount === 0 ? (
+                <EmptyHint text="Trash is empty — deleted pages land here." />
+              ) : (
+                <>
+                  <ul className="sidebar-section-items">
+                    {trashed.map((item) => {
+                      const trashedAt = item.trashedAt ?? item.updatedAt;
+                      const daysLeft =
+                        trashRetentionDays > 0
+                          ? Math.max(
+                              0,
+                              Math.ceil(
+                                (trashedAt + trashRetentionDays * 86400000 - Date.now()) /
+                                  86400000,
+                              ),
+                            )
+                          : null;
+                      return (
+                        <li key={item._id} className="sidebar-bin-item">
+                          <span className="sidebar-bin-label">
+                            <span>{item.icon}</span>
+                            <span className="sidebar-bin-text">
+                              <span className="truncate">{item.title || "Untitled"}</span>
+                              <span className="sidebar-bin-meta">
+                                Trashed {formatRelativeTime(trashedAt)}
+                                {daysLeft != null
+                                  ? ` · ${daysLeft === 0 ? "purges soon" : `${daysLeft}d left`}`
+                                  : ""}
+                              </span>
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            className="sidebar-bin-restore"
+                            onClick={() => void handleRestore(item._id)}
+                          >
+                            Restore
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <button
+                    type="button"
+                    className="sidebar-empty-bin"
+                    onClick={() => void handleEmptyTrash()}
+                  >
+                    Empty trash
+                  </button>
+                </>
+              )}
+            </SidebarSection>
           ) : isSearching ? (
             <SidebarSection
               title={searchPending ? "Searching…" : `Results · ${searchResults.length}`}
@@ -971,55 +1048,6 @@ export function Sidebar({
         </nav>
 
         <div className="sidebar-footer">
-          {showBin && (
-            <div className="sidebar-bin">
-              <p className="sidebar-bin-title">Trash</p>
-              {trashCount === 0 ? (
-                <p className="sidebar-empty">Trash is empty</p>
-              ) : (
-                <>
-                  {trashed?.map((item) => {
-                    const trashedAt = item.trashedAt ?? item.updatedAt;
-                    const daysLeft =
-                      trashRetentionDays > 0
-                        ? Math.max(
-                            0,
-                            Math.ceil(
-                              (trashedAt + trashRetentionDays * 86400000 - Date.now()) / 86400000,
-                            ),
-                          )
-                        : null;
-                    return (
-                      <div key={item._id} className="sidebar-bin-item">
-                        <span className="sidebar-bin-label">
-                          <span>{item.icon}</span>
-                          <span className="sidebar-bin-text">
-                            <span className="truncate">{item.title || "Untitled"}</span>
-                            <span className="sidebar-bin-meta">
-                              Trashed {formatRelativeTime(trashedAt)}
-                              {daysLeft != null
-                                ? ` · ${daysLeft === 0 ? "purges soon" : `${daysLeft}d left`}`
-                                : ""}
-                            </span>
-                          </span>
-                        </span>
-                        <button
-                          type="button"
-                          className="sidebar-bin-restore"
-                          onClick={() => handleRestore(item._id)}
-                        >
-                          Restore
-                        </button>
-                      </div>
-                    );
-                  })}
-                  <button type="button" className="sidebar-empty-bin" onClick={handleEmptyTrash}>
-                    Empty trash
-                  </button>
-                </>
-              )}
-            </div>
-          )}
 
           <div className="sidebar-footer-links">
             <button
@@ -1065,7 +1093,10 @@ export function Sidebar({
             <button
               type="button"
               className={`sidebar-link ${showBin ? "sidebar-link-active" : ""}`}
-              onClick={() => setShowBin((v) => !v)}
+              onClick={() => {
+                setShowBin((v) => !v);
+                setBrowse("all");
+              }}
             >
               <Trash2 className="size-4" />
               <span>Trash</span>
@@ -1374,7 +1405,15 @@ function ActionBtn({
   children: React.ReactNode;
 }) {
   return (
-    <button type="button" className="sidebar-action-btn" aria-label={label} onClick={onClick}>
+    <button
+      type="button"
+      className="sidebar-action-btn"
+      aria-label={label}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+    >
       {children}
     </button>
   );

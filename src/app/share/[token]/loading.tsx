@@ -1,9 +1,8 @@
-import { LottieStatus } from "@/components/lottie-status";
+import { VaultPreload } from "@/components/ui/spinner";
 
 export default function ShareLoading() {
   return (
-    <LottieStatus
-      variant="loading"
+    <VaultPreload
       title="Opening shared vault…"
       description="Validating the share link and loading content."
     />

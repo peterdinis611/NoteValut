@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useAuth } from "@clerk/nextjs";
-import { LottieStatus } from "@/components/lottie-status";
+import { VaultPreload } from "@/components/ui/spinner";
 
 const MarketingLanding = dynamic(
   () => import("@/components/marketing-landing").then((m) => ({ default: m.MarketingLanding })),
@@ -14,9 +14,8 @@ const NoteVaultApp = dynamic(
   {
     ssr: false,
     loading: () => (
-      <LottieStatus
+      <VaultPreload
         compact
-        variant="loading"
         title="Opening your vault…"
         description="Loading the desk."
       />
@@ -29,9 +28,8 @@ export function HomeGate() {
 
   if (!isLoaded) {
     return (
-      <LottieStatus
+      <VaultPreload
         compact
-        variant="loading"
         title="Opening NoteVault…"
         description="Checking your session."
       />

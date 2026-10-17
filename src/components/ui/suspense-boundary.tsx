@@ -10,6 +10,8 @@ type Props = {
   hint?: string;
   size?: SpinnerSize;
   compact?: boolean;
+  /** Paper skeleton lines under the label */
+  lines?: number;
 };
 
 /**
@@ -22,11 +24,20 @@ export function SuspenseBoundary({
   hint,
   size = "md",
   compact = true,
+  lines = 3,
 }: Props) {
   return (
     <Suspense
       fallback={
-        fallback ?? <PreloadSpinner label={label} hint={hint} size={size} compact={compact} />
+        fallback ?? (
+          <PreloadSpinner
+            label={label}
+            hint={hint}
+            size={size}
+            compact={compact}
+            lines={lines}
+          />
+        )
       }
     >
       {children}

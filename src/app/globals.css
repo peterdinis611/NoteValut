@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /* NoteVault theme — Folio (paper, ink, brew) */
 :root {
@@ -697,8 +698,15 @@ body {
   opacity: 0;
   transition: opacity 0.14s ease;
 }
-.sidebar-item:hover .sidebar-item-actions {
+.sidebar-item:hover .sidebar-item-actions,
+.sidebar-item:focus-within .sidebar-item-actions,
+.sidebar-item-selected .sidebar-item-actions {
   opacity: 1;
+}
+@media (hover: none) {
+  .sidebar-item-actions {
+    opacity: 1;
+  }
 }
 
 .sidebar-action-btn {
@@ -973,13 +981,22 @@ body {
   padding: 0.35rem 0.85rem 0.15rem;
 }
 .cmd-facet-select {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.4rem;
-  border-radius: 0.3rem;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--panel) 80%, transparent);
-  color: var(--foreground);
-  max-width: 9rem;
+  max-width: 9rem !important;
+  width: auto !important;
+  height: 1.9rem !important;
+  padding: 0 0.5rem !important;
+  border-radius: 0.4rem !important;
+  border-color: color-mix(in srgb, var(--foreground) 12%, transparent) !important;
+  background: color-mix(in srgb, var(--panel) 85%, transparent) !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  color: var(--foreground) !important;
+  box-shadow: none !important;
+}
+.cmd-facet-select[data-state="open"],
+.cmd-facet-select:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border)) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent) !important;
 }
 .cmd-filter-chip {
   cursor: pointer;
@@ -987,18 +1004,31 @@ body {
 
 .sidebar-facets {
   display: flex;
-  gap: 0.3rem;
-  padding: 0 0.65rem 0.45rem;
+  gap: 0.35rem;
+  padding: 0 0.65rem 0.5rem;
 }
 .sidebar-facet {
   flex: 1;
-  min-width: 0;
-  font-size: 0.68rem;
-  padding: 0.15rem 0.3rem;
-  border-radius: 0.3rem;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--muted);
+  width: auto !important;
+  min-width: 0 !important;
+  height: 1.85rem !important;
+  padding: 0 0.45rem !important;
+  border-radius: 0.4rem !important;
+  border-color: color-mix(in srgb, var(--foreground) 12%, transparent) !important;
+  background: color-mix(in srgb, var(--panel) 70%, transparent) !important;
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  color: var(--muted) !important;
+  box-shadow: none !important;
+}
+.sidebar-facet[data-state="open"],
+.sidebar-facet:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border)) !important;
+  color: var(--foreground) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent) !important;
+}
+.sidebar-facet[data-placeholder] {
+  color: var(--muted) !important;
 }
 .auth-btn {
   border-radius: 0.35rem;
@@ -2921,11 +2951,10 @@ body {
 }
 
 .sidebar-bin {
-  max-height: 11rem;
-  overflow-y: auto;
-  margin-bottom: 0.35rem;
-  padding-bottom: 0.35rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 6%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-height: 0;
 }
 
 .sidebar-bin-title {
@@ -7399,41 +7428,73 @@ body {
 .nv-spinner {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.5rem;
   color: var(--muted);
 }
-.nv-spinner-ring {
-  display: block;
-  border-radius: 999px;
-  border-style: solid;
-  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
-  border-top-color: var(--accent);
-  animation: nv-spin 0.7s linear infinite;
+.nv-spinner-seal {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
 }
-.nv-spinner-sm .nv-spinner-ring {
-  width: 0.85rem;
-  height: 0.85rem;
-  border-width: 1.5px;
+.nv-spinner-sm.nv-spinner-seal,
+.nv-spinner-sm .nv-spinner-seal {
+  width: 1rem;
+  height: 1rem;
 }
-.nv-spinner-md .nv-spinner-ring {
-  width: 1.25rem;
-  height: 1.25rem;
+.nv-spinner-md.nv-spinner-seal,
+.nv-spinner-md .nv-spinner-seal {
+  width: 1.45rem;
+  height: 1.45rem;
+}
+.nv-spinner-lg.nv-spinner-seal,
+.nv-spinner-lg .nv-spinner-seal {
+  width: 2.1rem;
+  height: 2.1rem;
+}
+.nv-spinner-orbit {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.28rem;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 55%, var(--foreground));
+  animation: nv-seal-spin 1.1s linear infinite;
+}
+.nv-spinner-core {
+  width: 42%;
+  height: 42%;
+  border-radius: 0.15rem;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--foreground) 18%, transparent);
+  animation: nv-seal-press 1.4s ease-in-out infinite;
+}
+.nv-spinner-sm .nv-spinner-orbit {
+  border-width: 1px;
+  border-radius: 0.2rem;
+}
+.nv-spinner-lg .nv-spinner-orbit {
   border-width: 2px;
-}
-.nv-spinner-lg .nv-spinner-ring {
-  width: 1.75rem;
-  height: 1.75rem;
-  border-width: 2.5px;
+  border-radius: 0.35rem;
 }
 .nv-spinner-label {
   font-size: 0.75rem;
-  font-weight: 550;
-  letter-spacing: 0.02em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   color: var(--foreground);
 }
-@keyframes nv-spin {
+@keyframes nv-seal-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+@keyframes nv-seal-press {
+  0%,
+  100% {
+    transform: scale(0.88);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
@@ -7444,49 +7505,195 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
-  min-height: 8.5rem;
-  padding: 1.25rem 1rem;
+  gap: 0.4rem;
+  min-height: 9rem;
+  padding: 1.4rem 1.1rem 1.25rem;
   text-align: center;
   overflow: hidden;
+  border-radius: 0.35rem 0.35rem 0.75rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  border-top: 2px solid color-mix(in srgb, var(--accent) 55%, var(--foreground));
+  background:
+    radial-gradient(
+      120% 80% at 10% 0%,
+      color-mix(in srgb, var(--accent) 8%, transparent),
+      transparent 55%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--panel) 96%, #fff),
+      color-mix(in srgb, var(--sidebar) 22%, var(--panel))
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 65%, transparent),
+    0 8px 22px color-mix(in srgb, var(--foreground) 5%, transparent);
 }
 .nv-preload-compact {
-  min-height: 7.5rem;
-  padding: 1rem 0.75rem;
+  min-height: 7rem;
+  padding: 1rem 0.85rem 0.9rem;
+  gap: 0.35rem;
 }
 .nv-preload-glow {
   position: absolute;
-  inset: 20% 18%;
+  inset: 12% 10%;
   background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--accent) 16%, transparent),
-    transparent 70%
+    circle at 40% 35%,
+    color-mix(in srgb, var(--accent) 18%, transparent),
+    transparent 68%
   );
-  filter: blur(18px);
+  filter: blur(22px);
   pointer-events: none;
   z-index: 0;
-  animation: nv-preload-pulse 1.8s ease-in-out infinite;
+  animation: nv-preload-pulse 2.2s ease-in-out infinite;
 }
-.nv-preload > :not(.nv-preload-glow) {
+.nv-preload-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+}
+.nv-preload > :not(.nv-preload-glow):not(.nv-preload-grain) {
   position: relative;
   z-index: 1;
 }
+.nv-preload-label {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: var(--foreground);
+}
 .nv-preload-hint {
   margin: 0;
-  max-width: 16rem;
+  max-width: 17rem;
   font-size: 0.7rem;
-  line-height: 1.35;
+  line-height: 1.4;
   color: var(--muted);
+}
+.nv-preload-lines {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: min(14rem, 88%);
+  margin-top: 0.55rem;
+}
+.nv-preload-line {
+  display: block;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--foreground) 10%, transparent) 20%,
+    color-mix(in srgb, var(--accent) 18%, transparent) 50%,
+    color-mix(in srgb, var(--foreground) 10%, transparent) 80%,
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: nv-preload-shimmer 1.6s ease-in-out infinite;
 }
 @keyframes nv-preload-pulse {
   0%,
   100% {
-    opacity: 0.55;
-    transform: scale(0.92);
+    opacity: 0.45;
+    transform: scale(0.94);
   }
   50% {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1.02);
+  }
+}
+@keyframes nv-preload-shimmer {
+  0% {
+    background-position: 100% 0;
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    background-position: -100% 0;
+    opacity: 0.55;
+  }
+}
+
+/* Full-page / auth-gate vault preload */
+.nv-vault-preload {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 1.5rem;
+  background:
+    radial-gradient(
+      90% 60% at 50% 0%,
+      color-mix(in srgb, var(--accent) 10%, transparent),
+      transparent 55%
+    ),
+    var(--background);
+}
+.nv-vault-preload-compact {
+  min-height: 100%;
+  padding: 1.25rem;
+}
+.nv-vault-preload-card {
+  width: min(22rem, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1.6rem 1.35rem 1.45rem;
+  text-align: center;
+  border-radius: 0.3rem 0.3rem 0.85rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  border-top: 2.5px solid color-mix(in srgb, var(--accent) 60%, var(--foreground));
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--panel) 97%, #fff),
+      color-mix(in srgb, var(--sidebar) 30%, var(--panel))
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 70%, transparent),
+    4px 4px 0 color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+.nv-vault-preload-kicker {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.nv-vault-preload-mark {
+  margin: 0.55rem 0 0.35rem;
+}
+.nv-vault-preload-title {
+  margin: 0.2rem 0 0;
+  font-family: var(--font-land-display), var(--font-display), Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--foreground);
+}
+.nv-vault-preload-desc {
+  margin: 0;
+  max-width: 18rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nv-spinner-orbit,
+  .nv-spinner-core,
+  .nv-preload-glow,
+  .nv-preload-line {
+    animation: none !important;
   }
 }
 

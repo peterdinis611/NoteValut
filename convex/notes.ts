@@ -382,15 +382,44 @@ export const listChildren = query({
 });
 
 export const listTrashed = query({
-  args: { ownerId: v.string() },
+  args: {
+    ownerId: v.string(),
+    workspaceId: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     await requireOwner(ctx, args.ownerId);
-    const notes = await ctx.db
-      .query("notes")
+    const settings = await ctx.db
+      .query("vaultSettings")
       .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
-      .collect();
+      .first();
+    const activeWs = args.workspaceId ?? settings?.activeWorkspaceId ?? args.ownerId;
+    const isTeam = activeWs.startsWith("org:");
 
-    return notes.filter((n) => n.trashed).sort((a, b) => (b.trashedAt ?? 0) - (a.trashedAt ?? 0));
+    let notes;
+    if (isTeam) {
+      const role = await getWorkspaceRole(ctx, args.ownerId, activeWs);
+      if (!role) return [];
+      notes = await ctx.db
+        .query("notes")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", activeWs))
+        .collect();
+    } else {
+      notes = await ctx.db
+        .query("notes")
+        .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+        .collect();
+      notes = notes.filter(
+        (n) =>
+          !n.workspaceId ||
+          n.workspaceId === args.ownerId ||
+          n.workspaceId === activeWs ||
+          !String(n.workspaceId).startsWith("org:"),
+      );
+    }
+
+    return notes
+      .filter((n) => n.trashed)
+      .sort((a, b) => (b.trashedAt ?? 0) - (a.trashedAt ?? 0));
   },
 });
 
@@ -1340,7 +1369,9 @@ export const bulkTrash = mutation({
     const now = Date.now();
     let count = 0;
     for (const id of args.ids) {
-      const note = await assertCanAccessNote(ctx, id).catch(() => null);
+      const note = await assertCanAccessNote(ctx, id, { minEditRole: "member" }).catch(
+        () => null,
+      );
       if (!note || note.trashed) continue;
       await ctx.db.patch(id, { trashed: true, trashedAt: now, updatedAt: now });
       count += 1;
@@ -1484,7 +1515,7 @@ export const importVault = mutation({
 export const trash = mutation({
   args: { id: v.id("notes") },
   handler: async (ctx, args) => {
-    await assertCanAccessNote(ctx, args.id);
+    await assertCanAccessNote(ctx, args.id, { minEditRole: "member" });
     const now = Date.now();
     await ctx.db.patch(args.id, { trashed: true, trashedAt: now, updatedAt: now });
     return args.id;
@@ -1494,7 +1525,7 @@ export const trash = mutation({
 export const restoreFromTrash = mutation({
   args: { id: v.id("notes") },
   handler: async (ctx, args) => {
-    await assertCanAccessNote(ctx, args.id);
+    await assertCanAccessNote(ctx, args.id, { minEditRole: "member" });
     await ctx.db.patch(args.id, {
       trashed: false,
       trashedAt: undefined,
@@ -1505,15 +1536,42 @@ export const restoreFromTrash = mutation({
 });
 
 export const emptyTrash = mutation({
-  args: { ownerId: v.string() },
+  args: {
+    ownerId: v.string(),
+    workspaceId: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     await requireOwner(ctx, args.ownerId);
-    const trashed = await ctx.db
-      .query("notes")
+    const settings = await ctx.db
+      .query("vaultSettings")
       .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
-      .collect();
+      .first();
+    const activeWs = args.workspaceId ?? settings?.activeWorkspaceId ?? args.ownerId;
+    const isTeam = activeWs.startsWith("org:");
 
-    const toDelete = trashed.filter((n) => n.trashed);
+    let notes;
+    if (isTeam) {
+      const role = await getWorkspaceRole(ctx, args.ownerId, activeWs);
+      if (!role) return { deleted: 0 };
+      notes = await ctx.db
+        .query("notes")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", activeWs))
+        .collect();
+    } else {
+      notes = await ctx.db
+        .query("notes")
+        .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+        .collect();
+      notes = notes.filter(
+        (n) =>
+          !n.workspaceId ||
+          n.workspaceId === args.ownerId ||
+          n.workspaceId === activeWs ||
+          !String(n.workspaceId).startsWith("org:"),
+      );
+    }
+
+    const toDelete = notes.filter((n) => n.trashed);
     for (const item of toDelete) {
       await permanentlyDelete(ctx, item._id);
     }

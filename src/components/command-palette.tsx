@@ -48,6 +48,13 @@ import {
 } from "@/lib/search-highlight";
 import { STATUS_OPTIONS } from "@/lib/status";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   getRecentSearches,
   getServerRecentSearches,
   rememberSearch,
@@ -56,6 +63,9 @@ import {
 import { AnimePresence } from "@/lib/anime-ui";
 import { snippetAround } from "@/lib/block-search";
 import { blocksToSearchText } from "@/lib/block-search";
+
+/** Radix Select forbids empty string values. */
+const FACET_ALL = "__all__";
 
 export type CommandAction = {
   id: string;
@@ -372,73 +382,83 @@ export function CommandPalette({
               <kbd className="cmd-kbd">esc</kbd>
             </div>
             <div className="cmd-facet-bar" aria-label="Search facets">
-              <select
-                className="cmd-facet-select"
-                value={filters.status ?? ""}
-                onChange={(e) =>
-                  patchFilters({ status: e.target.value || undefined })
+              <Select
+                value={filters.status ?? FACET_ALL}
+                onValueChange={(v) =>
+                  patchFilters({ status: v === FACET_ALL ? undefined : v })
                 }
-                aria-label="Status"
               >
-                <option value="">Status</option>
-                <option value="none">No status</option>
-                {STATUS_OPTIONS.filter(Boolean).map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="cmd-facet-select"
-                value={filters.tags[0] ?? ""}
-                onChange={(e) =>
-                  patchFilters({
-                    tags: e.target.value ? [e.target.value] : [],
-                  })
-                }
-                aria-label="Tag"
-              >
-                <option value="">Tag</option>
-                {(tagRows ?? []).slice(0, 40).map((t) => (
-                  <option key={t.key} value={t.tag}>
-                    {t.tag}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="cmd-facet-select"
-                value={filters.folderId ?? ""}
-                onChange={(e) =>
-                  patchFilters({ folderId: e.target.value || undefined })
-                }
-                aria-label="Folder"
-              >
-                <option value="">Folder</option>
-                {folders.slice(0, 40).map((f) => (
-                  <option key={f._id} value={f._id}>
-                    {f.icon} {f.title || "Untitled"}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="cmd-facet-select"
-                value={filters.assignee ?? ""}
-                onChange={(e) =>
-                  patchFilters({ assignee: e.target.value || undefined })
-                }
-                aria-label="Assignee"
-              >
-                <option value="">Assignee</option>
-                <option value="me">Me</option>
-                {(people ?? [])
-                  .filter((p) => p.userId !== ownerId)
-                  .slice(0, 20)
-                  .map((p) => (
-                    <option key={p.userId} value={p.userId}>
-                      {p.name}
-                    </option>
+                <SelectTrigger size="sm" className="cmd-facet-select" aria-label="Status">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent position="popper" align="start">
+                  <SelectItem value={FACET_ALL}>Status</SelectItem>
+                  <SelectItem value="none">No status</SelectItem>
+                  {STATUS_OPTIONS.filter(Boolean).map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
                   ))}
-              </select>
+                </SelectContent>
+              </Select>
+              <Select
+                value={filters.tags[0] ?? FACET_ALL}
+                onValueChange={(v) =>
+                  patchFilters({ tags: v === FACET_ALL ? [] : [v] })
+                }
+              >
+                <SelectTrigger size="sm" className="cmd-facet-select" aria-label="Tag">
+                  <SelectValue placeholder="Tag" />
+                </SelectTrigger>
+                <SelectContent position="popper" align="start">
+                  <SelectItem value={FACET_ALL}>Tag</SelectItem>
+                  {(tagRows ?? []).slice(0, 40).map((t) => (
+                    <SelectItem key={t.key} value={t.tag}>
+                      {t.tag}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={filters.folderId ?? FACET_ALL}
+                onValueChange={(v) =>
+                  patchFilters({ folderId: v === FACET_ALL ? undefined : v })
+                }
+              >
+                <SelectTrigger size="sm" className="cmd-facet-select" aria-label="Folder">
+                  <SelectValue placeholder="Folder" />
+                </SelectTrigger>
+                <SelectContent position="popper" align="start">
+                  <SelectItem value={FACET_ALL}>Folder</SelectItem>
+                  {folders.slice(0, 40).map((f) => (
+                    <SelectItem key={f._id} value={f._id}>
+                      {f.icon} {f.title || "Untitled"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={filters.assignee ?? FACET_ALL}
+                onValueChange={(v) =>
+                  patchFilters({ assignee: v === FACET_ALL ? undefined : v })
+                }
+              >
+                <SelectTrigger size="sm" className="cmd-facet-select" aria-label="Assignee">
+                  <SelectValue placeholder="Assignee" />
+                </SelectTrigger>
+                <SelectContent position="popper" align="start">
+                  <SelectItem value={FACET_ALL}>Assignee</SelectItem>
+                  <SelectItem value="me">Me</SelectItem>
+                  {(people ?? [])
+                    .filter((p) => p.userId !== ownerId)
+                    .slice(0, 20)
+                    .map((p) => (
+                      <SelectItem key={p.userId} value={p.userId}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
             <p className="cmd-hint">
               Filters: <span>status:</span> <span>tag:</span> <span>folder:</span>{" "}

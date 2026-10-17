@@ -518,12 +518,14 @@
 
 .nv-preload {
   border: var(--folio-border);
-  background: var(--panel);
-  box-shadow: var(--folio-shadow);
+  border-top: 2.5px solid var(--accent);
+  box-shadow: var(--folio-shadow-sm);
 }
 
-.nv-preload-glow {
-  display: none;
+.nv-vault-preload-card {
+  border: var(--folio-border);
+  border-top: 2.5px solid var(--accent);
+  box-shadow: var(--folio-shadow);
 }
 
 .nv-folio-btn {

@@ -393,17 +393,30 @@ export function applyFont(settings?: SettingsRecord) {
   clearFontDom();
 }
 
-export function applyTheme(settings?: SettingsRecord) {
-  if (typeof document === "undefined") return;
-  const s = normalizeSettings(settings ?? getSettings());
-  const root = document.documentElement;
+/** Every token we may stamp as an inline style — must be cleared for custom CSS. */
+const INLINE_THEME_KEYS = Array.from(
+  new Set([
+    ...Object.keys(THEME_PRESETS.default.vars),
+    "--accent-bright",
+    "--accent-ink",
+    "--lilac",
+    "--live",
+    "--live-soft",
+    "--grid-line",
+  ]),
+);
 
-  const preset = s.themeId === "custom" ? THEME_PRESETS.default : THEME_PRESETS[s.themeId];
+function clearInlineThemeVars(root: HTMLElement) {
+  for (const key of INLINE_THEME_KEYS) {
+    root.style.removeProperty(key);
+  }
+}
+
+function applyPresetInline(root: HTMLElement, preset: (typeof THEME_PRESETS)[Exclude<ThemePresetId, "custom">]) {
   for (const [key, value] of Object.entries(preset.vars)) {
     root.style.setProperty(key, value);
   }
   const accent = preset.vars["--accent"];
-  const background = preset.vars["--background"] ?? "#fbf8f2";
   if (accent) {
     root.style.setProperty("--accent-bright", preset.vars["--accent-bright"] ?? accent);
     root.style.setProperty("--accent-ink", preset.vars["--accent-ink"] ?? "#fffaf2");
@@ -411,31 +424,70 @@ export function applyTheme(settings?: SettingsRecord) {
   if (preset.vars["--lilac"]) {
     root.style.setProperty("--lilac", preset.vars["--lilac"]);
   }
+}
 
-  const hex = background.replace("#", "");
-  let isLight = true;
-  if (hex.length >= 6) {
-    const r = parseInt(hex.slice(0, 2), 16) / 255;
-    const g = parseInt(hex.slice(2, 4), 16) / 255;
-    const b = parseInt(hex.slice(4, 6), 16) / 255;
-    isLight = 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45;
+function folioRootCssFallback(): string {
+  const lines = Object.entries(THEME_PRESETS.default.vars)
+    .map(([key, value]) => `  ${key}: ${value};`)
+    .join("\n");
+  return `:root {\n${lines}\n}\n`;
+}
+
+function backgroundLooksLight(background: string): boolean {
+  const hex = background.trim().replace("#", "");
+  if (hex.length < 6) return true;
+  const r = parseInt(hex.slice(0, 2), 16) / 255;
+  const g = parseInt(hex.slice(2, 4), 16) / 255;
+  const b = parseInt(hex.slice(4, 6), 16) / 255;
+  if ([r, g, b].some((n) => Number.isNaN(n))) return true;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45;
+}
+
+function ensureCustomStyleEl(): HTMLStyleElement {
+  let styleEl = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
+  if (!styleEl) {
+    styleEl = document.createElement("style");
+    styleEl.id = STYLE_ID;
+    document.head.appendChild(styleEl);
   }
+  return styleEl;
+}
+
+export function applyTheme(settings?: SettingsRecord) {
+  if (typeof document === "undefined") return;
+  const s = normalizeSettings(settings ?? getSettings());
+  const root = document.documentElement;
+
+  if (s.themeId === "custom") {
+    // Inline :root vars beat stylesheet rules — clear them so custom CSS can win.
+    clearInlineThemeVars(root);
+
+    const css = s.customCss.trim();
+    if (css) {
+      // Folio defaults first, then user CSS (later :root declarations override).
+      ensureCustomStyleEl().textContent = `${folioRootCssFallback()}\n${css}`;
+    } else {
+      document.getElementById(STYLE_ID)?.remove();
+      applyPresetInline(root, THEME_PRESETS.default);
+    }
+
+    const bgMatch = /--background\s*:\s*([^;]+);/.exec(css);
+    const background = (bgMatch?.[1] ?? THEME_PRESETS.default.vars["--background"] ?? "#fbf8f2").trim();
+    const isLight = backgroundLooksLight(background);
+    root.style.colorScheme = isLight ? "light" : "dark";
+    root.classList.toggle("dark", !isLight);
+    applyFont(s);
+    return;
+  }
+
+  document.getElementById(STYLE_ID)?.remove();
+  const preset = THEME_PRESETS[s.themeId];
+  applyPresetInline(root, preset);
+
+  const background = preset.vars["--background"] ?? "#fbf8f2";
+  const isLight = backgroundLooksLight(background);
   root.style.colorScheme = isLight ? "light" : "dark";
   root.classList.toggle("dark", !isLight);
-
-  let styleEl = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
-  const css = s.themeId === "custom" ? s.customCss.trim() : "";
-
-  if (css) {
-    if (!styleEl) {
-      styleEl = document.createElement("style");
-      styleEl.id = STYLE_ID;
-      document.head.appendChild(styleEl);
-    }
-    styleEl.textContent = css;
-  } else if (styleEl) {
-    styleEl.remove();
-  }
 
   applyFont(s);
 }

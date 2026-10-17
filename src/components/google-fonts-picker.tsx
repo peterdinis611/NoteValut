@@ -348,6 +348,7 @@ function GoogleFontsPickerInner({ onPick, seed }: InnerProps) {
             <PreloadSpinner
               compact
               size="sm"
+              lines={3}
               label={ensuring ? "Fetching font catalog…" : "Loading fonts…"}
               hint="Cached in Convex for faster opens"
             />
@@ -398,7 +399,13 @@ type Props = PickerProps & {
 
 export function GoogleFontsPicker({ preloaded, onPick }: Props) {
   return (
-    <SuspenseBoundary label="Loading Google Fonts…" hint="Preparing the catalog" compact size="sm">
+    <SuspenseBoundary
+      label="Loading Google Fonts…"
+      hint="Preparing the catalog"
+      compact
+      size="sm"
+      lines={3}
+    >
       {preloaded ? (
         <GoogleFontsPickerPreloaded onPick={onPick} preloaded={preloaded} />
       ) : (
