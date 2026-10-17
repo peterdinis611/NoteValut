@@ -25,22 +25,36 @@ export type ConflictItem = {
 const KEY = "notevault.offline-queue.v1";
 const CONFLICT_KEY = "notevault.offline-conflicts.v1";
 const EMPTY_CONFLICTS: ConflictItem[] = [];
+const EMPTY_QUEUE: QueuedNotePatch[] = [];
+
+/** Suppress storage events while a flush is mutating the queue. */
+let queueEventsMuted = 0;
+
+export function withMutedQueueEvents<T>(fn: () => T): T {
+  queueEventsMuted += 1;
+  try {
+    return fn();
+  } finally {
+    queueEventsMuted -= 1;
+  }
+}
 
 function read(): QueuedNotePatch[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return EMPTY_QUEUE;
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return [];
+    if (!raw) return EMPTY_QUEUE;
     const parsed = JSON.parse(raw) as QueuedNotePatch[];
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed : EMPTY_QUEUE;
   } catch {
-    return [];
+    return EMPTY_QUEUE;
   }
 }
 
 function write(items: QueuedNotePatch[]) {
   if (typeof window === "undefined") return;
   localStorage.setItem(KEY, JSON.stringify(items));
+  if (queueEventsMuted > 0) return;
   window.dispatchEvent(new CustomEvent("nv-offline-queue", { detail: { count: items.length } }));
 }
 
@@ -86,9 +100,11 @@ export function clearAllQueuedPatches() {
 
 /** Merge latest patch per noteId and return in queue order. */
 export function drainQueuedPatches(): QueuedNotePatch[] {
-  const items = read();
-  write([]);
-  return items;
+  return withMutedQueueEvents(() => {
+    const items = read();
+    write([]);
+    return items;
+  });
 }
 
 export function subscribeOfflineQueue(cb: (count: number) => void) {
@@ -104,15 +120,35 @@ export function subscribeOfflineQueue(cb: (count: number) => void) {
   };
 }
 
+/** Cached client snapshot — always return the same array ref when data is unchanged. */
+let conflictsSnapshot: ConflictItem[] = EMPTY_CONFLICTS;
+let conflictsKey = "";
+
 function readConflicts(): ConflictItem[] {
   if (typeof window === "undefined") return EMPTY_CONFLICTS;
   try {
-    const raw = localStorage.getItem(CONFLICT_KEY);
-    if (!raw) return EMPTY_CONFLICTS;
+    const raw = localStorage.getItem(CONFLICT_KEY) ?? "";
+    if (raw === conflictsKey) return conflictsSnapshot;
+    conflictsKey = raw;
+    if (!raw) {
+      conflictsSnapshot = EMPTY_CONFLICTS;
+      return conflictsSnapshot;
+    }
     const parsed = JSON.parse(raw) as ConflictItem[];
-    return Array.isArray(parsed) ? parsed : EMPTY_CONFLICTS;
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      conflictsSnapshot = EMPTY_CONFLICTS;
+      return conflictsSnapshot;
+    }
+    // Re-sanitize titles — older builds stored Convex stack traces in `title`
+    conflictsSnapshot = parsed.map((c) => ({
+      ...c,
+      title: sanitizeConflictTitle(typeof c.title === "string" ? c.title : "Untitled"),
+    }));
+    return conflictsSnapshot;
   } catch {
-    return EMPTY_CONFLICTS;
+    conflictsKey = "";
+    conflictsSnapshot = EMPTY_CONFLICTS;
+    return conflictsSnapshot;
   }
 }
 
@@ -123,8 +159,13 @@ export function getServerConflicts(): ConflictItem[] {
 
 function writeConflicts(items: ConflictItem[]) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(CONFLICT_KEY, JSON.stringify(items));
-  window.dispatchEvent(new CustomEvent("nv-offline-conflicts", { detail: { count: items.length } }));
+  const next = items.length > 0 ? items : EMPTY_CONFLICTS;
+  const raw = next === EMPTY_CONFLICTS ? "" : JSON.stringify(next);
+  if (raw) localStorage.setItem(CONFLICT_KEY, raw);
+  else localStorage.removeItem(CONFLICT_KEY);
+  conflictsKey = raw;
+  conflictsSnapshot = next;
+  window.dispatchEvent(new CustomEvent("nv-offline-conflicts", { detail: { count: next.length } }));
 }
 
 export function pushConflict(item: ConflictItem) {
@@ -147,14 +188,24 @@ export function subscribeConflicts(cb: () => void) {
   return () => window.removeEventListener("nv-offline-conflicts", handler);
 }
 
+/** Strip Convex stack / "Called by client" noise from conflict titles. */
+function sanitizeConflictTitle(raw: string): string {
+  const line = (raw.split(/\r?\n/)[0] ?? "")
+    // Older parser ate the stack on one line: "Untitled at handler (...)"
+    .replace(/\s+at handler\b.*$/i, "")
+    .replace(/\s+Called by client\s*$/i, "")
+    .trim();
+  return line || "Untitled";
+}
+
 export function parseConflictError(message: string): {
   serverUpdatedAt: number;
   title: string;
 } | null {
-  const match = /CONFLICT:(\d+):([\s\S]*)/.exec(message);
+  // Convex wraps: "Uncaught Error: CONFLICT:ts:Title\n    at handler (...)\nCalled by client"
+  const match = /CONFLICT:(\d+):([^\n\r]*)/.exec(message);
   if (!match) return null;
   const serverUpdatedAt = Number(match[1]);
-  const title = (match[2] ?? "").trim() || "Untitled";
   if (!Number.isFinite(serverUpdatedAt)) return null;
-  return { serverUpdatedAt, title };
+  return { serverUpdatedAt, title: sanitizeConflictTitle(match[2] ?? "") };
 }

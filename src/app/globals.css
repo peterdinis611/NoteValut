@@ -789,22 +789,81 @@ body {
   gap: 2px;
 }
 
-.sidebar-footer-user {
+/* Account colophon — identity plaque, not a toolbar of chips */
+.sidebar-account {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.65rem;
-  margin-top: 0.45rem;
-  padding: 0.45rem 0.5rem;
-  border-radius: 0.5rem;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+  padding: 0.65rem 0.7rem 0.55rem;
+  border-radius: 0.25rem 0.25rem 0.7rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--foreground) 11%, transparent);
+  border-top: 2px solid color-mix(in srgb, var(--accent) 55%, var(--foreground));
   background:
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--accent) 6%, transparent),
+    radial-gradient(
+      120% 80% at 0% 0%,
+      color-mix(in srgb, var(--accent) 7%, transparent),
       transparent 55%
     ),
-    color-mix(in srgb, var(--panel) 55%, transparent);
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--panel) 96%, #fff),
+      color-mix(in srgb, var(--sidebar) 28%, var(--panel))
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 70%, transparent),
+    0 6px 18px color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+.sidebar-account-who {
+  min-width: 0;
+}
+.sidebar-account-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  padding-top: 0.4rem;
+  border-top: 1px dashed color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+.sidebar-account-meta .ws-presence {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+.sidebar-account-meta .nv-notif {
+  margin-left: auto;
+}
+.sidebar-account .nv-notif-btn {
+  width: 1.65rem;
+  height: 1.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.35rem;
+  border: none;
+  background: transparent;
+  color: color-mix(in srgb, var(--muted) 88%, var(--foreground));
+  transition: color 140ms ease, background 140ms ease;
+}
+.sidebar-account .nv-notif-btn:hover {
+  color: var(--accent-bright);
+  background: var(--accent-soft);
+}
+.sidebar-account .nv-notif-dot {
+  top: -0.05rem;
+  right: -0.05rem;
+  min-width: 0.8rem;
+  height: 0.8rem;
+  font-size: 0.52rem;
+  line-height: 0.8rem;
+  box-shadow: 0 0 0 2px var(--panel);
+}
+
+.sidebar-footer-user {
+  display: none;
 }
 
 .sidebar-footer-row {
@@ -818,35 +877,93 @@ body {
 .auth-controls {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.35rem;
-  flex-shrink: 0;
+  gap: 0.55rem;
   min-width: 0;
+  width: 100%;
 }
 .auth-controls .nv-user-root {
   width: auto !important;
   display: flex !important;
+  flex-shrink: 0 !important;
 }
 .auth-controls .nv-user-trigger {
-  border-radius: 999px !important;
+  border-radius: 0.35rem !important;
   outline: none !important;
   box-shadow: none !important;
 }
 .auth-controls .nv-user-avatar {
-  width: 1.75rem !important;
-  height: 1.75rem !important;
-  border-radius: 999px !important;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent) !important;
+  width: 2.15rem !important;
+  height: 2.15rem !important;
+  border-radius: 0.35rem !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--foreground) 14%, transparent),
+    0 2px 6px color-mix(in srgb, var(--foreground) 8%, transparent) !important;
 }
 .auth-controls .nv-org-root {
+  flex: 1 !important;
   width: auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
 }
 .auth-controls .nv-org-trigger {
-  padding: 0.15rem 0.4rem !important;
-  border-radius: 0.35rem !important;
-  font-size: 0.7rem !important;
-  max-width: 7.5rem;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.2rem !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 0 !important;
+  padding: 0.1rem 0.15rem 0.1rem 0 !important;
+  border: none !important;
+  border-radius: 0.2rem !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 0.84rem !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--foreground) !important;
+  overflow: hidden !important;
+  transition: color 140ms ease !important;
+}
+.auth-controls .nv-org-trigger:hover {
+  color: var(--accent-bright) !important;
+  background: transparent !important;
+}
+.auth-controls .nv-org-preview {
+  gap: 0 !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+/* Drop Clerk’s purple building mark — name is enough */
+.auth-controls .nv-org-avatar {
+  display: none !important;
+}
+.auth-controls .nv-org-text {
+  min-width: 0 !important;
+  align-items: flex-start !important;
+  width: 100% !important;
+}
+.auth-controls .nv-org-name {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  font-size: 0.84rem !important;
+  font-weight: 650 !important;
+  line-height: 1.2 !important;
+  color: inherit !important;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.auth-controls .nv-org-secondary {
+  display: none !important;
+}
+.auth-controls .nv-org-chevron {
+  width: 0.9rem !important;
+  height: 0.9rem !important;
+  color: var(--muted) !important;
+  opacity: 0.65;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .cmd-facet-bar {
@@ -10060,20 +10177,21 @@ body {
 .nv-conn-rail {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  min-width: 0;
+  gap: 0.32rem;
+  flex-shrink: 0;
   padding: 0;
   border: none;
   background: transparent;
-  font-size: 0.68rem;
-  font-weight: 650;
-  letter-spacing: 0.1em;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 .nv-conn-rail-dot {
-  width: 0.45rem;
-  height: 0.45rem;
+  width: 0.38rem;
+  height: 0.38rem;
   flex-shrink: 0;
   border-radius: 999px;
   background: var(--muted);
@@ -10084,8 +10202,8 @@ body {
 .nv-conn-rail-live .nv-conn-rail-dot {
   background: var(--live);
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--live) 18%, transparent),
-    0 0 10px color-mix(in srgb, var(--live) 28%, transparent);
+    0 0 0 3px color-mix(in srgb, var(--live) 16%, transparent),
+    0 0 8px color-mix(in srgb, var(--live) 24%, transparent);
   animation: nv-conn-pulse 2.4s ease-in-out infinite;
 }
 .nv-conn-rail-sync {
@@ -10101,8 +10219,7 @@ body {
   background: #9b3a3a;
 }
 .nv-conn-rail-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex-shrink: 0;
   white-space: nowrap;
 }
 @keyframes nv-conn-pulse {

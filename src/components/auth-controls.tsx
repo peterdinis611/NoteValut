@@ -10,7 +10,7 @@ import {
 import { clerkAppearance } from "@/lib/clerk-appearance";
 import { SoftErrorBoundary } from "./soft-error-boundary";
 
-/** Compact Clerk controls for the sidebar account row. */
+/** Identity-first Clerk controls for the sidebar colophon. */
 export function AuthControls({ className = "" }: { className?: string }) {
   return (
     <div className={`auth-controls ${className}`.trim()}>
@@ -27,6 +27,15 @@ export function AuthControls({ className = "" }: { className?: string }) {
         </SignUpButton>
       </Show>
       <Show when="signed-in">
+        <UserButton
+          appearance={{
+            elements: {
+              rootBox: "nv-user-root",
+              avatarBox: "nv-user-avatar",
+              userButtonTrigger: "nv-user-trigger",
+            },
+          }}
+        />
         {/* Orgs may be disabled in Clerk — never take down the vault chrome. */}
         <SoftErrorBoundary>
           <OrganizationSwitcher
@@ -39,19 +48,17 @@ export function AuthControls({ className = "" }: { className?: string }) {
                 ...clerkAppearance.elements,
                 rootBox: "nv-org-root",
                 organizationSwitcherTrigger: "nv-org-trigger",
+                organizationSwitcherTriggerIcon: "nv-org-chevron",
+                organizationPreview: "nv-org-preview",
+                organizationPreviewAvatarBox: "nv-org-avatar",
+                organizationPreviewAvatarImage: "nv-org-avatar-img",
+                organizationPreviewTextContainer: "nv-org-text",
+                organizationPreviewMainIdentifier: "nv-org-name",
+                organizationPreviewSecondaryIdentifier: "nv-org-secondary",
               },
             }}
           />
         </SoftErrorBoundary>
-        <UserButton
-          appearance={{
-            elements: {
-              rootBox: "nv-user-root",
-              avatarBox: "nv-user-avatar",
-              userButtonTrigger: "nv-user-trigger",
-            },
-          }}
-        />
       </Show>
     </div>
   );

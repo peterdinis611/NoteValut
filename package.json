@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack --port 3001",
     "dev:all": "concurrently -n convex,next -c cyan,magenta \"npx convex dev\" \"next dev --turbopack\"",
     "build": "next build --webpack",
     "build:vercel": "convex deploy --cmd 'npm run build' --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL",

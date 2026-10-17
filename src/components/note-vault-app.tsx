@@ -1,6 +1,6 @@
 "use client";
 
-import { useClerk } from "@clerk/nextjs";
+import { useAuth, useClerk } from "@clerk/nextjs";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { PanelLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -43,7 +43,48 @@ import { TagsHub } from "./tags-hub";
 import { useToast } from "./toast";
 import { VaultHome } from "./vault-home";
 
-const CONVEX_AUTH_TIMEOUT_MS = 12_000;
+const CONVEX_AUTH_TIMEOUT_MS = 8_000;
+
+function useConvexJwtProbe(enabled: boolean) {
+  const { getToken, isSignedIn } = useAuth();
+  const [detail, setDetail] = useState<string>("Checking Clerk → Convex JWT…");
+
+  useEffect(() => {
+    if (!enabled || !isSignedIn) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const token = await getToken({ template: "convex", skipCache: true });
+        if (cancelled) return;
+        if (!token) {
+          setDetail(
+            "Clerk returned no JWT for template “convex”. Open Clerk → JWT templates and ensure “convex” exists (aud: convex), then sign out/in.",
+          );
+          return;
+        }
+        const payload = JSON.parse(atob(token.split(".")[1]!.replace(/-/g, "+").replace(/_/g, "/")));
+        const aud = payload.aud;
+        const iss = payload.iss;
+        setDetail(
+          `JWT ok · aud=${Array.isArray(aud) ? aud.join(",") : aud} · iss=${iss}. If Convex still rejects it, redeploy auth.config (npx convex dev).`,
+        );
+      } catch (err) {
+        if (!cancelled) {
+          setDetail(
+            err instanceof Error
+              ? `getToken(“convex”) failed: ${err.message}`
+              : "getToken(“convex”) failed",
+          );
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, isSignedIn, getToken]);
+
+  return detail;
+}
 
 type MainPanel = "home" | "note" | "settings" | "tags" | "calendar" | "due";
 
@@ -64,6 +105,7 @@ export function NoteVaultApp() {
   const { signOut } = useClerk();
   const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth();
   const [authTimedOut, setAuthTimedOut] = useState(false);
+  const jwtProbe = useConvexJwtProbe(!isAuthenticated || authTimedOut);
   const toast = useToast();
   const isMobile = useIsMobile();
   useVaultSettings();
@@ -632,8 +674,21 @@ export function NoteVaultApp() {
           compact
           variant="error"
           title="Login failed — vault session not linked"
-          description="Clerk signed you in, but Convex never accepted the JWT. In Clerk → JWT templates create “convex” (aud: convex). On the Convex deployment set CLERK_JWT_ISSUER_DOMAIN to your Clerk Frontend API URL, then sign out and back in."
+          description="Clerk signed you in, but Convex never accepted the JWT."
         />
+        <p
+          className="max-w-md text-left text-xs text-muted"
+          style={{
+            fontFamily: "ui-monospace, monospace",
+            wordBreak: "break-word",
+            padding: "0.75rem 1rem",
+            border: "1px solid var(--border)",
+            borderRadius: "0.5rem",
+            background: "color-mix(in srgb, var(--panel) 80%, transparent)",
+          }}
+        >
+          {jwtProbe}
+        </p>
         <div className="flex flex-wrap items-center justify-center gap-2">
           <button
             type="button"

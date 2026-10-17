@@ -70,6 +70,14 @@ export function ConnectionStatus({ className = "", variant = "default" }: Props)
           : "Connected to Convex";
 
   if (variant === "rail") {
+    const railLabel =
+      status === "offline"
+        ? "Off"
+        : status === "queued"
+          ? `${queue}`
+          : status === "syncing"
+            ? "Sync"
+            : "Live";
     return (
       <div
         className={`nv-conn-rail nv-conn-rail-${status === "queued" ? "sync" : status} ${className}`}
@@ -78,13 +86,12 @@ export function ConnectionStatus({ className = "", variant = "default" }: Props)
         title={title}
       >
         <span className="nv-conn-rail-dot" aria-hidden />
-        {status === "syncing" || status === "queued" ? (
+        {status === "syncing" ? (
           <Loader2 className="size-3 nv-conn-spin" aria-hidden />
         ) : status === "offline" ? (
           <CloudOff className="size-3" aria-hidden />
         ) : null}
-        <span className="nv-conn-rail-label">{label}</span>
-        {queue > 0 ? <span className="nv-conn-queue-badge">{queue}</span> : null}
+        <span className="nv-conn-rail-label">{railLabel}</span>
       </div>
     );
   }

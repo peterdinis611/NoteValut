@@ -1073,11 +1073,15 @@ export function Sidebar({
             </button>
           </div>
 
-          <div className="sidebar-footer-user">
-            <WorkspacePresence ownerId={ownerId} noteId={activeId} />
-            <ConnectionStatus variant="rail" />
-            <NotificationsBell ownerId={ownerId} onNavigate={onSelect} />
-            <AuthControls />
+          <div className="sidebar-account">
+            <div className="sidebar-account-who">
+              <AuthControls />
+            </div>
+            <div className="sidebar-account-meta">
+              <ConnectionStatus variant="rail" />
+              <WorkspacePresence ownerId={ownerId} noteId={activeId} />
+              <NotificationsBell ownerId={ownerId} onNavigate={onSelect} />
+            </div>
           </div>
         </div>
 

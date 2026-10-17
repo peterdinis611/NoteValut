@@ -1,26 +1,23 @@
 "use client";
 
 import { useMutation } from "convex/react";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import {
   clearConflict,
   drainQueuedPatches,
-  getServerConflicts,
+  enqueueNotePatch,
   listConflicts,
   parseConflictError,
   pushConflict,
   queuedPatchCount,
   subscribeConflicts,
   subscribeOfflineQueue,
+  withMutedQueueEvents,
   type ConflictItem,
 } from "@/lib/offline-queue";
 import { useToast } from "./toast";
-
-function useConflicts() {
-  return useSyncExternalStore(subscribeConflicts, listConflicts, getServerConflicts);
-}
 
 function patchPreview(patch: Record<string, unknown>): string {
   if (typeof patch.title === "string" && patch.title.trim()) {
@@ -48,65 +45,84 @@ export function OfflineQueueFlush() {
   const createNote = useMutation(api.notes.create);
   const toast = useToast();
   const flushing = useRef(false);
-  const conflicts = useConflicts();
-  const [active, setActive] = useState<ConflictItem | null>(null);
+  const cooldownUntil = useRef(0);
+  const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
 
   useEffect(() => {
-    if (!active && conflicts.length > 0) setActive(conflicts[0]!);
-  }, [conflicts, active]);
+    const sync = () => {
+      const next = listConflicts();
+      setConflicts((prev) => (prev === next ? prev : next));
+    };
+    sync();
+    return subscribeConflicts(sync);
+  }, []);
 
-  useEffect(() => {
-    async function flush() {
-      if (flushing.current || !navigator.onLine) return;
-      const items = drainQueuedPatches();
-      if (items.length === 0) return;
-      flushing.current = true;
-      let ok = 0;
-      try {
-        for (const item of items) {
-          try {
-            await updateNote({
-              id: item.noteId as Id<"notes">,
-              ...item.patch,
-              expectedUpdatedAt: item.baseUpdatedAt,
+  const active = conflicts[0] ?? null;
+
+  const flush = useEffectEvent(async () => {
+    if (flushing.current || !navigator.onLine) return;
+    if (Date.now() < cooldownUntil.current) return;
+    const items = drainQueuedPatches();
+    if (items.length === 0) return;
+
+    flushing.current = true;
+    let ok = 0;
+    const retry: typeof items = [];
+    try {
+      for (const item of items) {
+        try {
+          await updateNote({
+            id: item.noteId as Id<"notes">,
+            ...item.patch,
+            expectedUpdatedAt: item.baseUpdatedAt,
+          });
+          ok += 1;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "";
+          const conflict = parseConflictError(msg);
+          if (conflict) {
+            pushConflict({
+              noteId: item.noteId,
+              ownerId: item.ownerId,
+              title: conflict.title,
+              serverUpdatedAt: conflict.serverUpdatedAt,
+              localPatch: item.patch,
+              baseUpdatedAt: item.baseUpdatedAt,
             });
-            ok += 1;
-          } catch (err) {
-            const msg = err instanceof Error ? err.message : "";
-            const conflict = parseConflictError(msg);
-            if (conflict) {
-              pushConflict({
-                noteId: item.noteId,
-                ownerId: item.ownerId,
-                title: conflict.title,
-                serverUpdatedAt: conflict.serverUpdatedAt,
-                localPatch: item.patch,
-                baseUpdatedAt: item.baseUpdatedAt,
-              });
-            } else {
-              const { enqueueNotePatch } = await import("@/lib/offline-queue");
-              enqueueNotePatch(item.noteId, item.ownerId, item.patch, item.baseUpdatedAt);
-            }
+          } else {
+            // Auth / network failures — put back, but cooldown so we don't spin
+            retry.push(item);
           }
         }
-        if (ok > 0) {
-          toast.success(ok === 1 ? "Synced 1 offline edit" : `Synced ${ok} offline edits`);
-        }
-      } finally {
-        flushing.current = false;
       }
+      if (retry.length) {
+        withMutedQueueEvents(() => {
+          for (const item of retry) {
+            enqueueNotePatch(item.noteId, item.ownerId, item.patch, item.baseUpdatedAt);
+          }
+        });
+        cooldownUntil.current = Date.now() + 8_000;
+      }
+      if (ok > 0) {
+        toast.success(ok === 1 ? "Synced 1 offline edit" : `Synced ${ok} offline edits`);
+      }
+    } finally {
+      flushing.current = false;
     }
+  });
 
+  useEffect(() => {
     void flush();
-    window.addEventListener("online", flush);
+    const onOnline = () => void flush();
+    window.addEventListener("online", onOnline);
     const unsub = subscribeOfflineQueue(() => {
       if (navigator.onLine && queuedPatchCount() > 0) void flush();
     });
     return () => {
-      window.removeEventListener("online", flush);
+      window.removeEventListener("online", onOnline);
       unsub();
     };
-  }, [updateNote, toast]);
+  }, []);
 
   async function keepMine(item: ConflictItem) {
     try {
@@ -115,7 +131,6 @@ export function OfflineQueueFlush() {
         ...item.localPatch,
       });
       clearConflict(item.noteId);
-      setActive(null);
       toast.success("Kept your offline version");
     } catch {
       toast.error("Couldn’t apply your version");
@@ -124,7 +139,6 @@ export function OfflineQueueFlush() {
 
   function keepTheirs(item: ConflictItem) {
     clearConflict(item.noteId);
-    setActive(null);
     toast.success("Kept the server version");
   }
 
@@ -153,7 +167,6 @@ export function OfflineQueueFlush() {
         tags: Array.isArray(patch.tags) ? (patch.tags as string[]) : undefined,
       });
       clearConflict(item.noteId);
-      setActive(null);
       toast.success("Saved offline edits as a new note");
     } catch {
       toast.error("Couldn’t keep both versions");
