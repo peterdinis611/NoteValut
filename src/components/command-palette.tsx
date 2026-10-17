@@ -39,10 +39,14 @@ import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { isFolder } from "@/lib/item-kinds";
 import { searchNotes, type NoteSearchHit } from "@/lib/search";
 import {
+  formatSearchFilters,
+  hasActiveFacets,
   highlightMatches,
   noteMatchesFilters,
   parseSearchFilters,
+  type SearchFilters,
 } from "@/lib/search-highlight";
+import { STATUS_OPTIONS } from "@/lib/status";
 import {
   getRecentSearches,
   getServerRecentSearches,
@@ -113,14 +117,46 @@ export function CommandPalette({
   const qLower = q.toLowerCase();
   const tagQuery = qLower.startsWith("#") ? qLower.slice(1).trim() : filters.tags[0] ?? "";
   const searchBare = filters.bareQuery || (q.startsWith("#") ? "" : q);
+  const facetsOn = hasActiveFacets(filters);
 
   const serverHits = useQuery(
     api.notes.search,
-    open && ownerId && searchBare.length >= 2 && !q.startsWith("#")
-      ? { ownerId, query: searchBare, limit: 24 }
+    open &&
+      ownerId &&
+      !q.startsWith("#") &&
+      (searchBare.length >= 2 || facetsOn)
+      ? {
+          ownerId,
+          query: searchBare,
+          limit: 24,
+          tags: filters.tags.length ? filters.tags : undefined,
+          status: filters.status,
+          folderId: filters.folderId as Id<"notes"> | undefined,
+          assignee: filters.assignee,
+        }
       : "skip",
   );
   const tagRows = useQuery(api.notes.listTags, open && ownerId ? { ownerId } : "skip");
+  const folders = useMemo(
+    () => (notes ?? []).filter((n) => isFolder(n) && !n.trashed && !n.archived),
+    [notes],
+  );
+  const vaultRemote = useQuery(
+    api.vaultSettings.get,
+    open && ownerId ? { ownerId } : "skip",
+  );
+  const activeWs = vaultRemote?.activeWorkspaceId ?? ownerId;
+  const people = useQuery(
+    api.workspaces.listMembers,
+    open && ownerId && activeWs
+      ? { ownerId, workspaceId: activeWs }
+      : "skip",
+  );
+
+  function patchFilters(next: Partial<SearchFilters>) {
+    const merged: SearchFilters = { ...filters, ...next };
+    setQuery(formatSearchFilters(merged));
+  }
   const vectorSearch = useAction(api.embeddings.search);
   const [vectorHits, setVectorHits] = useState<
     Array<{
@@ -174,14 +210,16 @@ export function CommandPalette({
 
   const noteHits: NoteSearchHit[] = useMemo(() => {
     if (!notes || q.startsWith("#")) return [];
-    const pool = notes.filter((n) => !isFolder(n) && noteMatchesFilters(n, filters));
-    if (!searchBare && !filters.tags.length && !filters.after && !filters.before) {
+    const pool = notes.filter(
+      (n) => !isFolder(n) && noteMatchesFilters(n, filters, { ownerId }),
+    );
+    if (!searchBare && !facetsOn) {
       return pool.slice(0, 8);
     }
     let hits: NoteSearchHit[] = [];
-    if (searchBare.length >= 2 && serverHits !== undefined && serverHits.length > 0) {
+    if (serverHits !== undefined && (searchBare.length >= 2 || facetsOn)) {
       hits = serverHits
-        .filter((n) => noteMatchesFilters(n, filters))
+        .filter((n) => noteMatchesFilters(n, filters, { ownerId }))
         .map((n) => {
           const body = [n.content, blocksToSearchText(n.blocks)].filter(Boolean).join("\n");
           return {
@@ -195,7 +233,7 @@ export function CommandPalette({
       hits = pool.slice(0, 12);
     }
     return hits.slice(0, 12);
-  }, [notes, q, serverHits, filters, searchBare]);
+  }, [notes, q, serverHits, filters, searchBare, facetsOn, ownerId]);
 
   const actionHits = useMemo(() => {
     if (!qLower || q.startsWith("#") || filters.tags.length || filters.after || filters.before) {
@@ -308,7 +346,8 @@ export function CommandPalette({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, rows, index, onClose, onNavigate, onOpenTag, q]);
 
-  const ftsPending = searchBare.length >= 2 && !q.startsWith("#") && serverHits === undefined;
+  const ftsPending =
+    (searchBare.length >= 2 || facetsOn) && !q.startsWith("#") && serverHits === undefined;
   const highlightQ = searchBare || tagQuery;
 
   return (
@@ -326,24 +365,128 @@ export function CommandPalette({
               <input
                 ref={inputRef}
                 className="cmd-input"
-                placeholder="Search · #tag · tag:work after:2026-01-01 · commands…"
+                placeholder="Search · status:Todo tag:work folder:… assignee:me…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
               <kbd className="cmd-kbd">esc</kbd>
             </div>
+            <div className="cmd-facet-bar" aria-label="Search facets">
+              <select
+                className="cmd-facet-select"
+                value={filters.status ?? ""}
+                onChange={(e) =>
+                  patchFilters({ status: e.target.value || undefined })
+                }
+                aria-label="Status"
+              >
+                <option value="">Status</option>
+                <option value="none">No status</option>
+                {STATUS_OPTIONS.filter(Boolean).map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="cmd-facet-select"
+                value={filters.tags[0] ?? ""}
+                onChange={(e) =>
+                  patchFilters({
+                    tags: e.target.value ? [e.target.value] : [],
+                  })
+                }
+                aria-label="Tag"
+              >
+                <option value="">Tag</option>
+                {(tagRows ?? []).slice(0, 40).map((t) => (
+                  <option key={t.key} value={t.tag}>
+                    {t.tag}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="cmd-facet-select"
+                value={filters.folderId ?? ""}
+                onChange={(e) =>
+                  patchFilters({ folderId: e.target.value || undefined })
+                }
+                aria-label="Folder"
+              >
+                <option value="">Folder</option>
+                {folders.slice(0, 40).map((f) => (
+                  <option key={f._id} value={f._id}>
+                    {f.icon} {f.title || "Untitled"}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="cmd-facet-select"
+                value={filters.assignee ?? ""}
+                onChange={(e) =>
+                  patchFilters({ assignee: e.target.value || undefined })
+                }
+                aria-label="Assignee"
+              >
+                <option value="">Assignee</option>
+                <option value="me">Me</option>
+                {(people ?? [])
+                  .filter((p) => p.userId !== ownerId)
+                  .slice(0, 20)
+                  .map((p) => (
+                    <option key={p.userId} value={p.userId}>
+                      {p.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
             <p className="cmd-hint">
-              Filters: <span>tag:</span> <span>after:</span> <span>before:</span> · ↑↓ enter · ⌘K
+              Filters: <span>status:</span> <span>tag:</span> <span>folder:</span>{" "}
+              <span>assignee:</span> · ↑↓ enter · ⌘K
               {ftsPending || vectorPending ? " · searching…" : ""}
             </p>
 
-            {(filters.tags.length > 0 || filters.after || filters.before) && (
+            {facetsOn && (
               <div className="cmd-filters">
                 {filters.tags.map((t) => (
-                  <span key={t} className="cmd-filter-chip">
-                    tag:{t}
-                  </span>
+                  <button
+                    key={t}
+                    type="button"
+                    className="cmd-filter-chip"
+                    onClick={() =>
+                      patchFilters({ tags: filters.tags.filter((x) => x !== t) })
+                    }
+                  >
+                    tag:{t} ×
+                  </button>
                 ))}
+                {filters.status ? (
+                  <button
+                    type="button"
+                    className="cmd-filter-chip"
+                    onClick={() => patchFilters({ status: undefined })}
+                  >
+                    status:{filters.status} ×
+                  </button>
+                ) : null}
+                {filters.folderId ? (
+                  <button
+                    type="button"
+                    className="cmd-filter-chip"
+                    onClick={() => patchFilters({ folderId: undefined })}
+                  >
+                    folder ×
+                  </button>
+                ) : null}
+                {filters.assignee ? (
+                  <button
+                    type="button"
+                    className="cmd-filter-chip"
+                    onClick={() => patchFilters({ assignee: undefined })}
+                  >
+                    assignee:{filters.assignee === "me" ? "me" : "…"} ×
+                  </button>
+                ) : null}
                 {filters.after ? (
                   <span className="cmd-filter-chip">after:{filters.after}</span>
                 ) : null}

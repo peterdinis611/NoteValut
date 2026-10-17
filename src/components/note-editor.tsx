@@ -44,6 +44,7 @@ import { GoogleFontsPicker } from "./google-fonts-picker";
 import { enqueueNotePatch, isBrowserOffline, queuedPatchCount } from "@/lib/offline-queue";
 import { applyNoteFont, clearNoteFont } from "@/lib/note-font";
 import { getFontHistory } from "@/lib/font-history";
+import { diffBlocks, mergeRemoteBlocks } from "@/lib/merge-blocks";
 
 type Props = {
   noteId: Id<"notes">;
@@ -93,6 +94,7 @@ export function NoteEditor({
   const children = useQuery(api.notes.listChildren, { parentId: noteId });
   const allNotes = useQuery(api.notes.list, { ownerId });
   const updateNote = useMutation(api.notes.update);
+  const patchBlocks = useMutation(api.notes.patchBlocks);
   const trashNote = useMutation(api.notes.trash);
   const duplicateNote = useMutation(api.notes.duplicate);
   const scheduleReminder = useMutation(api.reminders.schedule);
@@ -112,6 +114,10 @@ export function NoteEditor({
   const [commentBlockId, setCommentBlockId] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dirtyBlockIds = useRef<Set<string>>(new Set());
+  const baselineBlocks = useRef<Block[]>([]);
+  const lastRemoteUpdatedAt = useRef<number>(0);
+  const loadedNoteId = useRef<Id<"notes"> | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving" | "queued">("saved");
 
   const readOnly = globalReadOnly || !canUpdate;
@@ -202,18 +208,41 @@ export function NoteEditor({
       clearNoteFont();
       return;
     }
-    setTitle(note.title);
-    setTags(note.tags);
-    setShowIcon(true);
-    setBlocks(note.blocks?.length ? note.blocks : migrateContentToBlocks(note.content));
+    const remoteBlocks = note.blocks?.length
+      ? (note.blocks as Block[])
+      : migrateContentToBlocks(note.content);
+
+    // New note or first load — take server wholesale
+    if (loadedNoteId.current !== note._id || lastRemoteUpdatedAt.current === 0) {
+      loadedNoteId.current = note._id;
+      setTitle(note.title);
+      setTags(note.tags);
+      setShowIcon(true);
+      setBlocks(remoteBlocks);
+      baselineBlocks.current = remoteBlocks;
+      dirtyBlockIds.current = new Set();
+      lastRemoteUpdatedAt.current = note.updatedAt;
+    } else if (note.updatedAt !== lastRemoteUpdatedAt.current) {
+      // Concurrent remote update — merge by block id, keep local dirty blocks
+      setBlocks((local) => mergeRemoteBlocks(local, remoteBlocks, dirtyBlockIds.current));
+      if (!dirtyBlockIds.current.size) {
+        setTitle(note.title);
+        setTags(note.tags);
+        baselineBlocks.current = remoteBlocks;
+      }
+      lastRemoteUpdatedAt.current = note.updatedAt;
+    }
+
     applyNoteFont({
       scopeSelector: `[data-note-id="${noteId}"]`,
       family: note.fontFamily,
       cssUrl: note.fontUrl,
     });
     return () => clearNoteFont();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     note?._id,
+    note?.updatedAt,
     note?.title,
     note?.content,
     note?.blocks,
@@ -240,6 +269,9 @@ export function NoteEditor({
         toast.error(firstIssue(parsed));
         return;
       }
+      const diff = diffBlocks(baselineBlocks.current, patch.blocks);
+      for (const b of diff.upserts) dirtyBlockIds.current.add(b.id);
+      for (const id of diff.deletes) dirtyBlockIds.current.add(id);
     }
     if (patch.tags) {
       const parsed = normalizeTags(patch.tags);
@@ -273,12 +305,46 @@ export function NoteEditor({
       }
 
       try {
-        // Online OCC — reject if another session saved since we loaded the note.
-        await updateNote({
-          id: noteId,
-          ...payload,
-          expectedUpdatedAt: baseUpdatedAt,
-        });
+        const onlyBlocks =
+          patch.blocks !== undefined &&
+          patch.coverColor === undefined &&
+          patch.coverImage === undefined &&
+          patch.fontFamily === undefined &&
+          patch.fontUrl === undefined;
+
+        if (onlyBlocks) {
+          // Live merge path — LWW per block, no whole-doc OCC reject
+          const diff = diffBlocks(baselineBlocks.current, nextBlocks);
+          if (diff.changed) {
+            await patchBlocks({
+              id: noteId,
+              upserts: diff.upserts,
+              deletes: diff.deletes,
+              order: diff.order,
+              title: patch.title,
+              tags: patch.tags,
+            });
+          } else if (patch.title !== undefined || patch.tags !== undefined) {
+            await patchBlocks({
+              id: noteId,
+              title: patch.title,
+              tags: patch.tags,
+            });
+          }
+          baselineBlocks.current = nextBlocks;
+          dirtyBlockIds.current = new Set();
+        } else {
+          // Metadata / cover still uses OCC
+          await updateNote({
+            id: noteId,
+            ...payload,
+            expectedUpdatedAt: baseUpdatedAt,
+          });
+          if (patch.blocks) {
+            baselineBlocks.current = nextBlocks;
+            dirtyBlockIds.current = new Set();
+          }
+        }
         setSaveState("saved");
         if (activityTimer.current) clearTimeout(activityTimer.current);
         activityTimer.current = setTimeout(() => {

@@ -44,6 +44,13 @@ import { formatRelativeTime } from "@/lib/format";
 import { isFolder } from "@/lib/item-kinds";
 import { SIDEBAR_WIDTH } from "@/lib/motion";
 import { searchNotes } from "@/lib/search";
+import {
+  formatSearchFilters,
+  hasActiveFacets,
+  noteMatchesFilters,
+  parseSearchFilters,
+} from "@/lib/search-highlight";
+import { STATUS_OPTIONS } from "@/lib/status";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { AuthControls } from "./auth-controls";
@@ -138,6 +145,10 @@ export function Sidebar({
   const [debouncedSearch, searchDebouncer] = useDebouncedValue(search, { wait: 200 }, (state) => ({
     isPending: state.isPending,
   }));
+  const searchFilters = useMemo(
+    () => parseSearchFilters(debouncedSearch),
+    [debouncedSearch],
+  );
   const [showBin, setShowBin] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showShare, setShowShare] = useState(false);
@@ -285,10 +296,14 @@ export function Sidebar({
   const isSearching = !!search.trim();
   const searchPending = isSearching && searchDebouncer.state.isPending;
   const activeItems = useMemo(() => notes ?? [], [notes]);
-  const searchResults = useMemo(
-    () => searchNotes(activeItems, debouncedSearch),
-    [activeItems, debouncedSearch],
-  );
+  const searchResults = useMemo(() => {
+    const bare = searchFilters.bareQuery;
+    const pool = activeItems.filter((n) =>
+      noteMatchesFilters(n, searchFilters, { ownerId }),
+    );
+    if (!bare) return hasActiveFacets(searchFilters) ? pool : searchNotes(activeItems, "");
+    return searchNotes(pool, bare);
+  }, [activeItems, debouncedSearch, searchFilters, ownerId]);
   const pinned = useMemo(() => activeItems.filter((n) => n.pinned), [activeItems]);
   const collections = useMemo(
     () => activeItems.filter((n) => isFolder(n) && !n.parentId),
@@ -492,11 +507,57 @@ export function Sidebar({
           <Search className="sidebar-search-icon" />
           <input
             className="sidebar-search"
-            placeholder="Search"
+            placeholder="Search · status: · tag:"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-busy={searchPending}
           />
+        </div>
+        <div className="sidebar-facets" aria-label="Search filters">
+          <select
+            className="sidebar-facet"
+            value={searchFilters.status ?? ""}
+            onChange={(e) =>
+              setSearch(
+                formatSearchFilters({
+                  ...searchFilters,
+                  status: e.target.value || undefined,
+                }),
+              )
+            }
+            aria-label="Filter by status"
+          >
+            <option value="">Status</option>
+            <option value="none">None</option>
+            {STATUS_OPTIONS.filter(Boolean).map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <select
+            className="sidebar-facet"
+            value={searchFilters.folderId ?? ""}
+            onChange={(e) =>
+              setSearch(
+                formatSearchFilters({
+                  ...searchFilters,
+                  folderId: e.target.value || undefined,
+                }),
+              )
+            }
+            aria-label="Filter by folder"
+          >
+            <option value="">Folder</option>
+            {(notes ?? [])
+              .filter((n) => isFolder(n) && !n.trashed)
+              .slice(0, 30)
+              .map((f) => (
+                <option key={f._id} value={f._id}>
+                  {f.title || "Untitled"}
+                </option>
+              ))}
+          </select>
         </div>
 
         <div className="sidebar-menu">

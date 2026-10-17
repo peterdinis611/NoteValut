@@ -95,6 +95,46 @@ export const list = query({
   },
 });
 
+function matchesSearchFacets(
+  n: {
+    tags: string[];
+    status?: string;
+    parentId?: Id<"notes">;
+    properties?: unknown;
+    trashed?: boolean;
+    archived: boolean;
+  },
+  facets: {
+    tags?: string[];
+    status?: string;
+    folderId?: Id<"notes">;
+    assignee?: string;
+    ownerId: string;
+  },
+) {
+  if (n.trashed || n.archived) return false;
+  if (facets.tags?.length) {
+    const have = n.tags.map((t) => t.toLowerCase());
+    if (!facets.tags.every((t) => have.includes(t.toLowerCase()))) return false;
+  }
+  if (facets.status) {
+    const want = facets.status.toLowerCase();
+    const have = (n.status || "").toLowerCase();
+    if (want === "none" || want === "empty") {
+      if (have) return false;
+    } else if (have !== want) return false;
+  }
+  if (facets.folderId && n.parentId !== facets.folderId) return false;
+  if (facets.assignee) {
+    const props = (n.properties ?? {}) as Record<string, unknown>;
+    const have = props.assignee == null ? "" : String(props.assignee);
+    const want =
+      facets.assignee === "me" ? facets.ownerId : facets.assignee;
+    if (have !== want) return false;
+  }
+  return true;
+}
+
 /** Full-text search via Convex searchIndex (falls back gracefully if empty). */
 export const search = query({
   args: {
@@ -102,11 +142,18 @@ export const search = query({
     query: v.string(),
     limit: v.optional(v.number()),
     workspaceId: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    status: v.optional(v.string()),
+    folderId: v.optional(v.id("notes")),
+    assignee: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireOwner(ctx, args.ownerId);
     const q = args.query.trim();
-    if (!q) return [];
+    const hasFacets = Boolean(
+      args.tags?.length || args.status || args.folderId || args.assignee,
+    );
+    if (!q && !hasFacets) return [];
     const limit = Math.min(args.limit ?? 24, 48);
     const settings = await ctx.db
       .query("vaultSettings")
@@ -114,23 +161,39 @@ export const search = query({
       .first();
     const activeWs = args.workspaceId ?? settings?.activeWorkspaceId ?? args.ownerId;
     const isTeam = activeWs.startsWith("org:");
+    const facets = {
+      tags: args.tags,
+      status: args.status,
+      folderId: args.folderId,
+      assignee: args.assignee,
+      ownerId: args.ownerId,
+    };
 
-    if (isTeam) {
-      const role = await getWorkspaceRole(ctx, args.ownerId, activeWs);
-      if (!role) return [];
-      const notes = await ctx.db
-        .query("notes")
-        .withIndex("by_workspace", (q2) => q2.eq("workspaceId", activeWs))
-        .collect();
+    if (isTeam || !q) {
+      if (isTeam) {
+        const role = await getWorkspaceRole(ctx, args.ownerId, activeWs);
+        if (!role) return [];
+      }
+      const notes = isTeam
+        ? await ctx.db
+            .query("notes")
+            .withIndex("by_workspace", (q2) => q2.eq("workspaceId", activeWs))
+            .collect()
+        : await ctx.db
+            .query("notes")
+            .withIndex("by_owner_updated", (q2) => q2.eq("ownerId", args.ownerId))
+            .order("desc")
+            .take(400);
       const needle = q.toLowerCase();
       return notes
-        .filter(
-          (n) =>
-            !n.trashed &&
-            !n.archived &&
-            ((n.searchText || `${n.title} ${n.content}`).toLowerCase().includes(needle) ||
-              n.tags.some((t) => t.toLowerCase().includes(needle))),
-        )
+        .filter((n) => matchesSearchFacets(n, facets))
+        .filter((n) => {
+          if (!needle) return true;
+          return (
+            (n.searchText || `${n.title} ${n.content}`).toLowerCase().includes(needle) ||
+            n.tags.some((t) => t.toLowerCase().includes(needle))
+          );
+        })
         .sort((a, b) => b.updatedAt - a.updatedAt)
         .slice(0, limit);
     }
@@ -138,13 +201,12 @@ export const search = query({
     const hits = await ctx.db
       .query("notes")
       .withSearchIndex("search_body", (s) => s.search("searchText", q).eq("ownerId", args.ownerId))
-      .take(limit * 2);
+      .take(limit * 4);
 
     return hits
       .filter(
         (n) =>
-          !n.trashed &&
-          !n.archived &&
+          matchesSearchFacets(n, facets) &&
           (!n.workspaceId ||
             n.workspaceId === args.ownerId ||
             !String(n.workspaceId).startsWith("org:")),
@@ -724,6 +786,86 @@ export const update = mutation({
     }
 
     return id;
+  },
+});
+
+/**
+ * Block-level live merge for concurrent editing.
+ * Upserts/deletes by stable block.id (LWW) — no whole-document OCC reject.
+ */
+export const patchBlocks = mutation({
+  args: {
+    id: v.id("notes"),
+    upserts: v.optional(v.array(block)),
+    deletes: v.optional(v.array(v.string())),
+    order: v.optional(v.array(v.string())),
+    title: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const existing = await assertCanAccessNote(ctx, args.id, { minEditRole: "member" });
+    if (existing.kind === "folder") throw new Error("Use folderBlocks for collections");
+    if (existing.isLocked) throw new Error("Collection is locked (read-only)");
+
+    type BlockRow = NonNullable<typeof existing.blocks>[number];
+    const byId = new Map((existing.blocks ?? []).map((b) => [b.id, b as BlockRow]));
+    for (const id of args.deletes ?? []) byId.delete(id);
+    for (const b of args.upserts ?? []) byId.set(b.id, b as BlockRow);
+
+    let nextBlocks: BlockRow[];
+    if (args.order?.length) {
+      const ordered: BlockRow[] = [];
+      const seen = new Set<string>();
+      for (const id of args.order) {
+        const b = byId.get(id);
+        if (b) {
+          ordered.push(b);
+          seen.add(id);
+        }
+      }
+      for (const [id, b] of byId) {
+        if (!seen.has(id)) ordered.push(b);
+      }
+      nextBlocks = ordered;
+    } else {
+      const next: BlockRow[] = [];
+      const seen = new Set<string>();
+      for (const b of existing.blocks ?? []) {
+        if (!byId.has(b.id)) continue;
+        next.push(byId.get(b.id)!);
+        seen.add(b.id);
+      }
+      for (const [id, b] of byId) {
+        if (!seen.has(id)) next.push(b);
+      }
+      nextBlocks = next;
+    }
+
+    const nextTitle = args.title !== undefined ? args.title : existing.title;
+    const nextTags =
+      args.tags !== undefined ? assertTags(args.tags) : existing.tags;
+    const content = nextBlocks.map((b) => b.text || "").join("\n");
+    const searchText = buildNoteSearchText({
+      title: nextTitle,
+      content,
+      description: existing.description,
+      status: existing.status,
+      tags: nextTags,
+      blocks: nextBlocks,
+      folderBlocks: existing.folderBlocks,
+    });
+
+    const now = Date.now();
+    await ctx.db.patch(args.id, {
+      blocks: nextBlocks,
+      content,
+      title: nextTitle,
+      tags: nextTags,
+      searchText,
+      embedding: embedText(searchText),
+      updatedAt: now,
+    });
+    return { id: args.id, updatedAt: now, blockCount: nextBlocks.length };
   },
 });
 
