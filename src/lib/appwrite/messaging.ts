@@ -2,6 +2,16 @@ import "server-only";
 
 import { Effect, Schema } from "effect";
 import { ID, MessagingProviderType, Query } from "node-appwrite";
+import { escapeEmailHtml } from "@/lib/email/brand";
+import {
+  emailBodyText,
+  emailEyebrow,
+  emailHeading,
+  emailMutedNote,
+  emailPillButton,
+  emailUrlFallback,
+  wrapEmailDocument,
+} from "@/lib/email/shell";
 import { plainTextFromEditorContent } from "@/lib/editor/content";
 import { sanitizeEmailHtml } from "@/lib/editor/sanitize";
 import { toSafePageUrl } from "@/lib/editor/safe-url";
@@ -15,13 +25,6 @@ export class MessagingError extends Schema.TaggedError<MessagingError>()(
   },
 ) {}
 
-const escapeHtml = (value: string) =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function isValidEmail(value: string): boolean {
@@ -34,44 +37,46 @@ function buildPageEmailHtml(input: {
   pageUrl: string;
   fromLabel: string;
 }): string {
-  const title = escapeHtml(input.title || "Untitled");
-  const from = escapeHtml(input.fromLabel);
-  const url = escapeHtml(input.pageUrl);
+  const title = escapeEmailHtml(input.title || "Untitled");
+  const from = escapeEmailHtml(input.fromLabel);
+  const url = escapeEmailHtml(input.pageUrl);
   const body = sanitizeEmailHtml(input.bodyHtml ?? "");
 
-  return `<!doctype html>
-<html>
-  <body style="margin:0;padding:0;background:#f5efe6;color:#2a2218;font-family:Georgia,serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5efe6;padding:32px 16px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" width="100%" style="max-width:640px;background:#fffdf8;border:1px solid #e6dcc8;border-radius:18px;overflow:hidden;">
-            <tr>
-              <td style="padding:28px 28px 12px;font-family:ui-sans-serif,system-ui,sans-serif;">
-                <p style="margin:0;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7a66;">NoteValut</p>
-                <h1 style="margin:10px 0 0;font-size:28px;line-height:1.2;">${title}</h1>
-                <p style="margin:10px 0 0;font-size:14px;color:#6b5e4e;">Shared by ${from}</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:8px 28px 24px;font-size:16px;line-height:1.65;">
-                ${body}
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:0 28px 28px;font-family:ui-sans-serif,system-ui,sans-serif;">
-                <a href="${url}" style="display:inline-block;background:#2a2218;color:#f5efe6;text-decoration:none;padding:12px 18px;border-radius:999px;font-size:14px;">
-                  Open in NoteValut
-                </a>
-                <p style="margin:14px 0 0;font-size:12px;color:#8a7a66;word-break:break-all;">${url}</p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
+  const bodyRows = `
+    <tr>
+      <td style="padding:32px 32px 8px;">
+        ${emailEyebrow("Shared page")}
+        ${emailHeading(title)}
+        <p style="margin:12px 0 0;font-family:'Figtree',system-ui,sans-serif;font-size:14px;color:#7A7064;">
+          From ${from}
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:12px 32px 8px;">
+        ${emailBodyText(body)}
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:20px 32px 10px;">
+        ${emailPillButton(url, "Open in NoteValut")}
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:8px 32px 32px;border-top:1px solid #E5DDD0;">
+        <div style="padding-top:18px;">
+          ${emailMutedNote("Or open this link:")}
+          <div style="margin-top:8px;">${emailUrlFallback(url)}</div>
+        </div>
+      </td>
+    </tr>
+  `;
+
+  return wrapEmailDocument({
+    title: `${input.title || "Untitled"} · NoteValut`,
+    preheader: `${input.title || "Untitled"} — shared from NoteValut`,
+    bodyRows,
+  });
 }
 
 async function resolveRecipientUserIds(

@@ -69,8 +69,14 @@ export function SignInForm() {
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-[oklch(0.28_0.02_40)]">
+        <span className="flex items-center justify-between gap-2 text-sm font-medium text-[oklch(0.28_0.02_40)]">
           Password
+          <Link
+            href="/forgot-password"
+            className="font-normal text-[oklch(0.45_0.02_50)] underline-offset-2 hover:underline"
+          >
+            Forgot password?
+          </Link>
         </span>
         <Input
           type="password"
