@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NoteValut
 
-## Getting Started
+Note vault scaffold built with:
 
-First, run the development server:
+- **Next.js** (App Router) + **TypeScript**
+- **Tailwind CSS** v4
+- **shadcn/ui**
+- **Effect.ts** for domain validation and typed errors
+- **Appwrite** (`@appwrite.io/react`) for auth/backend (SSR-ready)
+
+## Getting started
 
 ```bash
+npm install
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Appwrite setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Create a project in the [Appwrite Console](https://cloud.appwrite.io/console).
+2. Under **Add a platform**, add a **Web app** with hostname `localhost`.
+3. Create an API key with scopes `users.read`, `users.write`, and `sessions.write`.
+4. Fill `.env.local` with your endpoint, project ID, and API key.
 
-## Learn More
+Wiring already in place:
 
-To learn more about Next.js, take a look at the following resources:
+- `src/lib/appwrite/` — env helpers, Effect `Appwrite` service, server helpers
+- `src/lib/effect-server.ts` — `runServer()` for RSC / server actions
+- `src/domain/account.ts` — `getSessionAccount` Effect use-case
+- `src/app/providers.tsx` — `AppwriteProvider` (SSR session)
+- `src/app/api/appwrite/[...appwrite]/route.ts` — SSR auth handlers
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Example in a server component:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```ts
+import { getSessionAccount } from "@/domain/account";
+import { runServer } from "@/lib/effect-server";
 
-## Deploy on Vercel
+const account = await runServer(getSessionAccount());
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project layout
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+  app/                 # Next.js routes + Appwrite providers/handlers
+  components/ui/       # shadcn primitives
+  components/notes/    # note vault UI
+  domain/              # Effect schemas & use-cases
+  lib/                 # shared helpers (cn, Effect, Appwrite)
+```
+
+## Scripts
+
+| Command        | Description              |
+| -------------- | ------------------------ |
+| `npm run dev`  | Start Turbopack dev server |
+| `npm run build`| Production build         |
+| `npm run start`| Start production server  |
+| `npm run lint` | Run ESLint               |
