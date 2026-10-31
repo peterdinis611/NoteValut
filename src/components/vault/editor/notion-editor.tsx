@@ -20,12 +20,14 @@ export function NotionEditor({
   noteId,
   content,
   editable = true,
+  spellCheck = true,
   className,
   onChange,
 }: {
   noteId: string;
   content: string;
   editable?: boolean;
+  spellCheck?: boolean;
   className?: string;
   onChange: (html: string) => void;
 }) {
@@ -81,6 +83,7 @@ export function NotionEditor({
     editorProps: {
       attributes: {
         class: "nv-editor focus:outline-none",
+        spellcheck: spellCheck ? "true" : "false",
       },
     },
     onUpdate: ({ editor: current }) => {
@@ -92,6 +95,18 @@ export function NotionEditor({
     if (!editor) return;
     editor.setEditable(editable);
   }, [editable, editor]);
+
+  useEffect(() => {
+    if (!editor) return;
+    editor.setOptions({
+      editorProps: {
+        attributes: {
+          class: "nv-editor focus:outline-none",
+          spellcheck: spellCheck ? "true" : "false",
+        },
+      },
+    });
+  }, [editor, spellCheck]);
 
   useEffect(() => {
     if (!editor) return;

@@ -10,6 +10,7 @@ import {
   HardDrive,
   Home,
   LayoutGrid,
+  LayoutTemplate,
   Search,
   Settings,
   Trash2,
@@ -64,7 +65,8 @@ type SearchItem =
         | "storage"
         | "lab"
         | "trash"
-        | "map";
+        | "map"
+        | "templates";
       title: string;
       subtitle: string;
       body: string;
@@ -79,6 +81,7 @@ function itemIcon(item: SearchItem) {
   if (item.id === "storage") return HardDrive;
   if (item.id === "lab") return Wrench;
   if (item.id === "trash") return Trash2;
+  if (item.id === "templates") return LayoutTemplate;
   if (item.id === "settings") return Settings;
   return Home;
 }
@@ -125,7 +128,8 @@ export function VaultSearchDialog({
       | "storage"
       | "lab"
       | "trash"
-      | "map",
+      | "map"
+      | "templates",
   ) => void;
 }) {
   const reduceMotion = useReducedMotion();
@@ -209,6 +213,13 @@ export function VaultSearchDialog({
       },
       {
         kind: "action",
+        id: "templates",
+        title: "Open templates",
+        subtitle: "Built-in and custom page starters",
+        body: "templates meeting daily brief checklist wiki custom",
+      },
+      {
+        kind: "action",
         id: "trash",
         title: "Open trash",
         subtitle: "Restore or permanently delete",
@@ -218,8 +229,8 @@ export function VaultSearchDialog({
         kind: "action",
         id: "settings",
         title: "Open settings",
-        subtitle: "Theme, editor, alerts",
-        body: "settings preferences theme",
+        subtitle: "Theme, writing, workspace, alerts",
+        body: "settings preferences theme workspace privacy",
       },
     ];
 

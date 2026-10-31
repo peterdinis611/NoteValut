@@ -18,7 +18,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollPane } from "./scroll-to-top";
 import { cn } from "cn";
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+const WEEKDAYS_MON = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+const WEEKDAYS_SUN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 const TONES: Array<{
   value: EventTone;
@@ -84,10 +85,17 @@ const parseDayKey = (key: string) => {
   return new Date(y!, m! - 1, d!);
 };
 
-const startOfMonthGrid = (year: number, month: number) => {
+const startOfMonthGrid = (
+  year: number,
+  month: number,
+  weekStartsOn: "monday" | "sunday",
+) => {
   const first = new Date(year, month, 1);
-  const mondayBased = (first.getDay() + 6) % 7;
-  return new Date(year, month, 1 - mondayBased);
+  const offset =
+    weekStartsOn === "monday"
+      ? (first.getDay() + 6) % 7
+      : first.getDay();
+  return new Date(year, month, 1 - offset);
 };
 
 const addDays = (key: string, delta: number) => {
@@ -116,11 +124,13 @@ const TONE_ORDER: Record<EventTone, number> = {
 
 export function VaultCalendar({
   events,
+  weekStartsOn = "monday",
   onAddEvent,
   onDeleteEvent,
   onOpenNote,
 }: {
   events: readonly CalendarEvent[];
+  weekStartsOn?: "monday" | "sunday";
   onAddEvent: (input: {
     title: string;
     day: string;
@@ -147,23 +157,27 @@ export function VaultCalendar({
     return toDayKey(now.getFullYear(), now.getMonth(), now.getDate());
   }, []);
 
+  const weekdays =
+    weekStartsOn === "sunday" ? WEEKDAYS_SUN : WEEKDAYS_MON;
+
   const cells = useMemo(() => {
-    const start = startOfMonthGrid(cursor.year, cursor.month);
+    const start = startOfMonthGrid(cursor.year, cursor.month, weekStartsOn);
     return Array.from({ length: 42 }, (_, index) => {
       const date = new Date(start);
       date.setDate(start.getDate() + index);
       const key = toDayKey(date.getFullYear(), date.getMonth(), date.getDate());
-      const weekday = (date.getDay() + 6) % 7;
+      const day = date.getDay();
+      const isWeekend = day === 0 || day === 6;
       return {
         key,
         date,
         inMonth: date.getMonth() === cursor.month,
         dayNumber: date.getDate(),
         isToday: key === todayKey,
-        isWeekend: weekday >= 5,
+        isWeekend,
       };
     });
-  }, [cursor.month, cursor.year, todayKey]);
+  }, [cursor.month, cursor.year, todayKey, weekStartsOn]);
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
@@ -356,7 +370,7 @@ export function VaultCalendar({
           <div className="space-y-4">
             <div className="overflow-hidden rounded-[22px] border border-border bg-card/80 shadow-sm">
               <div className="grid grid-cols-7 border-b border-border bg-muted/30">
-                {WEEKDAYS.map((day) => (
+                {weekdays.map((day) => (
                   <div
                     key={day}
                     className="px-1 py-2.5 text-center font-mono text-[10px] tracking-[0.14em] text-foreground/45 uppercase"

@@ -10,6 +10,7 @@ import {
   GitFork,
   HardDrive,
   Home,
+  LayoutTemplate,
   MoreHorizontal,
   Plus,
   Search,
@@ -47,7 +48,8 @@ export type VaultView =
   | "storage"
   | "lab"
   | "trash"
-  | "map";
+  | "map"
+  | "templates";
 
 export type CreatePageInput = {
   folderId?: string | null;
@@ -173,6 +175,7 @@ export function VaultSidebar({
   onTrashFolder,
   onChangeView,
   creating,
+  compact = false,
 }: {
   workspaces: readonly Workspace[];
   activeWorkspaceId: string;
@@ -193,6 +196,7 @@ export function VaultSidebar({
   onTrashFolder: (id: string) => void;
   onChangeView: (view: VaultView) => void;
   creating: boolean;
+  compact?: boolean;
 }) {
   const reduceMotion = useReducedMotion();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -243,7 +247,10 @@ export function VaultSidebar({
         initial={reduceMotion ? false : { opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="hidden h-full w-[240px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex lg:w-[252px]"
+        className={cn(
+          "hidden h-full w-[240px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex lg:w-[252px]",
+          compact && "[&_[role=button]]:h-[26px] [&_[role=button]]:text-[13px]",
+        )}
       >
         <div className="px-2 pt-2.5 pb-1">
           <DropdownMenu>
@@ -323,6 +330,12 @@ export function VaultSidebar({
             label="Map"
             onClick={() => onChangeView("map")}
             active={view === "map"}
+          />
+          <SidebarRow
+            leading={<LayoutTemplate className="size-3.5 stroke-[1.75]" />}
+            label="Templates"
+            onClick={() => onChangeView("templates")}
+            active={view === "templates"}
           />
           <SidebarRow
             leading={<HardDrive className="size-3.5 stroke-[1.75]" />}

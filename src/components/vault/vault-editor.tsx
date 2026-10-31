@@ -6,6 +6,7 @@ import {
   CircleAlert,
   FilePlus2,
   FolderPlus,
+  LayoutTemplate,
   Link2,
   Mail,
 } from "lucide-react";
@@ -25,6 +26,7 @@ import {
 import { EmailPageDialog } from "./email-page-dialog";
 import { NotionEditor } from "./editor/notion-editor";
 import { PageLinks } from "./page-links";
+import { SaveTemplateDialog } from "./save-template-dialog";
 import { ScrollPane } from "./scroll-to-top";
 import { VaultProfile } from "./vault-profile";
 
@@ -38,6 +40,9 @@ export function VaultEditor({
   saving,
   accountLabel,
   fontSize = "md",
+  density = "comfortable",
+  spellCheck = true,
+  showLinkedNotes = true,
   onChange,
   onCreatePage,
   onCreateFolder,
@@ -52,6 +57,9 @@ export function VaultEditor({
   saving: boolean;
   accountLabel?: string | null;
   fontSize?: "sm" | "md" | "lg";
+  density?: "comfortable" | "compact";
+  spellCheck?: boolean;
+  showLinkedNotes?: boolean;
   onChange: (patch: {
     title?: string;
     body?: string;
@@ -73,6 +81,8 @@ export function VaultEditor({
   const reduceMotion = useReducedMotion();
   const [copiedSafeUrl, setCopiedSafeUrl] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
+  const [templateOpen, setTemplateOpen] = useState(false);
+  const [templateSaved, setTemplateSaved] = useState(false);
 
   const copySafeUrl = async () => {
     if (!note) return;
@@ -248,6 +258,25 @@ export function VaultEditor({
                 Send this page via Appwrite Messaging
               </TooltipContent>
             </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-muted-foreground hover:text-foreground"
+                    onClick={() => setTemplateOpen(true)}
+                  />
+                }
+              >
+                <LayoutTemplate className="size-3.5 stroke-[1.5]" />
+                {templateSaved ? "Saved" : "Template"}
+              </TooltipTrigger>
+              <TooltipContent>
+                Save this page as a custom template
+              </TooltipContent>
+            </Tooltip>
             <VaultProfile accountLabel={accountLabel} />
           </div>
         </header>
@@ -256,6 +285,17 @@ export function VaultEditor({
           open={emailOpen}
           onOpenChange={setEmailOpen}
           note={note}
+        />
+        <SaveTemplateDialog
+          open={templateOpen}
+          onOpenChange={setTemplateOpen}
+          title={note.title}
+          body={note.body}
+          tags={note.tags}
+          onSaved={() => {
+            setTemplateSaved(true);
+            window.setTimeout(() => setTemplateSaved(false), 1600);
+          }}
         />
 
         <Separator className="bg-border" />
@@ -298,7 +338,7 @@ export function VaultEditor({
               </AnimatePresence>
             </div>
 
-            {onLinkNote && onUnlinkNote && onOpenNote ? (
+            {showLinkedNotes && onLinkNote && onUnlinkNote && onOpenNote ? (
               <PageLinks
                 note={note}
                 candidates={notes}
@@ -311,7 +351,12 @@ export function VaultEditor({
             <NotionEditor
               noteId={note.id}
               content={note.body}
-              className="mt-6 max-w-[44rem]"
+              spellCheck={spellCheck}
+              className={
+                density === "compact"
+                  ? "mt-4 max-w-[44rem] [&_.nv-editor]:text-[0.95rem] [&_.nv-editor]:leading-relaxed"
+                  : "mt-6 max-w-[44rem]"
+              }
               onChange={(body) => onChange({ body })}
             />
 

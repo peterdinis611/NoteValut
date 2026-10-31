@@ -5,7 +5,17 @@ export type VaultPreferences = {
   openCalendarFirst: boolean;
   notifyMentions: boolean;
   notifyUpdates: boolean;
+  notifyCalendar: boolean;
+  notifyTrash: boolean;
   defaultNewPageTitle: string;
+  /** Built-in or custom template id used when creating a page */
+  defaultTemplateId: string;
+  confirmTrash: boolean;
+  showLinkedNotes: boolean;
+  spellCheck: boolean;
+  weekStartsOn: "sunday" | "monday";
+  editorDensity: "comfortable" | "compact";
+  focusMode: boolean;
 };
 
 export const DEFAULT_VAULT_PREFERENCES: VaultPreferences = {
@@ -15,7 +25,16 @@ export const DEFAULT_VAULT_PREFERENCES: VaultPreferences = {
   openCalendarFirst: false,
   notifyMentions: true,
   notifyUpdates: false,
+  notifyCalendar: true,
+  notifyTrash: false,
   defaultNewPageTitle: "Untitled",
+  defaultTemplateId: "blank",
+  confirmTrash: true,
+  showLinkedNotes: true,
+  spellCheck: true,
+  weekStartsOn: "monday",
+  editorDensity: "comfortable",
+  focusMode: false,
 };
 
 const STORAGE_KEY = "notevalut.vault.preferences";

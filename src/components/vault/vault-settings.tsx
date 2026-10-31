@@ -4,14 +4,18 @@ import { useUser } from "@appwrite.io/react";
 import { motion, useReducedMotion } from "motion/react";
 import {
   Bell,
+  CalendarDays,
+  Keyboard,
+  LayoutTemplate,
   Moon,
   Palette,
   ShieldCheck,
   Type,
 } from "lucide-react";
 import { useTheme } from "@/components/theme/theme-provider";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -28,6 +32,7 @@ import {
   saveVaultPreferences,
   type VaultPreferences,
 } from "@/lib/vault-preferences";
+import { listPageTemplates } from "@/lib/vault/page-templates";
 import { ScrollPane } from "./scroll-to-top";
 
 function SettingRow({
@@ -81,14 +86,17 @@ function Segmented<T extends string>({
 
 export function VaultSettings({
   accountLabel,
+  onOpenTemplates,
 }: {
   accountLabel?: string | null;
+  onOpenTemplates?: () => void;
 }) {
   const reduceMotion = useReducedMotion();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { user } = useUser();
 
   const [prefs, setPrefs] = useState<VaultPreferences>(DEFAULT_VAULT_PREFERENCES);
+  const templates = useMemo(() => listPageTemplates(), [prefs.defaultTemplateId]);
 
   useEffect(() => {
     setPrefs(loadVaultPreferences());
@@ -116,8 +124,8 @@ export function VaultSettings({
           Vault preferences
         </h1>
         <p className="mt-1 max-w-xl text-sm text-foreground/65">
-          Appearance, editor habits, account, and alerts. Files live under
-          Storage.
+          Theme, writing habits, workspace defaults, privacy, and alerts —
+          stored on this device.
         </p>
       </header>
 
@@ -130,24 +138,32 @@ export function VaultSettings({
             </TabsTrigger>
             <TabsTrigger value="editor" className="rounded-lg">
               <Type className="size-3.5" />
-              Editor
+              Writing
             </TabsTrigger>
-            <TabsTrigger value="account" className="rounded-lg">
+            <TabsTrigger value="workspace" className="rounded-lg">
+              <CalendarDays className="size-3.5" />
+              Workspace
+            </TabsTrigger>
+            <TabsTrigger value="privacy" className="rounded-lg">
               <ShieldCheck className="size-3.5" />
-              Account
+              Privacy
             </TabsTrigger>
             <TabsTrigger value="notifications" className="rounded-lg">
               <Bell className="size-3.5" />
               Alerts
             </TabsTrigger>
+            <TabsTrigger value="shortcuts" className="rounded-lg">
+              <Keyboard className="size-3.5" />
+              Shortcuts
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="appearance" className="mt-4">
+          <TabsContent value="appearance" className="mt-4 space-y-4">
             <Card className="shadow-none">
               <CardHeader>
                 <CardTitle className="font-display text-lg">Theme</CardTitle>
                 <CardDescription>
-                  Light paper by day, ink vault by night — or follow the system.
+                  Warm paper by day, espresso ink by night — or follow the system.
                 </CardDescription>
               </CardHeader>
               <CardContent className="divide-y divide-border">
@@ -183,29 +199,28 @@ export function VaultSettings({
                   />
                 </SettingRow>
                 <SettingRow
-                  title="Open calendar first"
-                  description="Land on Calendar when opening the vault."
+                  title="Editor density"
+                  description="Comfortable spacing or a denser writing surface."
                 >
-                  <div className="flex items-center gap-2">
-                    <Moon className="size-3.5 text-foreground/55" />
-                    <Switch
-                      checked={prefs.openCalendarFirst}
-                      onCheckedChange={(checked) =>
-                        updatePrefs({ openCalendarFirst: Boolean(checked) })
-                      }
-                    />
-                  </div>
+                  <Segmented
+                    value={prefs.editorDensity}
+                    onChange={(editorDensity) => updatePrefs({ editorDensity })}
+                    options={[
+                      { value: "comfortable", label: "Airy" },
+                      { value: "compact", label: "Dense" },
+                    ]}
+                  />
                 </SettingRow>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="editor" className="mt-4">
+          <TabsContent value="editor" className="mt-4 space-y-4">
             <Card className="shadow-none">
               <CardHeader>
-                <CardTitle className="font-display text-lg">Editor</CardTitle>
+                <CardTitle className="font-display text-lg">Writing</CardTitle>
                 <CardDescription>
-                  Local preferences for writing and saving pages.
+                  How the page editor feels while you type and save.
                 </CardDescription>
               </CardHeader>
               <CardContent className="divide-y divide-border">
@@ -244,8 +259,81 @@ export function VaultSettings({
                   />
                 </SettingRow>
                 <SettingRow
+                  title="Spell check"
+                  description="Browser spellcheck inside the page body."
+                >
+                  <Switch
+                    checked={prefs.spellCheck}
+                    onCheckedChange={(checked) =>
+                      updatePrefs({ spellCheck: Boolean(checked) })
+                    }
+                  />
+                </SettingRow>
+                <SettingRow
+                  title="Focus mode"
+                  description="Hide chrome hints while editing (coming to the canvas)."
+                >
+                  <Switch
+                    checked={prefs.focusMode}
+                    onCheckedChange={(checked) =>
+                      updatePrefs({ focusMode: Boolean(checked) })
+                    }
+                  />
+                </SettingRow>
+                <SettingRow
+                  title="Show linked notes"
+                  description="Keep the page-links panel visible by default."
+                >
+                  <Switch
+                    checked={prefs.showLinkedNotes}
+                    onCheckedChange={(checked) =>
+                      updatePrefs({ showLinkedNotes: Boolean(checked) })
+                    }
+                  />
+                </SettingRow>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="workspace" className="mt-4 space-y-4">
+            <Card className="shadow-none">
+              <CardHeader>
+                <CardTitle className="font-display text-lg">Workspace</CardTitle>
+                <CardDescription>
+                  Defaults for new pages, calendar, and first paint.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="divide-y divide-border">
+                <SettingRow
+                  title="Open calendar first"
+                  description="Land on Calendar when opening the vault."
+                >
+                  <div className="flex items-center gap-2">
+                    <Moon className="size-3.5 text-foreground/55" />
+                    <Switch
+                      checked={prefs.openCalendarFirst}
+                      onCheckedChange={(checked) =>
+                        updatePrefs({ openCalendarFirst: Boolean(checked) })
+                      }
+                    />
+                  </div>
+                </SettingRow>
+                <SettingRow
+                  title="Week starts on"
+                  description="First day shown in the calendar week strip."
+                >
+                  <Segmented
+                    value={prefs.weekStartsOn}
+                    onChange={(weekStartsOn) => updatePrefs({ weekStartsOn })}
+                    options={[
+                      { value: "monday", label: "Mon" },
+                      { value: "sunday", label: "Sun" },
+                    ]}
+                  />
+                </SettingRow>
+                <SettingRow
                   title="Default page title"
-                  description="Used when you create a new page."
+                  description="Prefill when the create dialog opens."
                 >
                   <Input
                     value={prefs.defaultNewPageTitle}
@@ -255,50 +343,117 @@ export function VaultSettings({
                     className="h-9 w-44 rounded-lg"
                   />
                 </SettingRow>
+                <SettingRow
+                  title="Default template"
+                  description="Selected when you create a page (unless you pick another)."
+                >
+                  <select
+                    value={prefs.defaultTemplateId}
+                    onChange={(event) =>
+                      updatePrefs({ defaultTemplateId: event.target.value })
+                    }
+                    className="h-9 max-w-[14rem] rounded-lg border border-border bg-background px-2 text-sm"
+                  >
+                    {templates.map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.custom ? `★ ${template.label}` : template.label}
+                      </option>
+                    ))}
+                  </select>
+                </SettingRow>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-none">
+              <CardHeader>
+                <CardTitle className="font-display flex items-center gap-2 text-lg">
+                  <LayoutTemplate className="size-4" />
+                  Templates
+                </CardTitle>
+                <CardDescription>
+                  Browse built-ins, manage custom starters, and create pages from
+                  them.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-xl"
+                  onClick={onOpenTemplates}
+                >
+                  Open Templates
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="account" className="mt-4">
+          <TabsContent value="privacy" className="mt-4 space-y-4">
+            <Card className="shadow-none">
+              <CardHeader>
+                <CardTitle className="font-display text-lg">Privacy & safety</CardTitle>
+                <CardDescription>
+                  Local guards before destructive actions. Session comes from
+                  Appwrite.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="divide-y divide-border">
+                <SettingRow
+                  title="Confirm before trash"
+                  description="Ask before moving a page or folder to trash."
+                >
+                  <Switch
+                    checked={prefs.confirmTrash}
+                    onCheckedChange={(checked) =>
+                      updatePrefs({ confirmTrash: Boolean(checked) })
+                    }
+                  />
+                </SettingRow>
+                <SettingRow
+                  title="Signed-in as"
+                  description={
+                    user?.email ||
+                    accountLabel ||
+                    "Guest — demo/local shelf only"
+                  }
+                >
+                  {user ? (
+                    user.emailVerification ? (
+                      <Badge variant="secondary" className="gap-1">
+                        <ShieldCheck className="size-3" />
+                        Verified
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-amber-700 dark:text-amber-300"
+                      >
+                        Unverified
+                      </Badge>
+                    )
+                  ) : (
+                    <Badge variant="secondary">Guest</Badge>
+                  )}
+                </SettingRow>
+              </CardContent>
+            </Card>
+
             <Card className="shadow-none">
               <CardHeader>
                 <CardTitle className="font-display text-lg">Account</CardTitle>
                 <CardDescription>
-                  Session identity from Appwrite Auth.
+                  Profile name and password changes will land here next.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent>
                 <div className="rounded-xl border border-border bg-muted/30 p-4">
                   <p className="font-display text-base font-semibold text-foreground">
                     {user?.name || accountLabel || "Guest"}
                   </p>
                   <p className="mt-1 text-sm text-foreground/60">
-                    {user?.email || "Not signed in — demo/local shelf only."}
+                    {user?.email || "Not signed in — shelf stays on this device."}
                   </p>
-                  <div className="mt-3">
-                    {user ? (
-                      user.emailVerification ? (
-                        <Badge variant="secondary" className="gap-1">
-                          <ShieldCheck className="size-3" />
-                          Email verified
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="text-amber-700 dark:text-amber-300"
-                        >
-                          Email unverified
-                        </Badge>
-                      )
-                    ) : (
-                      <Badge variant="secondary">Guest</Badge>
-                    )}
-                  </div>
                 </div>
-                <p className="text-[13px] text-foreground/60">
-                  Profile name and password changes will land here next — shelf
-                  sync already uses this session. Files are on the Storage page.
-                </p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -324,6 +479,28 @@ export function VaultSettings({
                   />
                 </SettingRow>
                 <SettingRow
+                  title="Calendar reminders"
+                  description="Heads-up for events on your vault calendar."
+                >
+                  <Switch
+                    checked={prefs.notifyCalendar}
+                    onCheckedChange={(checked) =>
+                      updatePrefs({ notifyCalendar: Boolean(checked) })
+                    }
+                  />
+                </SettingRow>
+                <SettingRow
+                  title="Trash digests"
+                  description="Occasional reminder that items sit in trash."
+                >
+                  <Switch
+                    checked={prefs.notifyTrash}
+                    onCheckedChange={(checked) =>
+                      updatePrefs({ notifyTrash: Boolean(checked) })
+                    }
+                  />
+                </SettingRow>
+                <SettingRow
                   title="Product updates"
                   description="Occasional NoteValut tips and release notes."
                 >
@@ -334,6 +511,37 @@ export function VaultSettings({
                     }
                   />
                 </SettingRow>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="shortcuts" className="mt-4">
+            <Card className="shadow-none">
+              <CardHeader>
+                <CardTitle className="font-display text-lg">Shortcuts</CardTitle>
+                <CardDescription>
+                  Keyboard paths that already work in the vault shell.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="divide-y divide-border text-sm">
+                  {[
+                    ["Search pages & jumps", "⌘ K"],
+                    ["New page dialog", "Sidebar +"],
+                    ["Toggle theme", "Theme control"],
+                    ["Slash commands in editor", "/"],
+                  ].map(([label, keys]) => (
+                    <li
+                      key={label}
+                      className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+                    >
+                      <span className="text-foreground/80">{label}</span>
+                      <kbd className="rounded-md border border-border bg-muted px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
+                        {keys}
+                      </kbd>
+                    </li>
+                  ))}
+                </ul>
               </CardContent>
             </Card>
           </TabsContent>

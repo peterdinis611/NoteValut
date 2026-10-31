@@ -58,6 +58,7 @@ import {
   type VaultView,
 } from "./vault-sidebar";
 import { VaultStorage } from "./vault-storage";
+import { VaultTemplates } from "./vault-templates";
 import { VaultTrash } from "./vault-trash";
 
 const personal = runSync(createWorkspace({ name: "Personal", emoji: "🏠" }));
@@ -238,7 +239,9 @@ export function VaultDashboard({
   }, []);
 
   useEffect(() => {
-    if (view !== "settings") setPrefs(loadVaultPreferences());
+    if (view !== "settings" && view !== "templates") {
+      setPrefs(loadVaultPreferences());
+    }
   }, [view]);
 
   useEffect(() => {
@@ -638,6 +641,13 @@ export function VaultDashboard({
   const onTrashNote = (noteId: string) => {
     const existing = notes.find((note) => note.id === noteId);
     if (!existing || existing.deletedAt != null) return;
+    if (
+      (prefs?.confirmTrash ?? true) &&
+      typeof window !== "undefined" &&
+      !window.confirm(`Move “${existing.title || "Untitled"}” to trash?`)
+    ) {
+      return;
+    }
     setError(null);
     startTransition(() => {
       void (async () => {
@@ -675,6 +685,15 @@ export function VaultDashboard({
   const onTrashFolder = (folderId: string) => {
     const existing = folders.find((folder) => folder.id === folderId);
     if (!existing || existing.deletedAt != null) return;
+    if (
+      (prefs?.confirmTrash ?? true) &&
+      typeof window !== "undefined" &&
+      !window.confirm(
+        `Move folder “${existing.name}” and its pages to trash?`,
+      )
+    ) {
+      return;
+    }
     setError(null);
     startTransition(() => {
       void (async () => {
@@ -969,6 +988,7 @@ export function VaultDashboard({
             onTrashFolder={onTrashFolder}
             onChangeView={setView}
             creating={isPending}
+            compact={prefs?.compactSidebar ?? false}
           />
 
           <AnimatePresence mode="wait">
@@ -983,9 +1003,29 @@ export function VaultDashboard({
               >
                 <VaultCalendar
                   events={workspaceEvents}
+                  weekStartsOn={prefs?.weekStartsOn ?? "monday"}
                   onAddEvent={onAddEvent}
                   onDeleteEvent={onDeleteEvent}
                   onOpenNote={onOpenNote}
+                />
+              </motion.div>
+            ) : view === "templates" ? (
+              <motion.div
+                key="templates"
+                className="flex min-w-0 flex-1"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <VaultTemplates
+                  onUseTemplate={(templateId) => {
+                    const template = getPageTemplate(templateId);
+                    onCreateNote({
+                      title: template.suggestedTitle,
+                      templateId,
+                    });
+                  }}
                 />
               </motion.div>
             ) : view === "settings" ? (
@@ -997,7 +1037,10 @@ export function VaultDashboard({
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
               >
-                <VaultSettings accountLabel={accountLabel} />
+                <VaultSettings
+                  accountLabel={accountLabel}
+                  onOpenTemplates={() => setView("templates")}
+                />
               </motion.div>
             ) : view === "storage" ? (
               <motion.div
@@ -1081,6 +1124,9 @@ export function VaultDashboard({
                   saving={isPending}
                   accountLabel={accountLabel}
                   fontSize={prefs?.editorFontSize ?? "md"}
+                  density={prefs?.editorDensity ?? "comfortable"}
+                  spellCheck={prefs?.spellCheck ?? true}
+                  showLinkedNotes={prefs?.showLinkedNotes ?? true}
                   onChange={onChangeSelected}
                   onCreatePage={() => setCreateKind("page")}
                   onCreateFolder={() => setCreateKind("folder")}
@@ -1124,6 +1170,7 @@ export function VaultDashboard({
             placeholder="Meeting notes, Brief, Inbox…"
             confirmLabel="Create page"
             defaultValue={prefs?.defaultNewPageTitle ?? "Untitled"}
+            initialTemplateId={prefs?.defaultTemplateId ?? "blank"}
             templates
             onConfirm={(title, meta) => {
               onCreateNote({ title, templateId: meta?.templateId });
