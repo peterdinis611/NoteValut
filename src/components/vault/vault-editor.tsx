@@ -161,29 +161,11 @@ export function VaultEditor({
   }
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.section
-        key={note.id}
-        initial={
-          reduceMotion
-            ? false
-            : { opacity: 0, y: 18, filter: "blur(6px)", scale: 0.985 }
-        }
-        animate={{ opacity: 1, y: 0, filter: "blur(0px)", scale: 1 }}
-        exit={
-          reduceMotion
-            ? undefined
-            : { opacity: 0, y: -10, filter: "blur(4px)", scale: 0.99 }
-        }
-        transition={{ duration: 0.38, ease }}
-        className="relative mx-0 flex min-w-0 flex-1 flex-col overflow-hidden bg-background"
-      >
-        <motion.header
-          initial={reduceMotion ? false : { opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05, duration: 0.3, ease }}
-          className="flex flex-wrap items-center justify-between gap-3 px-6 pt-5 pb-2 md:px-10"
-        >
+    <motion.section
+      layout={false}
+      className="relative mx-0 flex min-w-0 flex-1 flex-col overflow-hidden bg-background"
+    >
+        <header className="flex flex-wrap items-center justify-between gap-3 px-6 pt-5 pb-2 md:px-10">
           <div className="flex min-w-0 items-center gap-2 text-[13px] text-muted-foreground">
             <motion.span
               key={mark}
@@ -268,7 +250,7 @@ export function VaultEditor({
             </Tooltip>
             <VaultProfile accountLabel={accountLabel} />
           </div>
-        </motion.header>
+        </header>
 
         <EmailPageDialog
           open={emailOpen}
@@ -279,18 +261,21 @@ export function VaultEditor({
         <Separator className="bg-border" />
 
         <ScrollPane className="px-6 pb-24 md:px-10 md:pb-28">
-          <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.08, duration: 0.35, ease }}
-          >
-            <Input
-              value={note.title}
-              onChange={(event) => onChange({ title: event.target.value })}
-              aria-label="Note title"
-              className={`mt-4 h-auto border-0 bg-transparent px-0 font-display leading-[1.1] font-semibold tracking-[-0.03em] text-foreground shadow-none focus-visible:ring-0 ${titleClass}`}
-              placeholder="Untitled"
-            />
+          <div>
+            <motion.div
+              key={`title-${note.id}`}
+              initial={reduceMotion ? false : { opacity: 0.55, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.18, ease }}
+            >
+              <Input
+                value={note.title}
+                onChange={(event) => onChange({ title: event.target.value })}
+                aria-label="Note title"
+                className={`mt-4 h-auto border-0 bg-transparent px-0 font-display leading-[1.1] font-semibold tracking-[-0.03em] text-foreground shadow-none focus-visible:ring-0 ${titleClass}`}
+                placeholder="Untitled"
+              />
+            </motion.div>
 
             <div className="mt-3 flex flex-wrap gap-2">
               <AnimatePresence initial={false}>
@@ -324,7 +309,6 @@ export function VaultEditor({
             ) : null}
 
             <NotionEditor
-              key={note.id}
               noteId={note.id}
               content={note.body}
               className="mt-6 max-w-[44rem]"
@@ -332,24 +316,18 @@ export function VaultEditor({
             />
 
             {error ? (
-              <motion.div
-                initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <Alert variant="destructive" className="mt-4 max-w-[42rem]">
-                  <CircleAlert />
-                  <AlertTitle>Could not save</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              </motion.div>
+              <Alert variant="destructive" className="mt-4 max-w-[42rem]">
+                <CircleAlert />
+                <AlertTitle>Could not save</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             ) : null}
 
             <p className="mt-6 text-[11px] text-muted-foreground/60">
               {saving ? "Saving…" : "TipTap · type / for blocks"}
             </p>
-          </motion.div>
+          </div>
         </ScrollPane>
       </motion.section>
-    </AnimatePresence>
   );
 }

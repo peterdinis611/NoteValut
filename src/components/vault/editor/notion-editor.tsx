@@ -9,7 +9,7 @@ import TaskList from "@tiptap/extension-task-list";
 import Underline from "@tiptap/extension-underline";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { normalizeEditorContent } from "@/lib/editor/content";
 import { sanitizeEditorHtml } from "@/lib/editor/sanitize";
 import { toSafeHref } from "@/lib/editor/safe-url";
@@ -29,6 +29,7 @@ export function NotionEditor({
   className?: string;
   onChange: (html: string) => void;
 }) {
+  const activeNoteId = useRef(noteId);
   const editor = useEditor({
     immediatelyRender: false,
     editable,
@@ -96,6 +97,14 @@ export function NotionEditor({
     if (!editor) return;
     const next = normalizeEditorContent(content);
     const current = editor.getHTML();
+    const switchedNote = activeNoteId.current !== noteId;
+
+    if (switchedNote) {
+      activeNoteId.current = noteId;
+      editor.commands.setContent(next, { emitUpdate: false });
+      return;
+    }
+
     if (next === current) return;
     // Avoid clobbering while the user is typing the same note.
     if (editor.isFocused) return;

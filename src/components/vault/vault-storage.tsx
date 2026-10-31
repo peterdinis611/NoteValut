@@ -3,6 +3,7 @@
 import { useAppwrite, useUser } from "@appwrite.io/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
+  Eye,
   FileUp,
   GripVertical,
   HardDrive,
@@ -20,23 +21,24 @@ import {
   deleteVaultFile,
   formatFileSize,
   getVaultFilePreviewUrl,
-  getVaultFileViewUrl,
   listVaultFiles,
   uploadVaultFile,
   type VaultFile,
   VAULT_BUCKET_ID,
 } from "@/lib/appwrite/storage";
 import { runPromise } from "@/lib/effect";
+import {
+  fileKindLabel,
+  getVaultFileKind,
+  VAULT_ACCEPT_ATTR,
+} from "@/lib/vault/file-kinds";
 import { cn } from "cn";
+import { FileViewerDialog } from "./storage/file-viewer-dialog";
 import { ScrollPane } from "./scroll-to-top";
 
 const FILE_CARD = "VAULT_FILE_CARD" as const;
 
-const ACCEPTED =
-  ".jpg,.jpeg,.png,.gif,.webp,.svg,.pdf,.txt,.md,.csv,.json";
-
-const isImage = (name: string) =>
-  /\.(png|jpe?g|gif|webp|svg)$/i.test(name);
+const isImage = (name: string) => getVaultFileKind(name) === "image";
 
 function moveItem<T>(list: T[], from: number, to: number) {
   if (from === to) return list;
@@ -121,8 +123,8 @@ function FileDropZone({
           {active ? "Drop to upload" : "Drag files here"}
         </p>
         <p className="mt-1 max-w-sm text-[13px] text-foreground/60">
-          Images, PDF, markdown, CSV, JSON — up to 10&nbsp;MB each. Or use the
-          button below.
+          Images, PDF, TXT, CSV, DOCX, XML, markdown, JSON — up to 10&nbsp;MB
+          each. Click a file to open its viewer.
         </p>
       </div>
     </motion.div>
@@ -133,20 +135,21 @@ function StorageFileCard({
   file,
   index,
   previewUrl,
-  viewUrl,
   busy,
   onDelete,
   onMove,
+  onOpen,
 }: {
   file: VaultFile;
   index: number;
   previewUrl: string;
-  viewUrl: string;
   busy?: boolean;
   onDelete: (id: string) => void;
   onMove: (from: number, to: number) => void;
+  onOpen: (file: VaultFile) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const kind = getVaultFileKind(file.name);
 
   const [{ isDragging }, drag, preview] = useDrag(
     () => ({
@@ -204,20 +207,29 @@ function StorageFileCard({
         </span>
       )}
       <div className="min-w-0 flex-1">
-        <a
-          href={viewUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="block truncate text-[14px] font-medium text-foreground hover:underline"
-          onClick={(event) => event.stopPropagation()}
+        <button
+          type="button"
+          className="block w-full truncate text-left text-[14px] font-medium text-foreground hover:underline"
+          onClick={() => onOpen(file)}
         >
           {file.name}
-        </a>
+        </button>
         <p className="mt-0.5 text-[11px] text-foreground/55">
-          {formatFileSize(file.sizeOriginal)} ·{" "}
+          {fileKindLabel(kind)} · {formatFileSize(file.sizeOriginal)} ·{" "}
           {new Date(file.$createdAt).toLocaleString()}
         </p>
       </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        disabled={busy}
+        onClick={() => onOpen(file)}
+        aria-label={`Preview ${file.name}`}
+        className="shrink-0"
+      >
+        <Eye className="size-3.5" />
+      </Button>
       <Button
         type="button"
         variant="ghost"
@@ -244,6 +256,7 @@ function VaultStorageInner() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [viewerFile, setViewerFile] = useState<VaultFile | null>(null);
 
   const refreshFiles = useCallback(() => {
     if (!user) {
@@ -331,7 +344,8 @@ function VaultStorageInner() {
               Storage
             </h1>
             <p className="mt-2 max-w-lg text-[14px] text-foreground/65">
-              Drag files onto the shelf, reorder cards, open previews. Bucket{" "}
+              Drag files onto the shelf, reorder cards, open type-specific
+              viewers. Bucket{" "}
               <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground">
                 {VAULT_BUCKET_ID}
               </code>
@@ -368,7 +382,7 @@ function VaultStorageInner() {
                   type="file"
                   multiple
                   className="hidden"
-                  accept={ACCEPTED}
+                  accept={VAULT_ACCEPT_ATTR}
                   onChange={(event) => {
                     uploadMany(Array.from(event.target.files ?? []));
                     event.target.value = "";
@@ -419,8 +433,7 @@ function VaultStorageInner() {
                   <p className="text-sm text-foreground/55">Loading files…</p>
                 ) : files.length === 0 ? (
                   <p className="rounded-[12px] border border-dashed border-border bg-muted/20 px-4 py-10 text-center text-sm text-foreground/55">
-                    No files yet. Drop a screenshot, brief PDF, or markdown note
-                    above.
+                    No files yet. Drop a PDF, CSV, DOCX, XML, or text note above.
                   </p>
                 ) : (
                   <AnimatePresence initial={false}>
@@ -443,10 +456,10 @@ function VaultStorageInner() {
                               file.$id,
                               72,
                             )}
-                            viewUrl={getVaultFileViewUrl(storage, file.$id)}
                             busy={isPending}
                             onDelete={onDelete}
                             onMove={onMove}
+                            onOpen={setViewerFile}
                           />
                         </motion.li>
                       ))}
@@ -454,6 +467,14 @@ function VaultStorageInner() {
                   </AnimatePresence>
                 )}
               </div>
+
+              <FileViewerDialog
+                file={viewerFile}
+                open={viewerFile != null}
+                onOpenChange={(open) => {
+                  if (!open) setViewerFile(null);
+                }}
+              />
             </>
           )}
         </div>

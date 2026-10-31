@@ -44,6 +44,7 @@ import {
   loadVaultPreferences,
   type VaultPreferences,
 } from "@/lib/vault-preferences";
+import { getPageTemplate } from "@/lib/vault/page-templates";
 import { VaultCalendar } from "./vault-calendar";
 import { VaultLab } from "./vault-lab";
 import { VaultEditor } from "./vault-editor";
@@ -424,6 +425,9 @@ export function VaultDashboard({
   const onCreateNote = (input: CreatePageInput) => {
     if (!activeWorkspaceId) return;
     const folderId = input.folderId ?? null;
+    const template = getPageTemplate(input.templateId);
+    const body = input.body ?? template.body;
+    const tags = input.tags ?? template.tags;
     setError(null);
     startTransition(() => {
       void (async () => {
@@ -431,9 +435,9 @@ export function VaultDashboard({
           createNote({
             workspaceId: activeWorkspaceId as WorkspaceId,
             folderId: folderId as Note["folderId"],
-            title: input.title.trim() || "Untitled",
-            body: "",
-            tags: ["inbox"],
+            title: input.title.trim() || template.suggestedTitle || "Untitled",
+            body,
+            tags,
           }),
         );
         if (!result.ok) {
@@ -609,6 +613,10 @@ export function VaultDashboard({
       }
       setEvents((prev) => [...prev, result.value]);
     });
+  };
+
+  const onDeleteEvent = (eventId: string) => {
+    setEvents((prev) => prev.filter((event) => event.id !== eventId));
   };
 
   const onOpenNote = (noteId: string) => {
@@ -976,6 +984,7 @@ export function VaultDashboard({
                 <VaultCalendar
                   events={workspaceEvents}
                   onAddEvent={onAddEvent}
+                  onDeleteEvent={onDeleteEvent}
                   onOpenNote={onOpenNote}
                 />
               </motion.div>
@@ -1059,10 +1068,10 @@ export function VaultDashboard({
               <motion.div
                 key="pages"
                 className="flex min-w-0 flex-1"
-                initial={{ opacity: 0, x: -14, filter: "blur(4px)" }}
-                animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                exit={{ opacity: 0, x: 12, filter: "blur(3px)" }}
-                transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 6 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               >
                 <VaultEditor
                   note={selected}
@@ -1111,12 +1120,13 @@ export function VaultDashboard({
             open={createKind === "page"}
             onOpenChange={(open) => !open && setCreateKind(null)}
             title="Create page"
-            description="New page at the workspace root."
+            description="Pick a template, then name the page."
             placeholder="Meeting notes, Brief, Inbox…"
             confirmLabel="Create page"
             defaultValue={prefs?.defaultNewPageTitle ?? "Untitled"}
-            onConfirm={(title) => {
-              onCreateNote({ title });
+            templates
+            onConfirm={(title, meta) => {
+              onCreateNote({ title, templateId: meta?.templateId });
               setCreateKind(null);
             }}
           />

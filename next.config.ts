@@ -73,10 +73,10 @@ const nextConfig: NextConfig = {
   },
 
   experimental: {
-    // Client router segment cache (seconds)
+    // Client router segment cache (seconds) — keep vault/auth shells warm longer
     staleTimes: {
-      dynamic: 30,
-      static: 300,
+      dynamic: 180,
+      static: 600,
     },
     // Tree-shake heavy barrels beyond the built-in defaults
     optimizePackageImports: [
@@ -88,57 +88,78 @@ const nextConfig: NextConfig = {
       "fuse.js",
       "cmdk",
     ],
-    // Persist Turbopack work across restarts
-    turbopackFileSystemCacheForDev: true,
+    // Off while theme stack is custom — FS cache kept a ghost next-themes edge
+    // after the package was removed ("module factory is not available").
+    turbopackFileSystemCacheForDev: false,
     turbopackFileSystemCacheForBuild: true,
     // Keep Server Component fetch results across HMR
     serverComponentsHmrCache: true,
   },
 
   async headers() {
+    // Never pin /_next/static as immutable in development — Turbopack HMR
+    // reuses chunk URLs and browsers then serve stale module graphs (e.g. after
+    // removing next-themes).
+    const assetCacheHeaders =
+      process.env.NODE_ENV === "production"
+        ? ([
+            {
+              source: "/_next/static/:path*",
+              headers: [
+                {
+                  key: "Cache-Control",
+                  value: `public, max-age=${ONE_YEAR}, immutable`,
+                },
+              ],
+            },
+            {
+              source: "/icon",
+              headers: [
+                {
+                  key: "Cache-Control",
+                  value: `public, max-age=${ONE_DAY}, stale-while-revalidate=${7 * ONE_DAY}`,
+                },
+              ],
+            },
+            {
+              source: "/apple-icon",
+              headers: [
+                {
+                  key: "Cache-Control",
+                  value: `public, max-age=${ONE_DAY}, stale-while-revalidate=${7 * ONE_DAY}`,
+                },
+              ],
+            },
+            {
+              source: "/opengraph-image",
+              headers: [
+                {
+                  key: "Cache-Control",
+                  value: `public, max-age=${ONE_HOUR}, stale-while-revalidate=${ONE_DAY}`,
+                },
+              ],
+            },
+          ] as const)
+        : ([
+            {
+              // Force revalidation of HMR chunks — immutable pins caused
+              // "module factory is not available" after package removals.
+              source: "/_next/static/:path*",
+              headers: [
+                {
+                  key: "Cache-Control",
+                  value: "no-store, must-revalidate",
+                },
+              ],
+            },
+          ] as const);
+
     return [
       {
         source: "/:path*",
         headers: [...securityHeaders],
       },
-      {
-        // Framework hashed assets — immutable
-        source: "/_next/static/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: `public, max-age=${ONE_YEAR}, immutable`,
-          },
-        ],
-      },
-      {
-        // Generated favicon / OG — long CDN cache, allow refresh
-        source: "/icon",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: `public, max-age=${ONE_DAY}, stale-while-revalidate=${7 * ONE_DAY}`,
-          },
-        ],
-      },
-      {
-        source: "/apple-icon",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: `public, max-age=${ONE_DAY}, stale-while-revalidate=${7 * ONE_DAY}`,
-          },
-        ],
-      },
-      {
-        source: "/opengraph-image",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: `public, max-age=${ONE_HOUR}, stale-while-revalidate=${ONE_DAY}`,
-          },
-        ],
-      },
+      ...assetCacheHeaders,
       {
         // Marketing shell can be CDN-cached briefly; RSC still streams dynamic bits
         source: "/",
@@ -236,6 +257,10 @@ const nextConfig: NextConfig = {
   },
 
   turbopack: {
+    // Stale HMR / browser graphs may still import next-themes
+    resolveAlias: {
+      "next-themes": "./src/shims/next-themes.ts",
+    },
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],

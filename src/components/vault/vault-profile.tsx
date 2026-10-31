@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth, useUser } from "@appwrite.io/react";
 import { LogOut, Mail, Settings2, ShieldCheck, UserRound } from "lucide-react";
 import { ResendVerificationButton } from "@/components/auth/resend-verification-button";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { ThemeToggle } from "@/components/theme/theme-switch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Figtree, JetBrains_Mono } from "next/font/google";
 import { AppwriteShell } from "@/components/appwrite/appwrite-shell";
+import { RoutePrefetch } from "@/components/seo/route-prefetch";
+import { ThemeScript } from "@/components/theme/theme-script";
 import { getSiteUrl, siteConfig } from "@/lib/seo";
 import "./globals.css";
 
@@ -73,7 +75,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f5efe6" },
-    { media: "(prefers-color-scheme: dark)", color: "#12100e" },
+    { media: "(prefers-color-scheme: dark)", color: "#1c1712" },
   ],
   colorScheme: "light dark",
   width: "device-width",
@@ -88,6 +90,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${display.variable} ${sans.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-background font-sans text-foreground">
+        <ThemeScript />
+        <RoutePrefetch />
         <AppwriteShell>{children}</AppwriteShell>
       </body>
     </html>

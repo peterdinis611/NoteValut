@@ -21,7 +21,7 @@ import { useEffect, useState } from "react";
 import { cn } from "cn";
 import type { Note } from "@/domain/note";
 import type { Folder, Workspace } from "@/domain/shelf";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { ThemeToggle } from "@/components/theme/theme-switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +52,9 @@ export type VaultView =
 export type CreatePageInput = {
   folderId?: string | null;
   title: string;
+  body?: string;
+  tags?: string[];
+  templateId?: string;
 };
 
 function SidebarRow({
@@ -667,14 +670,19 @@ export function VaultSidebar({
         title="Create page"
         description={
           pageFolderId
-            ? "New page inside the selected folder."
-            : "New page at the workspace root."
+            ? "Pick a template, then name the page inside the selected folder."
+            : "Pick a template, then name the page."
         }
         placeholder="Meeting notes, Brief, Inbox…"
         confirmLabel="Create page"
         defaultValue="Untitled"
-        onConfirm={(title) =>
-          onCreateNote({ folderId: pageFolderId, title })
+        templates
+        onConfirm={(title, meta) =>
+          onCreateNote({
+            folderId: pageFolderId,
+            title,
+            templateId: meta?.templateId,
+          })
         }
       />
     </>

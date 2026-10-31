@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { ThemeToggle } from "@/components/theme/theme-switch";
 
 const links = [
   { href: "#product", label: "Product" },
@@ -46,12 +46,14 @@ export function LandingNav() {
           <ThemeToggle />
           <Link
             href="/login"
+            prefetch
             className="hidden rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:inline-flex"
           >
             Login
           </Link>
           <Link
             href="/signup"
+            prefetch
             className="inline-flex h-9 items-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/85"
           >
             Create Account

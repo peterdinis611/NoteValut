@@ -117,12 +117,14 @@ export function LandingHero() {
         >
           <Link
             href="/signup"
+            prefetch
             className="inline-flex h-12 items-center justify-center rounded-full bg-[oklch(0.18_0.02_40)] px-8 text-base font-medium text-white shadow-[0_12px_32px_-12px_rgba(20,16,12,0.45)] transition-[transform,background-color] hover:bg-[oklch(0.28_0.02_40)] hover:scale-[1.02] active:scale-[0.99]"
           >
             Get NoteValut Free
           </Link>
           <Link
             href="/demo"
+            prefetch
             className="inline-flex h-12 items-center justify-center rounded-full border border-[oklch(0.75_0.02_50)] bg-white/60 px-6 text-base font-medium text-[oklch(0.28_0.02_40)] backdrop-blur-sm transition-colors hover:bg-white"
           >
             Try the demo

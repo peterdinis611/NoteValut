@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   Type,
 } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/theme/theme-provider";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import {

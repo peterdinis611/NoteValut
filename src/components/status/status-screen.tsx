@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowLeft, Home, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "cn";
 
 export function StatusScreen({
   code,
@@ -82,33 +83,37 @@ export function StatusScreen({
           transition={{ delay: 0.16, duration: 0.45 }}
           className="mt-8 flex flex-wrap gap-2"
         >
-          <Button
-            render={<Link href={primaryHref} />}
-            className="h-10 rounded-xl px-4"
+          <Link
+            href={primaryHref}
+            className={cn(buttonVariants(), "h-10 rounded-xl px-4")}
           >
             <Home data-icon="inline-start" />
             {primaryLabel}
-          </Button>
+          </Link>
 
           {onRetry ? (
-            <Button
+            <button
               type="button"
-              variant="outline"
-              className="h-10 rounded-xl px-4"
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "h-10 rounded-xl px-4",
+              )}
               onClick={onRetry}
             >
               <RefreshCw data-icon="inline-start" />
               Try again
-            </Button>
+            </button>
           ) : (
-            <Button
-              render={<Link href="/vault" />}
-              variant="outline"
-              className="h-10 rounded-xl px-4"
+            <Link
+              href="/vault"
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "h-10 rounded-xl px-4",
+              )}
             >
               <ArrowLeft data-icon="inline-start" />
               Open vault
-            </Button>
+            </Link>
           )}
         </motion.div>
 
