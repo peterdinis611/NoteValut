@@ -19,7 +19,7 @@ export function AuthShell({
     <div className="landing-shell relative flex min-h-full flex-1 flex-col bg-[oklch(0.94_0.02_65)] dark:bg-background">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_-10%,oklch(0.9_0.04_55/_0.7),transparent_55%)] dark:bg-[radial-gradient(ellipse_70%_50%_at_50%_-10%,oklch(0.35_0.05_65/_0.35),transparent_55%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_-10%,oklch(0.9_0.04_55/_0.7),transparent_55%)] dark:bg-[radial-gradient(ellipse_65%_45%_at_50%_-8%,oklch(0.28_0.025_70/_0.45),transparent_60%)]"
       />
 
       <motion.div

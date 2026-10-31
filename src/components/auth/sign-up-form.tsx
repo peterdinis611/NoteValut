@@ -7,6 +7,14 @@ import { useAppwrite, useAuth } from "@appwrite.io/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getEmailVerificationUrl } from "@/lib/appwrite/urls";
+import {
+  authHintClass,
+  authInputClass,
+  authLabelClass,
+  authLinkClass,
+  authMutedClass,
+  authPrimaryButtonClass,
+} from "./auth-field";
 
 export function SignUpForm() {
   const router = useRouter();
@@ -27,18 +35,14 @@ export function SignUpForm() {
 
   if (isLoading || (user && !submittedRef.current)) {
     return (
-      <p className="font-mono text-sm text-[oklch(0.45_0.02_50)]">
+      <p className={authHintClass}>
         {user ? "Already signed in — opening vault…" : "Checking session…"}
       </p>
     );
   }
 
   if (submittedRef.current && signUp.isPending) {
-    return (
-      <p className="font-mono text-sm text-[oklch(0.45_0.02_50)]">
-        Creating account…
-      </p>
-    );
+    return <p className={authHintClass}>Creating account…</p>;
   }
 
   const onSubmit = (event: React.FormEvent) => {
@@ -62,14 +66,22 @@ export function SignUpForm() {
       password,
       name: name.trim() || undefined,
       onSuccess: async () => {
+        let mail: "ok" | "fail" = "ok";
+        let reason = "";
         try {
           await account.createVerification({
             url: getEmailVerificationUrl(),
           });
-        } catch {
-          // Account exists even if mail fails — user can resend from vault.
+        } catch (err) {
+          mail = "fail";
+          reason =
+            err instanceof Error
+              ? err.message
+              : "Appwrite could not send the verification email.";
         }
-        router.replace("/verify/sent");
+        const params = new URLSearchParams({ mail });
+        if (reason) params.set("reason", reason.slice(0, 240));
+        router.replace(`/verify/sent?${params.toString()}`);
         router.refresh();
       },
       onError: (err) => {
@@ -84,44 +96,38 @@ export function SignUpForm() {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-[oklch(0.28_0.02_40)]">
-          Name
-        </span>
+        <span className={authLabelClass}>Name</span>
         <Input
           type="text"
           autoComplete="name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Optional"
-          className="h-11 rounded-full border-[oklch(0.82_0.02_50)] bg-white/80 px-4"
+          className={authInputClass}
         />
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-[oklch(0.28_0.02_40)]">
-          Email
-        </span>
+        <span className={authLabelClass}>Email</span>
         <Input
           type="email"
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
-          className="h-11 rounded-full border-[oklch(0.82_0.02_50)] bg-white/80 px-4"
+          className={authInputClass}
         />
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-[oklch(0.28_0.02_40)]">
-          Password
-        </span>
+        <span className={authLabelClass}>Password</span>
         <Input
           type="password"
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="At least 8 characters"
-          className="h-11 rounded-full border-[oklch(0.82_0.02_50)] bg-white/80 px-4"
+          className={authInputClass}
         />
       </label>
 
@@ -134,17 +140,14 @@ export function SignUpForm() {
       <Button
         type="submit"
         disabled={signUp.isPending}
-        className="mt-2 h-11 rounded-full bg-[oklch(0.18_0.02_40)] text-base text-white hover:bg-[oklch(0.28_0.02_40)]"
+        className={authPrimaryButtonClass}
       >
         {signUp.isPending ? "Creating account…" : "Create account"}
       </Button>
 
-      <p className="mt-2 text-center text-sm text-[oklch(0.45_0.02_50)]">
+      <p className={authMutedClass}>
         Already have a vault?{" "}
-        <Link
-          href="/login"
-          className="font-medium text-[oklch(0.22_0.02_40)] underline-offset-2 hover:underline"
-        >
+        <Link href="/login" className={authLinkClass}>
           Sign in
         </Link>
       </p>

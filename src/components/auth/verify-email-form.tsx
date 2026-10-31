@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAppwrite } from "@appwrite.io/react";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "cn";
+import { authHintClass } from "./auth-field";
 
 type Status = "idle" | "verifying" | "success" | "error";
 
@@ -55,7 +58,7 @@ export function VerifyEmailForm() {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="font-mono text-sm text-[oklch(0.45_0.02_50)]">
+      <p className={authHintClass}>
         {status === "verifying" || status === "idle"
           ? "Confirming your email…"
           : message}
@@ -68,7 +71,7 @@ export function VerifyEmailForm() {
           </p>
           <Link
             href="/login"
-            className="inline-flex h-11 items-center justify-center rounded-full bg-[oklch(0.18_0.02_40)] text-sm font-medium text-white hover:bg-[oklch(0.28_0.02_40)]"
+            className={cn(buttonVariants(), "h-11 rounded-full")}
           >
             Back to sign in
           </Link>

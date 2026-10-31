@@ -86,39 +86,38 @@
 }
 
 .dark {
-  /* Espresso vault: warm umber ink + parchment text + amber accent
-     (matches light paper hue — no cool slate clash) */
-  --background: oklch(0.175 0.018 55);
-  --foreground: oklch(0.93 0.018 85);
-  --card: oklch(0.22 0.02 52);
-  --card-foreground: oklch(0.93 0.018 85);
-  --popover: oklch(0.235 0.022 52);
-  --popover-foreground: oklch(0.93 0.018 85);
-  --primary: oklch(0.82 0.11 72);
-  --primary-foreground: oklch(0.2 0.03 55);
-  --secondary: oklch(0.28 0.022 50);
-  --secondary-foreground: oklch(0.9 0.02 85);
-  --muted: oklch(0.26 0.02 50);
-  --muted-foreground: oklch(0.72 0.025 75);
-  --accent: oklch(0.32 0.05 60);
-  --accent-foreground: oklch(0.94 0.04 80);
-  --destructive: oklch(0.7 0.16 28);
-  --border: oklch(0.9 0.02 80 / 14%);
-  --input: oklch(0.9 0.02 80 / 16%);
-  --ring: oklch(0.76 0.1 72);
-  --chart-1: oklch(0.82 0.11 72);
-  --chart-2: oklch(0.68 0.06 160);
-  --chart-3: oklch(0.62 0.07 40);
+  /* Ink vault: charcoal paper, parchment type, restrained brass accent */
+  --background: oklch(0.155 0.01 58);
+  --foreground: oklch(0.95 0.012 85);
+  --card: oklch(0.195 0.012 56);
+  --card-foreground: oklch(0.95 0.012 85);
+  --popover: oklch(0.21 0.012 56);
+  --popover-foreground: oklch(0.95 0.012 85);
+  --primary: oklch(0.9 0.035 82);
+  --primary-foreground: oklch(0.17 0.02 55);
+  --secondary: oklch(0.24 0.012 55);
+  --secondary-foreground: oklch(0.92 0.015 85);
+  --muted: oklch(0.225 0.01 55);
+  --muted-foreground: oklch(0.7 0.018 75);
+  --accent: oklch(0.255 0.02 65);
+  --accent-foreground: oklch(0.94 0.02 85);
+  --destructive: oklch(0.68 0.17 25);
+  --border: oklch(0.92 0.015 80 / 13%);
+  --input: oklch(0.92 0.015 80 / 16%);
+  --ring: oklch(0.72 0.05 75);
+  --chart-1: oklch(0.78 0.07 75);
+  --chart-2: oklch(0.68 0.05 160);
+  --chart-3: oklch(0.62 0.05 40);
   --chart-4: oklch(0.55 0.04 230);
-  --chart-5: oklch(0.45 0.03 55);
-  --sidebar: oklch(0.15 0.016 52);
-  --sidebar-foreground: oklch(0.93 0.018 85);
-  --sidebar-primary: oklch(0.82 0.11 72);
-  --sidebar-primary-foreground: oklch(0.2 0.03 55);
-  --sidebar-accent: oklch(0.26 0.022 50);
-  --sidebar-accent-foreground: oklch(0.9 0.02 85);
-  --sidebar-border: oklch(0.9 0.02 80 / 12%);
-  --sidebar-ring: oklch(0.76 0.1 72);
+  --chart-5: oklch(0.48 0.03 55);
+  --sidebar: oklch(0.135 0.01 55);
+  --sidebar-foreground: oklch(0.95 0.012 85);
+  --sidebar-primary: oklch(0.9 0.035 82);
+  --sidebar-primary-foreground: oklch(0.17 0.02 55);
+  --sidebar-accent: oklch(0.22 0.012 55);
+  --sidebar-accent-foreground: oklch(0.92 0.015 85);
+  --sidebar-border: oklch(0.92 0.015 80 / 11%);
+  --sidebar-ring: oklch(0.72 0.05 75);
 }
 
 @layer base {
@@ -204,21 +203,20 @@
 
 .dark .landing-paper {
   background-image:
-    radial-gradient(ellipse 55% 45% at 12% 18%, oklch(0.38 0.07 65 / 0.4), transparent 70%),
-    radial-gradient(ellipse 50% 40% at 88% 72%, oklch(0.32 0.04 40 / 0.32), transparent 68%),
-    radial-gradient(ellipse 40% 35% at 70% 12%, oklch(0.34 0.05 85 / 0.28), transparent 65%),
+    radial-gradient(ellipse 50% 42% at 14% 12%, oklch(0.28 0.03 70 / 0.35), transparent 70%),
+    radial-gradient(ellipse 45% 38% at 88% 78%, oklch(0.24 0.02 50 / 0.28), transparent 68%),
     repeating-linear-gradient(
       0deg,
       transparent,
       transparent 31px,
-      oklch(0.9 0.02 80 / 0.06) 31px,
-      oklch(0.9 0.02 80 / 0.06) 32px
+      oklch(0.94 0.01 85 / 0.045) 31px,
+      oklch(0.94 0.01 85 / 0.045) 32px
     ),
-    radial-gradient(oklch(0.9 0.02 80 / 0.09) 0.9px, transparent 1px);
+    radial-gradient(oklch(0.94 0.01 85 / 0.055) 0.85px, transparent 1px);
 }
 
 .dark .landing-shell {
-  background: oklch(0.14 0.016 52);
+  background: oklch(0.13 0.01 55);
 }
 
 /* Notion-like TipTap surface */

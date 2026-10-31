@@ -6,6 +6,14 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@appwrite.io/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  authHintClass,
+  authInputClass,
+  authLabelClass,
+  authLinkClass,
+  authMutedClass,
+  authPrimaryButtonClass,
+} from "./auth-field";
 
 export function SignInForm() {
   const router = useRouter();
@@ -22,7 +30,7 @@ export function SignInForm() {
 
   if (isLoading || user) {
     return (
-      <p className="font-mono text-sm text-[oklch(0.45_0.02_50)]">
+      <p className={authHintClass}>
         {user ? "Already signed in — opening vault…" : "Checking session…"}
       </p>
     );
@@ -55,25 +63,23 @@ export function SignInForm() {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-[oklch(0.28_0.02_40)]">
-          Email
-        </span>
+        <span className={authLabelClass}>Email</span>
         <Input
           type="email"
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
-          className="h-11 rounded-full border-[oklch(0.82_0.02_50)] bg-white/80 px-4"
+          className={authInputClass}
         />
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="flex items-center justify-between gap-2 text-sm font-medium text-[oklch(0.28_0.02_40)]">
+        <span className={`flex items-center justify-between gap-2 ${authLabelClass}`}>
           Password
           <Link
             href="/forgot-password"
-            className="font-normal text-[oklch(0.45_0.02_50)] underline-offset-2 hover:underline"
+            className="font-normal text-muted-foreground underline-offset-2 hover:underline"
           >
             Forgot password?
           </Link>
@@ -84,7 +90,7 @@ export function SignInForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
-          className="h-11 rounded-full border-[oklch(0.82_0.02_50)] bg-white/80 px-4"
+          className={authInputClass}
         />
       </label>
 
@@ -97,17 +103,14 @@ export function SignInForm() {
       <Button
         type="submit"
         disabled={signIn.isPending}
-        className="mt-2 h-11 rounded-full bg-[oklch(0.18_0.02_40)] text-base text-white hover:bg-[oklch(0.28_0.02_40)]"
+        className={authPrimaryButtonClass}
       >
         {signIn.isPending ? "Signing in…" : "Sign in"}
       </Button>
 
-      <p className="mt-2 text-center text-sm text-[oklch(0.45_0.02_50)]">
+      <p className={authMutedClass}>
         New here?{" "}
-        <Link
-          href="/signup"
-          className="font-medium text-[oklch(0.22_0.02_40)] underline-offset-2 hover:underline"
-        >
+        <Link href="/signup" className={authLinkClass}>
           Create an account
         </Link>
       </p>

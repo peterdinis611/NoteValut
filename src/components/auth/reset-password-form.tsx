@@ -3,8 +3,17 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "cn";
+import {
+  authHintClass,
+  authInputClass,
+  authLabelClass,
+  authLinkClass,
+  authMutedClass,
+  authPrimaryButtonClass,
+} from "./auth-field";
 
 export function ResetPasswordForm() {
   const router = useRouter();
@@ -78,7 +87,7 @@ export function ResetPasswordForm() {
         </p>
         <Link
           href="/forgot-password"
-          className="inline-flex h-11 items-center justify-center rounded-full bg-[oklch(0.18_0.02_40)] text-sm font-medium text-white hover:bg-[oklch(0.28_0.02_40)]"
+          className={cn(buttonVariants(), "h-11 rounded-full")}
         >
           Request a new link
         </Link>
@@ -87,44 +96,36 @@ export function ResetPasswordForm() {
   }
 
   if (done) {
-    return (
-      <p className="font-mono text-sm text-[oklch(0.45_0.02_50)]">
-        Password updated — opening sign in…
-      </p>
-    );
+    return <p className={authHintClass}>Password updated — opening sign in…</p>;
   }
 
   return (
     <form onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-[oklch(0.28_0.02_40)]">
-          New password
-        </span>
+        <span className={authLabelClass}>New password</span>
         <Input
           type="password"
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="At least 8 characters"
-          className="h-11 rounded-full border-[oklch(0.82_0.02_50)] bg-white/80 px-4"
+          className={authInputClass}
         />
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-[oklch(0.28_0.02_40)]">
-          Confirm password
-        </span>
+        <span className={authLabelClass}>Confirm password</span>
         <Input
           type="password"
           autoComplete="new-password"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           placeholder="Repeat password"
-          className="h-11 rounded-full border-[oklch(0.82_0.02_50)] bg-white/80 px-4"
+          className={authInputClass}
         />
       </label>
 
-      <p className="font-mono text-[11px] tracking-wide text-[oklch(0.55_0.02_50)] uppercase">
+      <p className="font-mono text-[11px] tracking-wide text-muted-foreground uppercase">
         This link expires 30 minutes after it was sent
       </p>
 
@@ -137,16 +138,13 @@ export function ResetPasswordForm() {
       <Button
         type="submit"
         disabled={pending}
-        className="mt-2 h-11 rounded-full bg-[oklch(0.18_0.02_40)] text-base text-white hover:bg-[oklch(0.28_0.02_40)]"
+        className={authPrimaryButtonClass}
       >
         {pending ? "Saving…" : "Update password"}
       </Button>
 
-      <p className="mt-2 text-center text-sm text-[oklch(0.45_0.02_50)]">
-        <Link
-          href="/login"
-          className="font-medium text-[oklch(0.22_0.02_40)] underline-offset-2 hover:underline"
-        >
+      <p className={authMutedClass}>
+        <Link href="/login" className={authLinkClass}>
           Back to sign in
         </Link>
       </p>
