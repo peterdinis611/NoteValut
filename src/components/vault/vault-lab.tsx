@@ -2,22 +2,32 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import {
+  Braces,
   CalendarDays,
+  ClipboardList,
+  Diff,
   FileCode2,
   ImageIcon,
   KeyRound,
   Link2,
+  Shapes,
   Type,
   Wrench,
 } from "lucide-react";
 import type { Note } from "@/domain/note";
 import type { CalendarEvent } from "@/domain/shelf";
 import { Badge } from "@/components/ui/badge";
+import { useEffect } from "react";
+import { ClipboardHistoryWidget } from "./lab/clipboard-history-widget";
+import { DataFormatWidget } from "./lab/data-format-widget";
 import { DayBriefWidget } from "./lab/day-brief-widget";
+import { DiffWidget } from "./lab/diff-widget";
+import { installClipboardCapture } from "./lab/lab-clipboard";
 import { LabSection } from "./lab/lab-widget-shell";
 import { LinksWidget } from "./lab/links-widget";
 import { MarkdownWidget } from "./lab/markdown-widget";
 import { PicsumWidget } from "./lab/picsum-widget";
+import { SvgWidget } from "./lab/svg-widget";
 import { TextWidget } from "./lab/text-widget";
 import { UuidWidget } from "./lab/uuid-widget";
 import { ScrollPane } from "./scroll-to-top";
@@ -27,6 +37,10 @@ const NAV = [
   { id: "media", label: "Media", icon: ImageIcon },
   { id: "copy", label: "Copy", icon: Type },
   { id: "markdown", label: "Markdown", icon: FileCode2 },
+  { id: "diff", label: "Diff", icon: Diff },
+  { id: "svg", label: "SVG", icon: Shapes },
+  { id: "data", label: "Data", icon: Braces },
+  { id: "clipboard", label: "Clipboard", icon: ClipboardList },
   { id: "ids", label: "IDs", icon: KeyRound },
   { id: "links", label: "Links", icon: Link2 },
 ] as const;
@@ -42,11 +56,13 @@ export function VaultLab({
 }) {
   const reduceMotion = useReducedMotion();
 
+  useEffect(() => installClipboardCapture(), []);
+
   return (
     <motion.section
       initial={reduceMotion ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative mx-0 flex min-w-0 flex-1 flex-col overflow-hidden bg-background"
+      className="relative mx-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background"
     >
       <div
         aria-hidden
@@ -140,8 +156,44 @@ export function VaultLab({
           </LabSection>
 
           <LabSection
+            id="diff"
+            eyebrow="05 · Diff"
+            title="Text diff"
+            description="Compare two snippets side-by-side or as a unified patch — copy the result when you need a quick change list."
+          >
+            <DiffWidget />
+          </LabSection>
+
+          <LabSection
+            id="svg"
+            eyebrow="06 · SVG"
+            title="SVG playground"
+            description="Paste markup, preview on a checkerboard, and get a quick whitespace-strip size hint before you commit an icon."
+          >
+            <SvgWidget />
+          </LabSection>
+
+          <LabSection
+            id="data"
+            eyebrow="07 · Data"
+            title="JSON ↔ YAML / CSV"
+            description="Format or minify payloads, convert between JSON, YAML, and CSV, and probe values with a tiny $.path query."
+          >
+            <DataFormatWidget />
+          </LabSection>
+
+          <LabSection
+            id="clipboard"
+            eyebrow="08 · Clipboard"
+            title="Clipboard history"
+            description="Last N strings copied this browser session — Lab writeText hooks plus selection copies on the page."
+          >
+            <ClipboardHistoryWidget />
+          </LabSection>
+
+          <LabSection
             id="ids"
-            eyebrow="05 · IDs"
+            eyebrow="09 · IDs"
             title="UUID / ID factory"
             description="Batch NoteId-style UUIDs, short shelf codes, and Appwrite-friendly IDs for fixtures."
           >
@@ -150,7 +202,7 @@ export function VaultLab({
 
           <LabSection
             id="links"
-            eyebrow="06 · Links"
+            eyebrow="10 · Links"
             title="Important links"
             description="Pin console, docs, and staging URLs — saved in this browser only."
           >

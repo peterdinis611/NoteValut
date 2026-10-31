@@ -13,7 +13,7 @@ export const metadata: Metadata = createPageMetadata({
 
 export default function DemoPage() {
   return (
-    <div className="flex min-h-full flex-1 flex-col">
+    <div className="flex h-dvh min-h-0 flex-1 flex-col overflow-hidden">
       <header className="flex items-center justify-between gap-3 border-b border-black/6 bg-[#f3f3f1] px-4 py-2.5 text-sm text-black/55">
         <p>
           <span className="font-medium text-black/75">Demo shelf</span>

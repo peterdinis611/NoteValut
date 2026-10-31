@@ -60,6 +60,7 @@ import {
 import { VaultStorage } from "./vault-storage";
 import { VaultTemplates } from "./vault-templates";
 import { VaultTrash } from "./vault-trash";
+import { VaultGlobalScrollToTop } from "./scroll-to-top";
 
 const personal = runSync(createWorkspace({ name: "Personal", emoji: "🏠" }));
 const acme = runSync(createWorkspace({ name: "Acme Inc.", emoji: "🎯" }));
@@ -927,8 +928,9 @@ export function VaultDashboard({
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="flex min-h-full flex-1 bg-background text-foreground">
-        <div className="flex min-h-full w-full flex-1 flex-col md:flex-row">
+      <div className="flex h-dvh min-h-0 flex-1 overflow-hidden bg-background text-foreground">
+        <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden md:flex-row">
+          <VaultGlobalScrollToTop />
           <div className="mb-1 flex gap-1 overflow-x-auto border-b border-border bg-sidebar px-2 py-2 md:hidden">
             <button
               type="button"
@@ -995,7 +997,7 @@ export function VaultDashboard({
             {view === "calendar" ? (
               <motion.div
                 key="calendar"
-                className="flex min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1"
                 initial={{ opacity: 0, x: 12 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -12 }}
@@ -1012,7 +1014,7 @@ export function VaultDashboard({
             ) : view === "templates" ? (
               <motion.div
                 key="templates"
-                className="flex min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -1031,7 +1033,7 @@ export function VaultDashboard({
             ) : view === "settings" ? (
               <motion.div
                 key="settings"
-                className="flex min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -1045,7 +1047,7 @@ export function VaultDashboard({
             ) : view === "storage" ? (
               <motion.div
                 key="storage"
-                className="flex min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -1056,7 +1058,7 @@ export function VaultDashboard({
             ) : view === "lab" ? (
               <motion.div
                 key="lab"
-                className="flex min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -1073,7 +1075,7 @@ export function VaultDashboard({
             ) : view === "trash" ? (
               <motion.div
                 key="trash"
-                className="flex min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -1093,7 +1095,7 @@ export function VaultDashboard({
             ) : view === "map" ? (
               <motion.div
                 key="map"
-                className="flex min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1"
                 initial={{ opacity: 0, scale: 0.985 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.99 }}
@@ -1110,7 +1112,7 @@ export function VaultDashboard({
             ) : (
               <motion.div
                 key="pages"
-                className="flex min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1"
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 6 }}
