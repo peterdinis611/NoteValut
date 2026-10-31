@@ -55,9 +55,23 @@ src/
 
 ## Scripts
 
-| Command        | Description              |
-| -------------- | ------------------------ |
-| `npm run dev`  | Start Turbopack dev server |
-| `npm run build`| Production build         |
-| `npm run start`| Start production server  |
-| `npm run lint` | Run ESLint               |
+| Command              | Description                         |
+| -------------------- | ----------------------------------- |
+| `npm run dev`        | Start Turbopack dev server          |
+| `npm run build`      | Production build (webpack — Appwrite Sites) |
+| `npm run build:turbo`| Production build with Turbopack     |
+| `npm run typecheck`  | `tsc --noEmit` (run before deploy)  |
+| `npm run start`      | Start production server             |
+| `npm run lint`       | Run ESLint                          |
+
+### Appwrite Sites
+
+Console → **Sites** → your site → **Settings → Build settings**:
+
+- Framework: **Next.js**
+- Rendering: **Server-side rendering (SSR)** (required — Static returns Appwrite `router_path_not_found`)
+- Install: `npm install`
+- Build: `npm run build` (webpack; Turbopack builds currently 404 on Sites)
+- Output directory: `./.next`
+
+Also raise **build** memory if the job is killed during TypeScript / compile, and redeploy after changing settings.

@@ -59,6 +59,10 @@ const nextConfig: NextConfig = {
   compress: true,
   generateEtags: true,
 
+  // Smaller image + faster cold starts on Appwrite Sites SSR.
+  // https://appwrite.io/docs/products/sites/rendering/ssr
+  output: "standalone",
+
   // Appwrite Sites / open-runtimes often OOM on Next's post-compile
   // "Running TypeScript…" pass (cgroup kill). Skip it in `next build` and
   // run `npm run typecheck` locally / in a roomier CI job instead.
