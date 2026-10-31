@@ -7,10 +7,12 @@ import {
   Code,
   Heading1,
   Heading2,
+  Heading3,
   Highlighter,
   Italic,
   Link2,
   Strikethrough,
+  Underline as UnderlineIcon,
 } from "lucide-react";
 import { cn } from "cn";
 import { toSafeHref } from "@/lib/editor/safe-url";
@@ -68,6 +70,13 @@ export function BubbleToolbar({ editor }: { editor: Editor }) {
         <Italic className="size-3.5" />
       </ToolButton>
       <ToolButton
+        label="Underline"
+        active={editor.isActive("underline")}
+        onClick={() => editor.chain().focus().toggleUnderline().run()}
+      >
+        <UnderlineIcon className="size-3.5" />
+      </ToolButton>
+      <ToolButton
         label="Strike"
         active={editor.isActive("strike")}
         onClick={() => editor.chain().focus().toggleStrike().run()}
@@ -95,6 +104,13 @@ export function BubbleToolbar({ editor }: { editor: Editor }) {
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
       >
         <Heading2 className="size-3.5" />
+      </ToolButton>
+      <ToolButton
+        label="Heading 3"
+        active={editor.isActive("heading", { level: 3 })}
+        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+      >
+        <Heading3 className="size-3.5" />
       </ToolButton>
       <span className="mx-0.5 h-4 w-px bg-border" />
       <ToolButton

@@ -7,7 +7,7 @@ import { ResendVerificationButton } from "@/components/auth/resend-verification-
 import { ThemeToggle } from "@/components/theme/theme-switch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 function initials(name?: string | null, email?: string | null) {
   const source = (name || email || "NV").trim();
@@ -45,10 +46,12 @@ export function VaultProfile({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            className="h-9 gap-2 rounded-full px-1.5 pr-2.5 hover:bg-muted"
+            className={cn(
+              buttonVariants({ variant: "ghost" }),
+              "h-9 gap-2 rounded-full px-1.5 pr-2.5 hover:bg-muted",
+            )}
           />
         }
       >

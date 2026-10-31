@@ -24,7 +24,7 @@ export default function VaultPage() {
   return (
     <main
       id="main-content"
-      className="flex h-dvh min-h-0 flex-1 flex-col overflow-hidden"
+      className="flex h-dvh max-h-dvh min-h-0 flex-1 flex-col overflow-hidden"
     >
       <Suspense fallback={<VaultPreload label="Opening vault…" />}>
         <VaultWithSession />

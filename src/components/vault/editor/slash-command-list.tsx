@@ -82,8 +82,8 @@ export const SlashCommandList = forwardRef<
   let flatIndex = -1;
 
   return (
-    <div className="w-72 overflow-hidden rounded-[10px] border border-border bg-popover p-1 shadow-lg ring-1 ring-foreground/5">
-      <div className="max-h-80 overflow-y-auto">
+      <div className="w-80 overflow-hidden rounded-[10px] border border-border bg-popover p-1 shadow-lg ring-1 ring-foreground/5">
+      <div className="max-h-96 overflow-y-auto">
         {sections.map(([group, groupItems]) => (
           <div key={group} className="pb-1">
             <p className="px-2 py-1.5 font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">

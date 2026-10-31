@@ -75,7 +75,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f5efe6" },
-    { media: "(prefers-color-scheme: dark)", color: "#1c1712" },
+    { media: "(prefers-color-scheme: dark)", color: "#121110" },
   ],
   colorScheme: "light dark",
   width: "device-width",
@@ -89,7 +89,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${display.variable} ${sans.variable} ${mono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-background font-sans text-foreground">
+      <body className="flex min-h-full flex-col bg-background font-sans text-foreground [&:has([data-vault-shell])]:h-dvh [&:has([data-vault-shell])]:overflow-hidden">
         <ThemeScript />
         <RoutePrefetch />
         <AppwriteShell>{children}</AppwriteShell>

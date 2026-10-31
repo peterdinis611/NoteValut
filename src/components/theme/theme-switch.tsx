@@ -3,7 +3,7 @@
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTheme } from "@/components/theme/theme-provider";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 export function ThemeToggle({
   className,
@@ -51,17 +52,24 @@ export function ThemeToggle({
       <Tooltip>
         <TooltipTrigger
           render={
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="icon-sm"
-              className={className}
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "icon-sm" }),
+                className,
+              )}
+              aria-label={
+                isDark ? "Switch to light mode" : "Switch to dark mode"
+              }
               onClick={() => setTheme(isDark ? "light" : "dark")}
             />
           }
         >
-          {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+          {isDark ? (
+            <Sun className="size-3.5" />
+          ) : (
+            <Moon className="size-3.5" />
+          )}
         </TooltipTrigger>
         <TooltipContent>
           {isDark ? "Light mode" : "Dark mode"}
@@ -74,11 +82,12 @@ export function ThemeToggle({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="icon"
-            className={className}
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "icon" }),
+              className,
+            )}
             aria-label="Theme"
           />
         }

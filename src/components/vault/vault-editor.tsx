@@ -105,7 +105,7 @@ export function VaultEditor({
         initial={reduceMotion ? false : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease }}
-        className="relative mx-0 flex min-w-0 flex-1 flex-col overflow-hidden bg-background"
+        className="relative mx-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background"
       >
         <header className="flex items-center justify-end px-6 pt-5 md:px-10">
           <VaultProfile accountLabel={accountLabel} />
@@ -173,7 +173,7 @@ export function VaultEditor({
   return (
     <motion.section
       layout={false}
-      className="relative mx-0 flex min-w-0 flex-1 flex-col overflow-hidden bg-background"
+      className="relative mx-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background"
     >
         <header className="flex flex-wrap items-center justify-between gap-3 px-6 pt-5 pb-2 md:px-10">
           <div className="flex min-w-0 items-center gap-2 text-[13px] text-muted-foreground">

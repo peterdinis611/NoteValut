@@ -22,19 +22,19 @@ export function LandingVault() {
       aria-labelledby="vault-heading"
       className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-20 md:px-10 md:pb-28"
     >
-      <div className="relative overflow-hidden rounded-[2rem] border border-[oklch(0.82_0.03_45)] bg-[oklch(0.22_0.02_40)] px-6 py-12 text-[oklch(0.96_0.01_85)] shadow-[0_28px_60px_-28px_rgba(20,12,8,0.45)] sm:px-10 sm:py-14 md:rounded-[2.5rem]">
+      <div className="relative overflow-hidden rounded-[2rem] border border-border bg-[oklch(0.22_0.02_40)] px-6 py-12 text-[oklch(0.96_0.01_85)] shadow-[0_28px_60px_-28px_rgba(20,12,8,0.45)] sm:px-10 sm:py-14 md:rounded-[2.5rem] dark:border-border dark:bg-muted dark:text-foreground dark:shadow-[0_28px_60px_-28px_rgba(0,0,0,0.55)]">
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-24 -right-16 size-72 rounded-full bg-[oklch(0.72_0.09_65_/_0.35)] blur-3xl"
+          className="pointer-events-none absolute -top-24 -right-16 size-72 rounded-full bg-[oklch(0.72_0.09_65_/_0.35)] blur-3xl dark:bg-[oklch(0.55_0.08_55_/_0.28)]"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute -bottom-28 -left-10 size-80 rounded-full bg-[oklch(0.55_0.05_230_/_0.25)] blur-3xl"
+          className="pointer-events-none absolute -bottom-28 -left-10 size-80 rounded-full bg-[oklch(0.55_0.05_230_/_0.25)] blur-3xl dark:bg-[oklch(0.4_0.04_230_/_0.2)]"
         />
 
         <div className="relative grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
           <div>
-            <p className="font-mono text-xs tracking-[0.18em] text-[oklch(0.78_0.08_65)] uppercase">
+            <p className="font-mono text-xs tracking-[0.18em] text-[oklch(0.78_0.08_65)] uppercase dark:text-[oklch(0.78_0.09_55)]">
               The vault
             </p>
             <h2
@@ -43,13 +43,13 @@ export function LandingVault() {
             >
               Three moves. Nothing clever in the way.
             </h2>
-            <p className="mt-4 max-w-sm text-base leading-relaxed text-[oklch(0.78_0.02_80)]">
+            <p className="mt-4 max-w-sm text-base leading-relaxed text-[oklch(0.78_0.02_80)] dark:text-muted-foreground">
               NoteValut is a short ritual: write, guard, keep. Open the vault when
               you are ready to practice it.
             </p>
             <Link
               href="/login"
-              className="mt-8 inline-flex h-11 items-center rounded-full bg-[oklch(0.78_0.09_65)] px-6 text-sm font-medium text-[oklch(0.18_0.02_40)] transition-transform hover:scale-[1.02] active:scale-[0.99]"
+              className="mt-8 inline-flex h-11 items-center rounded-full bg-[oklch(0.78_0.09_65)] px-6 text-sm font-medium text-[oklch(0.18_0.02_40)] transition-transform hover:scale-[1.02] active:scale-[0.99] dark:bg-primary dark:text-primary-foreground"
             >
               Open the vault
             </Link>
@@ -58,14 +58,14 @@ export function LandingVault() {
           <ol className="relative space-y-6" aria-label="Vault ritual">
             {steps.map((step, index) => (
               <li key={step.title} className="flex gap-4">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/20 font-mono text-xs text-[oklch(0.78_0.08_65)]">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/20 font-mono text-xs text-[oklch(0.78_0.08_65)] dark:border-border dark:text-[oklch(0.78_0.09_55)]">
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <div>
                   <h3 className="font-display text-lg font-semibold tracking-tight">
                     {step.title}
                   </h3>
-                  <p className="mt-1 text-sm leading-relaxed text-[oklch(0.75_0.02_80)]">
+                  <p className="mt-1 text-sm leading-relaxed text-[oklch(0.75_0.02_80)] dark:text-muted-foreground">
                     {step.detail}
                   </p>
                 </div>

@@ -41,7 +41,10 @@ import {
 } from "@/lib/appwrite/shelf";
 import { runPromise, runSync } from "@/lib/effect";
 import {
+  clampSidebarWidth,
   loadVaultPreferences,
+  patchVaultPreferences,
+  subscribeVaultPreferences,
   type VaultPreferences,
 } from "@/lib/vault-preferences";
 import { getPageTemplate } from "@/lib/vault/page-templates";
@@ -236,7 +239,14 @@ export function VaultDashboard({
   useEffect(() => {
     const loaded = loadVaultPreferences();
     setPrefs(loaded);
-    if (loaded.openCalendarFirst) setView("calendar");
+    if (loaded.openCalendarFirst || loaded.defaultLandingView === "calendar") {
+      setView("calendar");
+    } else if (
+      loaded.defaultLandingView === "lab" ||
+      loaded.defaultLandingView === "map"
+    ) {
+      setView(loaded.defaultLandingView);
+    }
   }, []);
 
   useEffect(() => {
@@ -244,6 +254,8 @@ export function VaultDashboard({
       setPrefs(loadVaultPreferences());
     }
   }, [view]);
+
+  useEffect(() => subscribeVaultPreferences(setPrefs), []);
 
   useEffect(() => {
     if (!persist) return;
@@ -928,76 +940,88 @@ export function VaultDashboard({
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="flex h-dvh min-h-0 flex-1 overflow-hidden bg-background text-foreground">
-        <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden md:flex-row">
-          <VaultGlobalScrollToTop />
-          <div className="mb-1 flex gap-1 overflow-x-auto border-b border-border bg-sidebar px-2 py-2 md:hidden">
+      <div
+        data-vault-shell=""
+        className="flex h-full min-h-0 w-full flex-1 flex-col items-stretch overflow-hidden bg-background text-foreground md:flex-row"
+      >
+        <VaultGlobalScrollToTop />
+        <div className="mb-1 flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-sidebar px-2 py-2 md:hidden">
+          <button
+            type="button"
+            onClick={() => onCreateNote({ title: "Untitled" })}
+            className="shrink-0 rounded-[6px] bg-card px-2.5 py-1.5 text-[13px] shadow-sm"
+          >
+            + Page
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setView(view === "calendar" ? "pages" : "calendar")
+            }
+            className="shrink-0 rounded-[6px] px-2.5 py-1.5 text-[13px] text-muted-foreground hover:bg-muted"
+          >
+            {view === "calendar" ? "Pages" : "Calendar"}
+          </button>
+          {workspaceNotes.map((note, index) => (
             <button
+              key={note.id}
               type="button"
-              onClick={() => onCreateNote({ title: "Untitled" })}
-              className="shrink-0 rounded-[6px] bg-card px-2.5 py-1.5 text-[13px] shadow-sm"
+              onClick={() => {
+                setSelectedId(note.id);
+                setView("pages");
+              }}
+              className={`shrink-0 rounded-[6px] px-2.5 py-1.5 text-[13px] ${
+                note.id === selected?.id && view === "pages"
+                  ? "bg-muted font-medium"
+                  : "text-muted-foreground"
+              }`}
             >
-              + Page
+              {noteMarks[index % noteMarks.length]} {note.title}
             </button>
-            <button
-              type="button"
-              onClick={() =>
-                setView(view === "calendar" ? "pages" : "calendar")
-              }
-              className="shrink-0 rounded-[6px] px-2.5 py-1.5 text-[13px] text-muted-foreground hover:bg-muted"
-            >
-              {view === "calendar" ? "Pages" : "Calendar"}
-            </button>
-            {workspaceNotes.map((note, index) => (
-              <button
-                key={note.id}
-                type="button"
-                onClick={() => {
-                  setSelectedId(note.id);
-                  setView("pages");
-                }}
-                className={`shrink-0 rounded-[6px] px-2.5 py-1.5 text-[13px] ${
-                  note.id === selected?.id && view === "pages"
-                    ? "bg-muted font-medium"
-                    : "text-muted-foreground"
-                }`}
-              >
-                {noteMarks[index % noteMarks.length]} {note.title}
-              </button>
-            ))}
-          </div>
+          ))}
+        </div>
 
-          <VaultSidebar
-            workspaces={workspaces}
-            activeWorkspaceId={activeWorkspaceId}
-            folders={folders}
-            notes={notes}
-            selectedId={selected?.id}
-            expandedFolderIds={expandedFolderIds}
-            view={view}
-            marks={noteMarks}
-            onSelectWorkspace={onSelectWorkspace}
-            onSelectNote={(id) => {
-              setSelectedId(id);
-              setView("pages");
-            }}
-            onToggleFolder={onToggleFolder}
-            onExpandFolder={onExpandFolder}
-            onCreateNote={onCreateNote}
-            onCreateFolder={onCreateFolder}
-            onCreateWorkspace={onCreateWorkspace}
-            onTrashNote={onTrashNote}
-            onTrashFolder={onTrashFolder}
+        <VaultSidebar
+          workspaces={workspaces}
+          activeWorkspaceId={activeWorkspaceId}
+          folders={folders}
+          notes={notes}
+          selectedId={selected?.id}
+          expandedFolderIds={expandedFolderIds}
+          view={view}
+          marks={noteMarks}
+          onSelectWorkspace={onSelectWorkspace}
+          onSelectNote={(id) => {
+            setSelectedId(id);
+            setView("pages");
+          }}
+          onToggleFolder={onToggleFolder}
+          onExpandFolder={onExpandFolder}
+          onCreateNote={onCreateNote}
+          onCreateFolder={onCreateFolder}
+          onCreateWorkspace={onCreateWorkspace}
+          onTrashNote={onTrashNote}
+          onTrashFolder={onTrashFolder}
             onChangeView={setView}
             creating={isPending}
             compact={prefs?.compactSidebar ?? false}
+            width={prefs?.sidebarWidth ?? 252}
+            showPageMarks={prefs?.showPageMarks ?? true}
+            onWidthChange={(next) => {
+              const sidebarWidth = clampSidebarWidth(next);
+              setPrefs((prev) =>
+                prev ? { ...prev, sidebarWidth } : prev,
+              );
+              patchVaultPreferences({ sidebarWidth });
+            }}
           />
 
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <AnimatePresence mode="wait">
             {view === "calendar" ? (
               <motion.div
                 key="calendar"
-                className="flex min-h-0 min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1 overflow-hidden"
                 initial={{ opacity: 0, x: 12 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -12 }}
@@ -1014,7 +1038,7 @@ export function VaultDashboard({
             ) : view === "templates" ? (
               <motion.div
                 key="templates"
-                className="flex min-h-0 min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1 overflow-hidden"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -1033,7 +1057,7 @@ export function VaultDashboard({
             ) : view === "settings" ? (
               <motion.div
                 key="settings"
-                className="flex min-h-0 min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1 overflow-hidden"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -1047,7 +1071,7 @@ export function VaultDashboard({
             ) : view === "storage" ? (
               <motion.div
                 key="storage"
-                className="flex min-h-0 min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1 overflow-hidden"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -1058,7 +1082,7 @@ export function VaultDashboard({
             ) : view === "lab" ? (
               <motion.div
                 key="lab"
-                className="flex min-h-0 min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1 overflow-hidden"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -1075,7 +1099,7 @@ export function VaultDashboard({
             ) : view === "trash" ? (
               <motion.div
                 key="trash"
-                className="flex min-h-0 min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1 overflow-hidden"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -1095,7 +1119,7 @@ export function VaultDashboard({
             ) : view === "map" ? (
               <motion.div
                 key="map"
-                className="flex min-h-0 min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1 overflow-hidden"
                 initial={{ opacity: 0, scale: 0.985 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.99 }}
@@ -1112,7 +1136,7 @@ export function VaultDashboard({
             ) : (
               <motion.div
                 key="pages"
-                className="flex min-h-0 min-w-0 flex-1"
+                className="flex min-h-0 min-w-0 flex-1 overflow-hidden"
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 6 }}

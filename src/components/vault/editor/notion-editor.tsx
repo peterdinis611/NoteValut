@@ -1,11 +1,21 @@
 "use client";
 
 import { Placeholder } from "@tiptap/extensions";
+import {
+  Details,
+  DetailsContent,
+  DetailsSummary,
+} from "@tiptap/extension-details";
 import Highlight from "@tiptap/extension-highlight";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
+import { Table } from "@tiptap/extension-table";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
+import TableRow from "@tiptap/extension-table-row";
 import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
+import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -14,6 +24,8 @@ import { normalizeEditorContent } from "@/lib/editor/content";
 import { sanitizeEditorHtml } from "@/lib/editor/sanitize";
 import { toSafeHref } from "@/lib/editor/safe-url";
 import { BubbleToolbar } from "./bubble-toolbar";
+import { Callout } from "./callout-extension";
+import { Column, Columns } from "./columns-extension";
 import { SlashCommands } from "./slash-commands";
 
 export function NotionEditor({
@@ -37,7 +49,7 @@ export function NotionEditor({
     editable,
     extensions: [
       StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
+        heading: { levels: [1, 2, 3, 4] },
         link: false,
         underline: false,
       }),
@@ -68,10 +80,40 @@ export function NotionEditor({
       TaskItem.configure({
         nested: true,
       }),
+      Table.configure({
+        resizable: false,
+        HTMLAttributes: {
+          class: "nv-editor-table",
+        },
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
+      Callout,
+      Columns,
+      Column,
+      Details.configure({
+        persist: true,
+        HTMLAttributes: {
+          class: "nv-editor-toggle",
+        },
+      }),
+      DetailsSummary,
+      DetailsContent.configure({
+        HTMLAttributes: {
+          class: "nv-editor-toggle-content",
+        },
+      }),
       Placeholder.configure({
         placeholder: ({ node }) => {
           if (node.type.name === "heading") {
             return "Heading";
+          }
+          if (node.type.name === "detailsSummary") {
+            return "Toggle title";
           }
           return "Type '/' for commands…";
         },

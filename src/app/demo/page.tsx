@@ -13,26 +13,26 @@ export const metadata: Metadata = createPageMetadata({
 
 export default function DemoPage() {
   return (
-    <div className="flex h-dvh min-h-0 flex-1 flex-col overflow-hidden">
-      <header className="flex items-center justify-between gap-3 border-b border-black/6 bg-[#f3f3f1] px-4 py-2.5 text-sm text-black/55">
+    <div className="flex h-dvh max-h-dvh min-h-0 flex-1 flex-col overflow-hidden">
+      <header className="relative z-50 flex shrink-0 items-center justify-between gap-3 border-b border-border bg-muted px-4 py-2.5 text-sm text-muted-foreground">
         <p>
-          <span className="font-medium text-black/75">Demo shelf</span>
+          <span className="font-medium text-foreground">Demo shelf</span>
           {" — "}
           local seed only — folders/pages sync on /vault when signed in.
         </p>
         <nav aria-label="Demo shortcuts" className="flex items-center gap-3">
-          <Link href="/signup" className="hover:text-black/80">
+          <Link href="/signup" className="transition-colors hover:text-foreground">
             Create account
           </Link>
-          <Link href="/" className="hover:text-black/80">
+          <Link href="/" className="transition-colors hover:text-foreground">
             Home
           </Link>
         </nav>
       </header>
-      <main className="flex min-h-0 flex-1 flex-col" id="main-content">
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden" id="main-content">
         <Suspense
           fallback={
-            <p className="p-6 font-mono text-sm text-black/45">
+            <p className="p-6 font-mono text-sm text-muted-foreground">
               Loading demo shelf…
             </p>
           }

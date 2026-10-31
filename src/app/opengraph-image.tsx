@@ -48,9 +48,6 @@ export default function OpenGraphImage() {
             {siteConfig.tagline}
           </div>
         </div>
-        <div style={{ display: "flex", fontSize: 24, opacity: 0.5 }}>
-          Effect · Appwrite · Next.js
-        </div>
       </div>
     ),
     size,

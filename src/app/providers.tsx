@@ -23,7 +23,9 @@ export function Providers({
         projectId={projectId}
         ssr={{ session, basePath: APPWRITE_SSR_BASE_PATH }}
       >
-        <TooltipProvider delay={200}>{children}</TooltipProvider>
+        <TooltipProvider delay={200}>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+        </TooltipProvider>
       </AppwriteProvider>
     </ThemeProvider>
   );
