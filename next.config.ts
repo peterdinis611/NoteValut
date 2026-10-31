@@ -4,7 +4,7 @@ const ONE_YEAR = 60 * 60 * 24 * 365;
 const ONE_DAY = 60 * 60 * 24;
 const ONE_HOUR = 60 * 60;
 
-const securityHeaders = [
+const securityHeaders: { key: string; value: string }[] = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -13,7 +13,7 @@ const securityHeaders = [
     value: "camera=(), microphone=(), geolocation=()",
   },
   { key: "X-DNS-Prefetch-Control", value: "on" },
-] as const;
+];
 
 const nextConfig: NextConfig = {
   // Cache Components + Partial Prefetching (PPR shell + use cache)
@@ -51,13 +51,21 @@ const nextConfig: NextConfig = {
     },
   },
 
-  // In-memory Data Cache / use-cache store per Node instance
-  cacheMaxMemorySize: 64 * 1024 * 1024,
+  // Keep the Data Cache modest — helps constrained Appwrite runtimes
+  cacheMaxMemorySize: 32 * 1024 * 1024,
 
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
   generateEtags: true,
+
+  // Appwrite Sites / open-runtimes often OOM on Next's post-compile
+  // "Running TypeScript…" pass (cgroup kill). Skip it in `next build` and
+  // run `npm run typecheck` locally / in a roomier CI job instead.
+  // https://nextjs.org/docs/app/guides/memory-usage#disable-static-analysis
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 
   images: {
     formats: ["image/avif", "image/webp"],
@@ -102,7 +110,7 @@ const nextConfig: NextConfig = {
     // removing next-themes).
     const assetCacheHeaders =
       process.env.NODE_ENV === "production"
-        ? ([
+        ? [
             {
               source: "/_next/static/:path*",
               headers: [
@@ -139,8 +147,8 @@ const nextConfig: NextConfig = {
                 },
               ],
             },
-          ] as const)
-        : ([
+          ]
+        : [
             {
               // Force revalidation of HMR chunks — immutable pins caused
               // "module factory is not available" after package removals.
@@ -152,7 +160,7 @@ const nextConfig: NextConfig = {
                 },
               ],
             },
-          ] as const);
+          ];
 
     return [
       {

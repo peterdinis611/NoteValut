@@ -195,7 +195,7 @@ const BG: Record<BgMode, string> = {
 
 export function SvgWidget() {
   const reduceMotion = useReducedMotion();
-  const [source, setSource] = useState(SAMPLES[0].value);
+  const [source, setSource] = useState<string>(SAMPLES[0].value);
   const [bg, setBg] = useState<BgMode>("checker");
   const [scale, setScale] = useState(1);
   const [stripComments, setStripComments] = useState(true);
