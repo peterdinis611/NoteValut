@@ -120,15 +120,17 @@ export const updateNote = Effect.fn("updateNote")(function* (
   input: UpdateNoteInput,
   existing: Note,
 ) {
-  const title = input.title.trim();
-  const body = sanitizeEditorHtml(input.body.trim());
+  // Keep trailing spaces while typing — controlled inputs call this on every
+  // keystroke; trimming made Space feel broken ("Portál" + " " → "Portál").
+  const title = input.title;
+  const body = sanitizeEditorHtml(input.body);
   const tags = normalizeTags(input.tags ?? existing.tags);
   const linkedNoteIds = normalizeLinkedIds(
     input.linkedNoteIds ?? existing.linkedNoteIds,
     existing.id,
   );
 
-  if (title.length === 0) {
+  if (title.trim().length === 0) {
     return yield* new NoteValidationError({
       message: "Title cannot be empty.",
     });

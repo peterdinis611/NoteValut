@@ -311,6 +311,12 @@ export function VaultEditor({
               <Input
                 value={note.title}
                 onChange={(event) => onChange({ title: event.target.value })}
+                onBlur={() => {
+                  const trimmed = note.title.trim();
+                  if (trimmed !== note.title) {
+                    onChange({ title: trimmed || note.title });
+                  }
+                }}
                 aria-label="Note title"
                 className={`mt-4 h-auto border-0 bg-transparent px-0 font-display leading-[1.1] font-semibold tracking-[-0.03em] text-foreground shadow-none focus-visible:ring-0 ${titleClass}`}
                 placeholder="Untitled"
